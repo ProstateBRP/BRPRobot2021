@@ -1,4 +1,0 @@
-/Users/lisa/Desktop/BRPRobot2021/SNR/OpenIGTLink-build/Testing/googletest-download/CMakeFiles/rebuild_cache.dir
-/Users/lisa/Desktop/BRPRobot2021/SNR/OpenIGTLink-build/Testing/googletest-download/CMakeFiles/edit_cache.dir
-/Users/lisa/Desktop/BRPRobot2021/SNR/OpenIGTLink-build/Testing/googletest-download/CMakeFiles/googlemock.dir
-/Users/lisa/Desktop/BRPRobot2021/SNR/OpenIGTLink-build/Testing/googletest-download/CMakeFiles/googletest.dir
