@@ -51,7 +51,8 @@ int main(int argc, char* argv[])
   int    port     = atoi(argv[2]);
   double fps      = atof(argv[3]);
   int    interval = (int) (1000.0 / fps);
-
+  char* argDeviceName = argv[4];
+  char* argMessage = argv[5];
   //------------------------------------------------------------
   // Establish Connection
 
@@ -77,13 +78,15 @@ int main(int argc, char* argv[])
   int i = 0;
   while (1)
     {
-    stringMsg->SetDeviceName("StringMessage");
-    std::cout << "Sending string: " << testString[i] << std::endl;
-    stringMsg->SetString(testString[i]);
-    stringMsg->Pack();
-    socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
-    igtl::Sleep(interval); // wait
-    i = (i + 1) % N_STRINGS;
+
+      stringMsg->SetDeviceName(argDeviceName);
+      
+      //std::cout << "Sending string: " << testString[i] << std::endl;
+      stringMsg->SetString(argMessage);
+      stringMsg->Pack();
+      socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
+      igtl::Sleep(interval); // wait
+      //i = (i + 1) % N_STRINGS;
     }
 
   //------------------------------------------------------------
