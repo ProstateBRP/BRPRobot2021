@@ -18,5 +18,6 @@ TARGET_LINK_LIBRARIES(StringServer OpenIGTLink)
 ADD_EXECUTABLE(StringEchoServer   StringEchoServer.cxx)
 TARGET_LINK_LIBRARIES(StringEchoServer OpenIGTLink)
 
-
+ADD_EXECUTABLE(SlicerCommunication   SlicerCommunication.cxx)
+TARGET_LINK_LIBRARIES(SlicerCommunication OpenIGTLink)
 
