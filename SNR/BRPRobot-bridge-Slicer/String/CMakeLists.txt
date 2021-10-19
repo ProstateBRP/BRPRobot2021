@@ -21,3 +21,6 @@ TARGET_LINK_LIBRARIES(StringEchoServer OpenIGTLink)
 ADD_EXECUTABLE(SlicerCommunication   SlicerCommunication.cxx)
 TARGET_LINK_LIBRARIES(SlicerCommunication OpenIGTLink)
 
+ADD_EXECUTABLE(RebeccaClient   RebeccaClient.cxx)
+TARGET_LINK_LIBRARIES(RebeccaClient OpenIGTLink)
+
