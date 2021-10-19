@@ -37,7 +37,7 @@ int main(int argc, char* argv[])
   //------------------------------------------------------------
   // Parse Arguments
 
-  if (argc != 4) // check number of arguments
+  if (argc != 6) // check number of arguments
     {
     // If not correct, print usage
     std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>"    << std::endl;

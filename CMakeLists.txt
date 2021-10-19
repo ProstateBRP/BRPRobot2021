@@ -12,6 +12,3 @@ include(${OpenIGTLink_USE_FILE})
 set(SNR_SOURCE
     SNR/BRPRobot-bridge-Slicer/String
 )
-set(WPI_SOURCE
-    WPI/string
-)
