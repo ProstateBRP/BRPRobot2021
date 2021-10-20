@@ -13,7 +13,7 @@ include(${OpenIGTLink_USE_FILE})
 ADD_EXECUTABLE(StringServer   StringServer.cxx)
 TARGET_LINK_LIBRARIES(StringServer OpenIGTLink)
 
-ADD_EXECUTABLE(RebeccaClient   RebeccaClient.cxx)
+ADD_EXECUTABLE(RebeccaClient   RebeccaClient.cxx LisaScript.cxx)
 TARGET_LINK_LIBRARIES(RebeccaClient OpenIGTLink)
 
 
