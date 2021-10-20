@@ -24,7 +24,6 @@
 
 #include "LisaScript.h"
 
-
 int main(int argc, char* argv[])
 {
   //------------------------------------------------------------
@@ -44,6 +43,7 @@ int main(int argc, char* argv[])
   int    port     = atoi(argv[2]);
   double fps      = atof(argv[3]);
   int    interval = (int) (1000.0 / fps);
+  char* deviceName = (char*)"deviceName";
 
   //------------------------------------------------------------
   // Establish Connection
@@ -95,33 +95,37 @@ int main(int argc, char* argv[])
       strMsg->Pack();
       socket->Send(strMsg->GetPackPointer(), strMsg->GetPackSize());
 
+      char* message = (char*)(strMsg->GetString());
+
       // Enter different phases of the protocol based on the message from WPI
-      if ( strMsg->GetString() == "START_UP" )
+      if ( strcmp(strMsg->GetString(), "START_UP") == 0 )
       {
-        // Call Startup function in Lisa's script
-        startup();
-        std::cout << "Called startup function in Lisa's script." << std::endl;
+        // Call SendStringToSlicer function in Lisa's script
+        SendStringToSlicer(hostname, port, deviceName, message);
+        std::cout << "Called SendStringToSlicer function in Lisa's script with argMessage = START_UP." << std::endl;
         //std::string status = getStatus();
         int status = getStatus();
-        //std::cout << "The current status is: " << status << std::endl;
+        std::cout << "The current status is: " << status << std::endl;
+        std::cout << "---------------------------------------------\n" << std::endl;
 
       }
 
-      else if ( strMsg->GetString() == "GET_TRANSFORM" )
+      else if ( strcmp(strMsg->GetString(), "GET_TRANSFORM") == 0 )
       {
         // Call GetTransform function in Lisa's script
         //std::string transform = getTransform();
         std::cout << "Called getTransform function in Lisa's script." << std::endl;
+        std::cout << "---------------------------------------------\n" << std::endl;
 
       }
 
-      else if ( strMsg->GetString() == "GET_STATUS" )
+      else if ( strcmp(strMsg->GetString(), "GET_STATUS") == 0 )
       {
         // Call GetStatus function in Lisa's script
         //std::string status = getStatus();
         std::cout << "Called getStatus function in Lisa's script." << std::endl;
         //std::cout << "The current status is: " << status << std::endl;
-
+        std::cout << "---------------------------------------------\n" << std::endl;
       }
 
     }
