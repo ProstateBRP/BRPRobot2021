@@ -7,12 +7,20 @@
 #include "igtlStringMessage.h"
 #include "igtlClientSocket.h"
 
-//#include "LisaScript.h"
+#include "LisaScript.h"
 
 #define FPS  10
 #define interval 100
 
-
+void startup()
+{
+    return 1;
+}
+   
+int getStatus()
+{
+    return 1;
+}
 
 
 
