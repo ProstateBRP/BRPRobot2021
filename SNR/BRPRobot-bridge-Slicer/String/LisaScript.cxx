@@ -23,6 +23,7 @@ int getStatus()
 }
 
 
+// Function to send a String to Slicer 
 
 void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* argMessage)
 {
@@ -61,9 +62,96 @@ void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* arg
             i = 1;     
      }
 
-
 }
 
+// Function to send a status to Slicer 
+void SendStateToSlicer(char*  hostname, int port, char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage)
+{
+    //------------------------------------------------------------
+    // Establish Connection
+
+    igtl::ClientSocket::Pointer socket;
+    socket = igtl::ClientSocket::New();
+    int r = socket->ConnectToServer(hostname, port);
+
+    if (r != 0)
+    {
+        std::cerr << "Cannot connect to the server." << std::endl;
+        exit(0);
+    }
+
+
+    //------------------------------------------------------------
+    // Allocate Status Message Class
+
+    igtl::StatusMessage::Pointer statusMsg;
+    statusMsg = igtl::StatusMessage::New();
+    statusMsg->SetDeviceName(argDeviceName);
+    //------------------------------------------------------------
+    // loop
+
+    int i = 0;
+    while (i == 0)
+    {
+            statusMsg->SetCode(argCode);
+            statusMsg->SetSubCode(argSubcode);
+            statusMsg->SetErrorName(argErrorName);
+            statusMsg->SetStatusString(argStatusStringMessage);
+            statusMsg->Pack();
+            socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
+            std::cout << "Sending STATUS: " << statusMsg << std::endl;
+            i = 1;
+     }
+}
+
+
+void SendTransformToSlicer(const char* hostname, int port, char* argDeviceName, igtl::Matrix4x4& matrix)
+{
+
+    //------------------------------------------------------------
+    // Establish Connection
+
+    igtl::ClientSocket::Pointer socket;
+    socket = igtl::ClientSocket::New();
+    int r = socket->ConnectToServer(hostname, port);
+
+    if (r != 0)
+    {
+        std::cerr << "Cannot connect to the server." << std::endl;
+        exit(0);
+    }
+
+    //------------------------------------------------------------
+    // Allocate Transform Message Class
+
+  
+    igtl::TransformMessage::Pointer transMsg;
+    transMsg = igtl::TransformMessage::New();
+    transMsg->SetDeviceName(argDeviceName);
+
+    std::cout << "Sending TRANSFORM" << std::endl;
+
+
+    igtl::TimeStamp::Pointer ts;
+    ts = igtl::TimeStamp::New();
+    ts->GetTime();
+
+    int i = 0;
+    while (i == 0)
+    {
+        transMsg->SetMatrix(matrix);
+        transMsg->SetTimeStamp(ts);
+        transMsg->Pack();
+
+        int r = socket->Send(transMsg->GetPackPointer(), transMsg->GetPackSize());
+        if (!r)
+        {
+            std::cerr << "Error Sending TRANSFORM " << std::endl;
+            exit(0);
+        }
+        i = 1;
+    }
+}
 
 
 /*

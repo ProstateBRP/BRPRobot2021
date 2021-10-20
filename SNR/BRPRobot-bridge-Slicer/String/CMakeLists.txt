@@ -9,8 +9,8 @@ find_package(OpenIGTLink REQUIRED)
 
 include(${OpenIGTLink_USE_FILE})
 
-ADD_EXECUTABLE(LisaClient   LisaClient.cxx)
-TARGET_LINK_LIBRARIES(LisaClient OpenIGTLink)
+ADD_EXECUTABLE(TestLisa   TestLisa.cxx)
+TARGET_LINK_LIBRARIES(TestLisa OpenIGTLink)
 
 ADD_EXECUTABLE(StringServer   StringServer.cxx)
 TARGET_LINK_LIBRARIES(StringServer OpenIGTLink)
@@ -21,7 +21,7 @@ TARGET_LINK_LIBRARIES(StringServer OpenIGTLink)
 #ADD_EXECUTABLE(SlicerCommunication   SlicerCommunication.cxx)
 #TARGET_LINK_LIBRARIES(SlicerCommunication OpenIGTLink)
 
-ADD_EXECUTABLE(RebeccaClient   RebeccaClient.cxx)
-TARGET_LINK_LIBRARIES(RebeccaClient OpenIGTLink)
+#ADD_EXECUTABLE(RebeccaClient   RebeccaClient.cxx)
+#TARGET_LINK_LIBRARIES(RebeccaClient OpenIGTLink)
 
 
