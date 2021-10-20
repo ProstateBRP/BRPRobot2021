@@ -3,9 +3,9 @@
 #define _LISA_SCRIPT
 
 // prototype function declarations
-void startup();
-int getTransform();
-int getStatus();
+//int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
+void SendStringToSlicer(char*  hostname, int port, char*  argDeviceName,char*  argMessage);
+
 
 #endif
 

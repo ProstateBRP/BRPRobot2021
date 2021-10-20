@@ -22,7 +22,7 @@
 #include "igtlStringMessage.h"
 #include "igtlClientSocket.h"
 
-#include "LisaClient.h"
+#include "LisaScript.h"
 
 
 int main(int argc, char* argv[])
