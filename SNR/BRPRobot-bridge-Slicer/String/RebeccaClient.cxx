@@ -104,41 +104,18 @@ int main(int argc, char* argv[])
         char* message = (char*)(strMsg->GetString());
 
         // Enter different phases of the protocol based on the content of the string message from WPI
-        if ( strcmp(strMsg->GetString(), "START_UP") == 0 )
-        {
-          // Call SendStringToSlicer function in Lisa's script
-          SendStringToSlicer(hostname, port, deviceName, message);
-          std::cout << "Called SendStringToSlicer function in Lisa's script with argMessage = " << strMsg->GetString() << std::endl;
+        //if ( strcmp(strMsg->GetString(), "START_UP") == 0 )
+        //{
+        
+        // Call SendStringToSlicer function in Lisa's script
+        SendStringToSlicer(hostname, port, deviceName, message);
+        std::cout << "Called SendStringToSlicer function in Lisa's script with argMessage = " << strMsg->GetString() << std::endl;
 
-          int status = getStatus();
-          std::cout << "The current status is: " << status << std::endl;
-          std::cout << "---------------------------------------------\n" << std::endl;
+        int status = getStatus();
+        std::cout << "The current status is: " << status << std::endl;
+        std::cout << "---------------------------------------------\n" << std::endl;
 
-        }
-
-        // else if ( strcmp(strMsg->GetString(), "SEND_TRANSFORM") == 0 )
-        // {
-        //   // Call GetTransform function in Lisa's script
-        //   //std::string transform = getTransform();
-        //   std::cout << "Called getTransform function in Lisa's script." << std::endl;
-        //   std::cout << "---------------------------------------------\n" << std::endl;
-
-        //   // TODO
-
-        // }
-
-        // else if ( strcmp(strMsg->GetString(), "SEND_STATUS") == 0 )
-        // {
-        //   // Call GetStatus function in Lisa's script
-        //   //std::string status = getStatus();
-        //   std::cout << "Called getStatus function in Lisa's script." << std::endl;
-        //   //std::cout << "The current status is: " << status << std::endl;
-        //   std::cout << "\n---------------------------------------------\n" << std::endl;
-
-        //   // TODO
-
-        // }
-
+        //}
       }
 
       // Message is a StatusMessage
