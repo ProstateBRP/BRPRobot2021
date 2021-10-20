@@ -20,6 +20,8 @@
 
 #include "igtlOSUtil.h"
 #include "igtlStringMessage.h"
+#include "igtlStatusMessage.h"
+#include "igtlTransformMessage.h"
 #include "igtlClientSocket.h"
 
 #include "LisaScript.h"
@@ -82,52 +84,116 @@ int main(int argc, char* argv[])
 
       // get data
       hdrMsg->Unpack();
-      igtl::StringMessage::Pointer strMsg(igtl::StringMessage::New());
-      strMsg->SetMessageHeader(hdrMsg);
-      strMsg->AllocatePack();
-      timeout = false;
-      socket->Receive(strMsg->GetPackBodyPointer(), strMsg->GetPackBodySize(), timeout);
-      int c = strMsg->Unpack();
 
-      // echo message back
-      std::cout << "Echoing message from WPI: " << strMsg->GetString() << std::endl;
-      strMsg->SetDeviceName("StringEchoClient");
-      strMsg->Pack();
-      socket->Send(strMsg->GetPackPointer(), strMsg->GetPackSize());
-
-      char* message = (char*)(strMsg->GetString());
-
-      // Enter different phases of the protocol based on the message from WPI
-      if ( strcmp(strMsg->GetString(), "START_UP") == 0 )
+      // Message is a StringMessage
+      if ( strcmp(hdrMsg->GetDeviceType(), "STRING") == 0 )
       {
-        // Call SendStringToSlicer function in Lisa's script
-        SendStringToSlicer(hostname, port, deviceName, message);
-        std::cout << "Called SendStringToSlicer function in Lisa's script with argMessage = START_UP." << std::endl;
-        //std::string status = getStatus();
+        igtl::StringMessage::Pointer strMsg(igtl::StringMessage::New());
+        strMsg->SetMessageHeader(hdrMsg);
+        strMsg->AllocatePack();
+        timeout = false;
+        socket->Receive(strMsg->GetPackBodyPointer(), strMsg->GetPackBodySize(), timeout);
+        int c = strMsg->Unpack();
+
+        // Echo message back
+        std::cout << "Echoing message from WPI: " << strMsg->GetString() << std::endl;
+        strMsg->SetDeviceName("StringEchoClient");
+        strMsg->Pack();
+        socket->Send(strMsg->GetPackPointer(), strMsg->GetPackSize());
+
+        char* message = (char*)(strMsg->GetString());
+
+        // Enter different phases of the protocol based on the content of the string message from WPI
+        if ( strcmp(strMsg->GetString(), "START_UP") == 0 )
+        {
+          // Call SendStringToSlicer function in Lisa's script
+          SendStringToSlicer(hostname, port, deviceName, message);
+          std::cout << "Called SendStringToSlicer function in Lisa's script with argMessage = " << strMsg->GetString() << std::endl;
+
+          int status = getStatus();
+          std::cout << "The current status is: " << status << std::endl;
+          std::cout << "---------------------------------------------\n" << std::endl;
+
+        }
+
+        // else if ( strcmp(strMsg->GetString(), "SEND_TRANSFORM") == 0 )
+        // {
+        //   // Call GetTransform function in Lisa's script
+        //   //std::string transform = getTransform();
+        //   std::cout << "Called getTransform function in Lisa's script." << std::endl;
+        //   std::cout << "---------------------------------------------\n" << std::endl;
+
+        //   // TODO
+
+        // }
+
+        // else if ( strcmp(strMsg->GetString(), "SEND_STATUS") == 0 )
+        // {
+        //   // Call GetStatus function in Lisa's script
+        //   //std::string status = getStatus();
+        //   std::cout << "Called getStatus function in Lisa's script." << std::endl;
+        //   //std::cout << "The current status is: " << status << std::endl;
+        //   std::cout << "\n---------------------------------------------\n" << std::endl;
+
+        //   // TODO
+
+        // }
+
+      }
+
+      // Message is a StatusMessage
+      else if (strcmp(hdrMsg->GetDeviceType(), "STATUS") == 0)
+      {
+        igtl::StatusMessage::Pointer statusMsg;
+        statusMsg = igtl::StatusMessage::New();
+        statusMsg->SetMessageHeader(hdrMsg);
+        statusMsg->AllocatePack();
+        timeout = false;
+        socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
+
+        // Send the contents of the statusMessage to LisaScript
+        unsigned short argCode = statusMsg->GetCode();
+        unsigned long long argSubcode = statusMsg->GetSubCode();
+        char* argErrorName = (char*)(statusMsg->GetErrorName());
+        char* argStatusStringMessage = (char*)(statusMsg->GetStatusString());
+        
+        SendStatusToSlicer(hostname, port, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+        std::cout << "Called SendStatusToSlicer function in Lisa's script." << std::endl;
+
         int status = getStatus();
         std::cout << "The current status is: " << status << std::endl;
         std::cout << "---------------------------------------------\n" << std::endl;
-
       }
 
-      else if ( strcmp(strMsg->GetString(), "GET_TRANSFORM") == 0 )
+      // Message is a TransformMessage
+      else if (strcmp(hdrMsg->GetDeviceType(), "TRANSFORM") == 0)
       {
-        // Call GetTransform function in Lisa's script
-        //std::string transform = getTransform();
-        std::cout << "Called getTransform function in Lisa's script." << std::endl;
-        std::cout << "---------------------------------------------\n" << std::endl;
+        igtl::TransformMessage::Pointer transMsg;
+        transMsg = igtl::TransformMessage::New();
+        transMsg->SetMessageHeader(hdrMsg);
+        transMsg->AllocatePack();
+        timeout = false;
+        socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
+
+        int c = transMsg->Unpack(1);
+        if (c & igtl::MessageHeader::UNPACK_BODY) 
+        {
+          // if CRC check is OK. Read transform data.
+          igtl::Matrix4x4 matrix;
+          transMsg->GetMatrix(matrix);
+          igtl::PrintMatrix(matrix);
+
+          // Send the contents of the transformMessage to LisaScript
+          SendTransformToSlicer(hostname, port, deviceName, matrix);
+          std::cout << "Called SendTransformToSlicer function in Lisa's script." << std::endl;
+
+          int status = getStatus();
+          std::cout << "The current status is: " << status << std::endl;
+          std::cout << "---------------------------------------------\n" << std::endl;
+
+        }
 
       }
-
-      else if ( strcmp(strMsg->GetString(), "GET_STATUS") == 0 )
-      {
-        // Call GetStatus function in Lisa's script
-        //std::string status = getStatus();
-        std::cout << "Called getStatus function in Lisa's script." << std::endl;
-        //std::cout << "The current status is: " << status << std::endl;
-        std::cout << "---------------------------------------------\n" << std::endl;
-      }
-
     }
   }
 
