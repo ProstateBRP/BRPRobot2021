@@ -5,6 +5,8 @@
 
 #include "igtlOSUtil.h"
 #include "igtlStringMessage.h"
+#include "igtlStatusMessage.h"
+#include "igtlTransformMessage.h"
 #include "igtlClientSocket.h"
 
 #include "LisaScript.h"
@@ -12,10 +14,6 @@
 #define FPS  10
 #define interval 100
 
-void startup()
-{
-    int i;
-}
    
 int getStatus()
 {
@@ -40,7 +38,6 @@ void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* arg
         exit(0);
     }
 
-
     //------------------------------------------------------------
     // Allocate Transform Message Class
 
@@ -49,23 +46,22 @@ void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* arg
     //------------------------------------------------------------
     // loop
 
-
     //while (1)
     int i = 0;
     while (i == 0)
     {
-            stringMsg->SetDeviceName(argDeviceName); 
-            std::cout << "Sending string to Slicer from LisaScript: " << argMessage << std::endl;
-            stringMsg->SetString(argMessage);
-            stringMsg->Pack();
-            socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
-            i = 1;     
+        stringMsg->SetDeviceName(argDeviceName); 
+        stringMsg->SetString(argMessage);
+        stringMsg->Pack();
+        socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
+        std::cout << "Sending STRING: " << argMessage << std::endl;
+        i = 1;     
      }
 
 }
 
 // Function to send a status to Slicer 
-void SendStateToSlicer(char*  hostname, int port, char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage)
+void SendStatusToSlicer(char*  hostname, int port, char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage)
 {
     //------------------------------------------------------------
     // Establish Connection
@@ -79,7 +75,6 @@ void SendStateToSlicer(char*  hostname, int port, char* argDeviceName, unsigned 
         std::cerr << "Cannot connect to the server." << std::endl;
         exit(0);
     }
-
 
     //------------------------------------------------------------
     // Allocate Status Message Class
@@ -93,21 +88,20 @@ void SendStateToSlicer(char*  hostname, int port, char* argDeviceName, unsigned 
     int i = 0;
     while (i == 0)
     {
-            statusMsg->SetCode(argCode);
-            statusMsg->SetSubCode(argSubcode);
-            statusMsg->SetErrorName(argErrorName);
-            statusMsg->SetStatusString(argStatusStringMessage);
-            statusMsg->Pack();
-            socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
-            std::cout << "Sending STATUS: " << statusMsg << std::endl;
-            i = 1;
+        statusMsg->SetCode(argCode);
+        statusMsg->SetSubCode(argSubcode);
+        statusMsg->SetErrorName(argErrorName);
+        statusMsg->SetStatusString(argStatusStringMessage);
+        statusMsg->Pack();
+        socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
+        std::cout << "Sending STATUS: " << statusMsg << std::endl;
+        i = 1;
      }
 }
 
 
 void SendTransformToSlicer(const char* hostname, int port, char* argDeviceName, igtl::Matrix4x4& matrix)
 {
-
     //------------------------------------------------------------
     // Establish Connection
 
@@ -123,14 +117,12 @@ void SendTransformToSlicer(const char* hostname, int port, char* argDeviceName, 
 
     //------------------------------------------------------------
     // Allocate Transform Message Class
-
   
     igtl::TransformMessage::Pointer transMsg;
     transMsg = igtl::TransformMessage::New();
     transMsg->SetDeviceName(argDeviceName);
 
     std::cout << "Sending TRANSFORM" << std::endl;
-
 
     igtl::TimeStamp::Pointer ts;
     ts = igtl::TimeStamp::New();
