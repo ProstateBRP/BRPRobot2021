@@ -14,5 +14,6 @@ void GetStringFromSlicer(const char* hostname, int port);
 void GetStateFromSlicer(const char* hostname, int port);
 void GetTransformFromSlicer(const char* hostname, int port);
 
+int getStatus();
 
 #endif

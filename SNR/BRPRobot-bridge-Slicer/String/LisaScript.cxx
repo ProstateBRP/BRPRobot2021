@@ -14,7 +14,10 @@
 #define FPS  10
 #define interval 100
 
-
+int getStatus()
+{
+    return 1;
+}
 
 void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* argMessage)
 {
