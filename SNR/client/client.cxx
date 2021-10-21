@@ -24,9 +24,9 @@
 #include "igtlTransformMessage.h"
 #include "igtlClientSocket.h"
 
-#include "LisaScript.hxx"
+#include "script.hxx"
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
   //------------------------------------------------------------
   // Parse Arguments
@@ -34,18 +34,18 @@ int main(int argc, char* argv[])
   if (argc != 4) // check number of arguments
   {
     // If not correct, print usage
-    std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>"    << std::endl;
-    std::cerr << "    <hostname> : IP or host name"                    << std::endl;
-    std::cerr << "    <port>     : Port # (18944 in Slicer default)"   << std::endl;
+    std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>" << std::endl;
+    std::cerr << "    <hostname> : IP or host name" << std::endl;
+    std::cerr << "    <port>     : Port # (18944 in Slicer default)" << std::endl;
     std::cerr << "    <fps>      : Frequency (fps) to send string" << std::endl;
     exit(0);
   }
 
-  char*  hostname = argv[1];
-  int    port     = atoi(argv[2]);
-  double fps      = atof(argv[3]);
-  int    interval = (int) (1000.0 / fps);
-  char* deviceName = (char*)"deviceName";
+  char *hostname = argv[1];
+  int port = atoi(argv[2]);
+  double fps = atof(argv[3]);
+  int interval = (int)(1000.0 / fps);
+  char *deviceName = (char *)"deviceName";
 
   //------------------------------------------------------------
   // Establish Connection
@@ -68,17 +68,17 @@ int main(int argc, char* argv[])
     igtl::MessageHeader::Pointer hdrMsg = igtl::MessageHeader::New();
 
     while (socket.IsNotNull() && socket->GetConnected())
-    {      
+    {
       hdrMsg->InitPack();
       bool timeout(false);
       igtlUint64 r = socket->Receive(hdrMsg->GetPackPointer(), hdrMsg->GetPackSize(), timeout);
 
       // check message
-      if (r == 0) 
-        {
+      if (r == 0)
+      {
         socket->CloseSocket();
         continue;
-        }
+      }
       if (r != hdrMsg->GetPackSize())
         continue;
 
@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
       hdrMsg->Unpack();
 
       // Message is a StringMessage
-      if ( strcmp(hdrMsg->GetDeviceType(), "STRING") == 0 )
+      if (strcmp(hdrMsg->GetDeviceType(), "STRING") == 0)
       {
         igtl::StringMessage::Pointer strMsg(igtl::StringMessage::New());
         strMsg->SetMessageHeader(hdrMsg);
@@ -101,10 +101,10 @@ int main(int argc, char* argv[])
         strMsg->Pack();
         socket->Send(strMsg->GetPackPointer(), strMsg->GetPackSize());
 
-        char* message = (char*)(strMsg->GetString());
+        char *message = (char *)(strMsg->GetString());
 
         // Enter different phases of the protocol based on the content of the string message from WPI
-        //if ( strcmp(strMsg->GetString(), "START_UP") == 0 )
+        // if ( strcmp(strMsg->GetString(), "START_UP") == 0 )
         //{
 
         // Call SendStringToSlicer function in Lisa's script
@@ -113,7 +113,8 @@ int main(int argc, char* argv[])
 
         int status = getStatus();
         std::cout << "The current status is: " << status << std::endl;
-        std::cout << "---------------------------------------------\n" << std::endl;
+        std::cout << "---------------------------------------------\n"
+                  << std::endl;
 
         //}
       }
@@ -131,15 +132,16 @@ int main(int argc, char* argv[])
         // Send the contents of the statusMessage to LisaScript
         unsigned short argCode = statusMsg->GetCode();
         unsigned long long argSubcode = statusMsg->GetSubCode();
-        char* argErrorName = (char*)(statusMsg->GetErrorName());
-        char* argStatusStringMessage = (char*)(statusMsg->GetStatusString());
-        
+        char *argErrorName = (char *)(statusMsg->GetErrorName());
+        char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
+
         SendStateToSlicer(hostname, port, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
         std::cout << "Called SendStateToSlicer function in Lisa's script." << std::endl;
 
         int status = getStatus();
         std::cout << "The current status is: " << status << std::endl;
-        std::cout << "---------------------------------------------\n" << std::endl;
+        std::cout << "---------------------------------------------\n"
+                  << std::endl;
       }
 
       // Message is a TransformMessage
@@ -153,7 +155,7 @@ int main(int argc, char* argv[])
         socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
 
         int c = transMsg->Unpack(1);
-        if (c & igtl::MessageHeader::UNPACK_BODY) 
+        if (c & igtl::MessageHeader::UNPACK_BODY)
         {
           // if CRC check is OK. Read transform data.
           igtl::Matrix4x4 matrix;
@@ -166,10 +168,9 @@ int main(int argc, char* argv[])
 
           int status = getStatus();
           std::cout << "The current status is: " << status << std::endl;
-          std::cout << "---------------------------------------------\n" << std::endl;
-
+          std::cout << "---------------------------------------------\n"
+                    << std::endl;
         }
-
       }
     }
   }
