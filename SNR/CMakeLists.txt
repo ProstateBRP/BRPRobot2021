@@ -1,4 +1,4 @@
-PROJECT(BRPRobot2021)
+PROJECT(String)
 
 cmake_minimum_required(VERSION 2.4)
 if(COMMAND cmake_policy)
@@ -8,5 +8,6 @@ endif(COMMAND cmake_policy)
 find_package(OpenIGTLink REQUIRED)
 
 include(${OpenIGTLink_USE_FILE})
-ADD_SUBDIRECTORY(SNR)
-ADD_SUBDIRECTORY(WPI)
+
+ADD_EXECUTABLE(client   ./client/client.cxx ./client/script.cxx)
+TARGET_LINK_LIBRARIES(client OpenIGTLink)
