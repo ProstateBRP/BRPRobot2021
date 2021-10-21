@@ -14,14 +14,7 @@
 #define FPS  10
 #define interval 100
 
-   
-int getStatus()
-{
-    return 1;
-}
 
-
-// Function to send a String to Slicer 
 
 void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* argMessage)
 {
@@ -44,24 +37,20 @@ void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* arg
     igtl::StringMessage::Pointer stringMsg;
     stringMsg = igtl::StringMessage::New();
     //------------------------------------------------------------
-    // loop
 
-    //while (1)
-    int i = 0;
-    while (i == 0)
-    {
-        stringMsg->SetDeviceName(argDeviceName); 
-        stringMsg->SetString(argMessage);
-        stringMsg->Pack();
-        socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
-        std::cout << "Sending STRING: " << argMessage << std::endl;
-        i = 1;     
-     }
+    // Send string message
+
+    stringMsg->SetDeviceName(argDeviceName); 
+    stringMsg->SetString(argMessage);
+    stringMsg->Pack();
+    socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
+    std::cout << "Sending STRING: " << argMessage << std::endl;
 
 }
 
-// Function to send a status to Slicer 
-void SendStatusToSlicer(char*  hostname, int port, char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage)
+
+
+void SendStateToSlicer(char*  hostname, int port, char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage)
 {
     //------------------------------------------------------------
     // Establish Connection
@@ -76,6 +65,7 @@ void SendStatusToSlicer(char*  hostname, int port, char* argDeviceName, unsigned
         exit(0);
     }
 
+
     //------------------------------------------------------------
     // Allocate Status Message Class
 
@@ -83,25 +73,27 @@ void SendStatusToSlicer(char*  hostname, int port, char* argDeviceName, unsigned
     statusMsg = igtl::StatusMessage::New();
     statusMsg->SetDeviceName(argDeviceName);
     //------------------------------------------------------------
-    // loop
 
     int i = 0;
     while (i == 0)
     {
-        statusMsg->SetCode(argCode);
-        statusMsg->SetSubCode(argSubcode);
-        statusMsg->SetErrorName(argErrorName);
-        statusMsg->SetStatusString(argStatusStringMessage);
-        statusMsg->Pack();
-        socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
-        std::cout << "Sending STATUS: " << statusMsg << std::endl;
-        i = 1;
+            statusMsg->SetCode(argCode);
+            statusMsg->SetSubCode(argSubcode);
+            statusMsg->SetErrorName(argErrorName);
+            statusMsg->SetStatusString(argStatusStringMessage);
+            statusMsg->Pack();
+            socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
+            std::cout << "Sending STATUS: " << statusMsg << std::endl;
+            i = 1;
      }
+
+
 }
 
 
 void SendTransformToSlicer(const char* hostname, int port, char* argDeviceName, igtl::Matrix4x4& matrix)
 {
+
     //------------------------------------------------------------
     // Establish Connection
 
@@ -117,12 +109,14 @@ void SendTransformToSlicer(const char* hostname, int port, char* argDeviceName, 
 
     //------------------------------------------------------------
     // Allocate Transform Message Class
+
   
     igtl::TransformMessage::Pointer transMsg;
     transMsg = igtl::TransformMessage::New();
     transMsg->SetDeviceName(argDeviceName);
 
     std::cout << "Sending TRANSFORM" << std::endl;
+
 
     igtl::TimeStamp::Pointer ts;
     ts = igtl::TimeStamp::New();
@@ -146,26 +140,150 @@ void SendTransformToSlicer(const char* hostname, int port, char* argDeviceName, 
 }
 
 
-/*
-int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
+void GetStringFromSlicer(const char* hostname, int port)
 {
-  std::cerr << "Receiving STRING data type." << std::endl;
-  // Create a message buffer to receive transform data
-  igtl::StringMessage::Pointer stringMsg;
-  stringMsg = igtl::StringMessage::New();
-  stringMsg->SetMessageHeader(header);
-  stringMsg->AllocatePack();
-  // Receive transform data from the socket
-  bool timeout(false);
-  socket->Receive(stringMsg->GetPackBodyPointer(), stringMsg->GetPackBodySize(), timeout);
-  // Deserialize the transform data
-  // If you want to skip CRC check, call Unpack() without argument.
-  int c = stringMsg->Unpack(1);
-  if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+
+//------------------------------------------------------------
+    // Establish Connection
+
+    igtl::ClientSocket::Pointer socket;
+    socket = igtl::ClientSocket::New();
+    int r = socket->ConnectToServer(hostname, port);
+
+    if (r != 0)
     {
-    std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
-              << "String: " << stringMsg->GetString() << std::endl << std::endl;
+        std::cerr << "Cannot connect to the server." << std::endl;
+        exit(0);
     }
-  return 1;
+
+
+    //------------------------------------------------------------
+    // Create a message buffer to receive header
+
+    igtl::MessageHeader::Pointer headerMsg;
+    headerMsg = igtl::MessageHeader::New();
+    bool messageReceived = 0;
+
+    while(messageReceived == 0)
+    {
+    // Message is a StringMessage
+      if ( strcmp(headerMsg->GetDeviceType(), "STRING") == 0 )
+      {
+        igtl::StringMessage::Pointer strMsg(igtl::StringMessage::New());
+        strMsg->SetMessageHeader(headerMsg);
+        strMsg->AllocatePack();
+        bool timeout = false;
+        socket->Receive(strMsg->GetPackBodyPointer(), strMsg->GetPackBodySize(), timeout);
+        int c = strMsg->Unpack();
+
+        // Echo message back
+        strMsg->SetDeviceName("StringEchoClient");
+        strMsg->Pack();
+        socket->Send(strMsg->GetPackPointer(), strMsg->GetPackSize());
+
+        char* message = (char*)(strMsg->GetString());
+        messageReceived = 1;
+      }
+        socket->CloseSocket();
+    }
+
 }
-*/
+
+void GetStateFromSlicer(const char* hostname, int port)
+{
+
+    //------------------------------------------------------------
+    // Establish Connection
+
+    igtl::ClientSocket::Pointer socket;
+    socket = igtl::ClientSocket::New();
+    int r = socket->ConnectToServer(hostname, port);
+
+    if (r != 0)
+    {
+        std::cerr << "Cannot connect to the server." << std::endl;
+        exit(0);
+    }
+
+
+    //------------------------------------------------------------
+    // Create a message buffer to receive header
+
+    igtl::MessageHeader::Pointer headerMsg;
+    headerMsg = igtl::MessageHeader::New();
+    bool messageReceived = 0;
+    while(messageReceived == 0)
+    {
+    // Message is a StringMessage
+      if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
+      {
+        igtl::StatusMessage::Pointer statusMsg;
+        statusMsg = igtl::StatusMessage::New();
+        statusMsg->SetMessageHeader(headerMsg);
+        statusMsg->AllocatePack();
+        bool timeout = false;
+        socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
+
+        unsigned short argCode = statusMsg->GetCode();
+        unsigned long long argSubcode = statusMsg->GetSubCode();
+        char* argErrorName = (char*)(statusMsg->GetErrorName());
+        char* argStatusStringMessage = (char*)(statusMsg->GetStatusString());
+        
+        messageReceived = 1;
+      }
+    }
+}
+
+void GetTransformFromSlicer(const char* hostname, int port)
+{
+
+    //------------------------------------------------------------
+    // Establish Connection
+
+    igtl::ClientSocket::Pointer socket;
+    socket = igtl::ClientSocket::New();
+    int r = socket->ConnectToServer(hostname, port);
+
+    if (r != 0)
+    {
+        std::cerr << "Cannot connect to the server." << std::endl;
+        exit(0);
+    }
+
+
+    //------------------------------------------------------------
+    // Create a message buffer to receive header
+
+    igtl::MessageHeader::Pointer headerMsg;
+    headerMsg = igtl::MessageHeader::New();
+
+    // Receive Transform message
+    bool messageReceived = 0;
+    while(messageReceived == 0)
+    {
+    // Message is a Transform message
+
+      if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
+      {
+        igtl::TransformMessage::Pointer transMsg;
+        transMsg = igtl::TransformMessage::New();
+        transMsg->SetMessageHeader(headerMsg);
+        transMsg->AllocatePack();
+        bool timeout = false;
+        socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
+
+        int c = transMsg->Unpack(1);
+        if (c & igtl::MessageHeader::UNPACK_BODY) 
+        {
+          // if CRC check is OK. Read transform data.
+          igtl::Matrix4x4 matrix;
+          transMsg->GetMatrix(matrix);
+          igtl::PrintMatrix(matrix);
+
+        }
+        messageReceived = 1;
+      }
+    }
+
+}
+
