@@ -9,14 +9,9 @@ find_package(OpenIGTLink REQUIRED)
 
 include(${OpenIGTLink_USE_FILE})
 
-#ADD_EXECUTABLE(StringClient   StringClient.cxx)
-#TARGET_LINK_LIBRARIES(StringClient OpenIGTLink)
 
 ADD_EXECUTABLE(StringServer   StringServer.cxx)
 TARGET_LINK_LIBRARIES(StringServer OpenIGTLink)
-
-#ADD_EXECUTABLE(StringEchoServer   StringEchoServer.cxx)
-#TARGET_LINK_LIBRARIES(StringEchoServer OpenIGTLink)
 
 ADD_EXECUTABLE(RebeccaClient   RebeccaClient.cxx LisaScript.cxx)
 TARGET_LINK_LIBRARIES(RebeccaClient OpenIGTLink)

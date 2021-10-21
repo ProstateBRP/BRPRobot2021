@@ -134,8 +134,8 @@ int main(int argc, char* argv[])
         char* argErrorName = (char*)(statusMsg->GetErrorName());
         char* argStatusStringMessage = (char*)(statusMsg->GetStatusString());
         
-        SendStatusToSlicer(hostname, port, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-        std::cout << "Called SendStatusToSlicer function in Lisa's script." << std::endl;
+        SendStateToSlicer(hostname, port, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+        std::cout << "Called SendStateToSlicer function in Lisa's script." << std::endl;
 
         int status = getStatus();
         std::cout << "The current status is: " << status << std::endl;
