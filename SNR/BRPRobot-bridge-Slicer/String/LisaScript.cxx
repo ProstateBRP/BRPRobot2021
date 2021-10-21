@@ -19,11 +19,23 @@ int getStatus()
     return 1;
 }
 
+
+#ifdef MAIN
+
+int main(int argc, char* argv[])
+{
+  char* hostname = argv[1];
+  int port = atoi(argv[2]);
+  char* argDeviceName = argv[3];
+  char* argMessage = argv[4];
+#else
 void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* argMessage)
 {
+#endif
     //------------------------------------------------------------
     // Establish Connection
 
+  
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
     int r = socket->ConnectToServer(hostname, port);

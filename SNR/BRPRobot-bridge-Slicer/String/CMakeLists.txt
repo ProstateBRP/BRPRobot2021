@@ -10,8 +10,15 @@ find_package(OpenIGTLink REQUIRED)
 include(${OpenIGTLink_USE_FILE})
 
 
-ADD_EXECUTABLE(StringServer   StringServer.cxx)
-TARGET_LINK_LIBRARIES(StringServer OpenIGTLink)
+#ADD_EXECUTABLE(StringServer   StringServer.cxx)
+#TARGET_LINK_LIBRARIES(StringServer OpenIGTLink)
+OPTION(LISA_SCRIPT_MAIN "compiling LisaScript.cxx as main" OFF)
+IF(LISA_SCRIPT_MAIN)
+ADD_DEFINITIONS(-DMAIN)
+ADD_EXECUTABLE(RebeccaClient LisaScript.cxx)
+ELSE()
+  ADD_EXECUTABLE(RebeccaClient RebeccaClient.cxx LisaScript.cxx)
+ENDIF()
 
-ADD_EXECUTABLE(RebeccaClient   RebeccaClient.cxx LisaScript.cxx)
+
 TARGET_LINK_LIBRARIES(RebeccaClient OpenIGTLink)
