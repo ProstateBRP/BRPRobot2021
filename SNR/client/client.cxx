@@ -31,19 +31,23 @@ int main(int argc, char *argv[])
   //------------------------------------------------------------
   // Parse Arguments
 
-  if (argc != 4) // check number of arguments
+  if (argc != 6) // check number of arguments
   {
     // If not correct, print usage
     std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>" << std::endl;
-    std::cerr << "    <hostname> : IP or host name" << std::endl;
-    std::cerr << "    <port>     : Port # (18944 in Slicer default)" << std::endl;
+    std::cerr << "    <hostname> : IP or host name for WPI server connection" << std::endl;
+    std::cerr << "    <port>     : Port # for WPI server connection" << std::endl;
+    std::cerr << "    <slicerHostname> : IP or host name for Slicer server connection" << std::endl;
+    std::cerr << "    <slicerPort>     : Port # for Slicer server connection" << std::endl;
     std::cerr << "    <fps>      : Frequency (fps) to send string" << std::endl;
     exit(0);
   }
 
   char *hostname = argv[1];
   int port = atoi(argv[2]);
-  double fps = atof(argv[3]);
+  char *slicerHostname = argv[3];
+  int slicerPort = atoi(argv[4]);
+  double fps = atof(argv[5]);
   int interval = (int)(1000.0 / fps);
   char *deviceName = (char *)"deviceName";
 
@@ -66,6 +70,15 @@ int main(int argc, char *argv[])
     // Waiting for Connection
     // socket = serverSocket->WaitForConnection(1000);
     igtl::MessageHeader::Pointer hdrMsg = igtl::MessageHeader::New();
+
+
+    // Startup protocol - Send startup command to WPI server
+    // stringMsg->SetDeviceName("StringMessage");
+    // std::cout << "Sending string: START_UP" << std::endl;
+    // stringMsg->SetString("START_UP");
+    // stringMsg->Pack();
+    // socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
+
 
     while (socket.IsNotNull() && socket->GetConnected())
     {
@@ -108,7 +121,7 @@ int main(int argc, char *argv[])
         //{
 
         // Call SendStringToSlicer function in Lisa's script
-        SendStringToSlicer(hostname, port, deviceName, message);
+        SendStringToSlicer(slicerHostname, slicerPort, deviceName, message);
         std::cout << "Called SendStringToSlicer function in Lisa's script with argMessage = " << strMsg->GetString() << std::endl;
 
         int status = getStatus();
@@ -135,7 +148,7 @@ int main(int argc, char *argv[])
         char *argErrorName = (char *)(statusMsg->GetErrorName());
         char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
-        SendStateToSlicer(hostname, port, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+        SendStateToSlicer(slicerHostname, slicerPort, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
         std::cout << "Called SendStateToSlicer function in Lisa's script." << std::endl;
 
         int status = getStatus();
@@ -163,7 +176,7 @@ int main(int argc, char *argv[])
           igtl::PrintMatrix(matrix);
 
           // Send the contents of the transformMessage to LisaScript
-          SendTransformToSlicer(hostname, port, deviceName, matrix);
+          SendTransformToSlicer(slicerHostname, slicerPort, deviceName, matrix);
           std::cout << "Called SendTransformToSlicer function in Lisa's script." << std::endl;
 
           int status = getStatus();
