@@ -1,6 +1,6 @@
 #include <string>
 #include <cstring>
-#include <eigen3/Eigen/Dense>
+//#include <eigen3/Eigen/Dense>
 #include <vector>
 
 #include "igtlOSUtil.h"
@@ -22,13 +22,15 @@
 class Client
 {
 public:
-    Client(char* hostname, int port){};
+    Client(char* wpiHostname, int wpiPort, char* slicerHostname, int slicerPort){};
     // Member variables
     int _clientSocketConnected;
     std::string status;
     igtl::Socket::Pointer socket;
-    char* _hostname;
-    int _port;
+    char* _wpiHostname;
+    int _wpiPort;
+    char* _slicerHostname;
+    int _slicerPort;
     std::string start_up_status;
     std::string cached_start_up_status;
 

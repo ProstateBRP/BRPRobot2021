@@ -16,28 +16,6 @@
 
 #include "script.hxx"
 
-Client::Client(char* hostname, int port)
-{
-  _clientSocketConnected = 0;
-  socket = igtl::ClientSocket::New();
-  _hostname = hostname;
-  _port = port;
-  status = "Not_Connected";
-  cached_start_up_status = "Not_Connected";
-  start_up_status = "";
-}
-
-// const char *testString[N_STRINGS] = {
-//     "START_UP",
-//     // "GET_STATUS",
-//     // "GET_TRANSFORM",
-//     // "PLANNING",
-//     // "CALIBRATION",
-//     // "TARGETING",
-//     // "STOP",
-//     // "EMERGENCY",
-// };
-
 void *Client::ThreadIGT(void *igt)
 {
 
@@ -47,7 +25,7 @@ void *Client::ThreadIGT(void *igt)
   // Connect to server on the provided port
   igtl::ClientSocket::Pointer socket;
   socket = igtl::ClientSocket::New();
-  int r = socket->ConnectToServer(igtModule->_hostname, igtModule->_port);
+  int r = socket->ConnectToServer(igtModule->_wpiHostname, igtModule->_wpiPort);
   
   if (r != 0)
   {
@@ -120,7 +98,7 @@ void *Client::ThreadIGT(void *igt)
             igtModule->ReceiveString(igtModule->socket, headerMsg);
             igtModule->start_up_status = headerMsg->GetDeviceName();
           }
-          
+
           // REQUEST: TYPE -- UNKNOWN
           else
           {
@@ -166,14 +144,16 @@ std::string Client::ReceiveString(igtl::Socket *socket, igtl::MessageHeader *hea
   // Deserialize the string data
   // If you want to skip CRC check, call Unpack() without argument.
   int c = strMsg->Unpack();
-  std::string stringMessage = "";
+  char *stringMessage = (char *)("");
 
   if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
   {
-    stringMessage = strMsg->GetString();
+    stringMessage = (char *)(strMsg->GetString());
   }
 
-  SendStringToSlicer(slicerHostname, slicerPort, deviceName, message);
+  char *deviceName = (char *)"stringMessage";
+
+  SendStringToSlicer(_slicerHostname, _slicerPort, deviceName, stringMessage);
   std::cout << "Called SendStringToSlicer function in Lisa's script with argMessage = " << strMsg->GetString() << std::endl;
 
   return stringMessage;

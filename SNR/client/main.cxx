@@ -16,7 +16,7 @@
 #include <cstring>
 #include "Client.hxx"
 
-void ClientFunctionality(char* hostname, int port)
+void ClientFunctionality(char* wpiHostname, int wpiPort, char* slicerHostname, int slicerPort)
 {
 
     //====================================== PTHREADS ========================================
@@ -39,7 +39,7 @@ void ClientFunctionality(char* hostname, int port)
     // void *_joinIgt;
     // _igtModule.ThreadIGT;
 
-    Client _igtModule = Client(hostname, port);
+    Client _igtModule = Client(wpiHostname, wpiPort, slicerHostname, slicerPort);
     void *_joinIgt;
     _igtModule.ThreadIGT;
 
@@ -84,15 +84,15 @@ int main(int argc, char *argv[])
     exit(0);
     }
 
-    char *hostname = argv[1];
-    int port = atoi(argv[2]);
+    char *wpiHostname = argv[1];
+    int wpiPort = atoi(argv[2]);
     char *slicerHostname = argv[3];
     int slicerPort = atoi(argv[4]);
     double fps = atof(argv[5]);
     int interval = (int)(1000.0 / fps);
-    char *deviceName = (char *)"deviceName";
+    //char *deviceName = (char *)"deviceName";
 
-    ClientFunctionality(hostname, port);
+    ClientFunctionality(wpiHostname, wpiPort, slicerHostname, slicerPort);
 
     return 0;
 }
