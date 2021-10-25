@@ -23,6 +23,7 @@
 #include "igtlStatusMessage.h"
 #include "igtlTransformMessage.h"
 #include "igtlClientSocket.h"
+#include "pthread.h"
 
 #include "script.hxx"
 
