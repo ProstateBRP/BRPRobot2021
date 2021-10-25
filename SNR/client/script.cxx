@@ -18,7 +18,7 @@ int getStatus()
 {
     return 1;
 }
-//std::string Global::myglobalstring = "DefaultGlobalString";
+std::string Global::myglobalstring = "DefaultGlobalString";
 
 
 #ifdef MAIN
