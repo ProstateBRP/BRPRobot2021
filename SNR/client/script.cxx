@@ -18,7 +18,7 @@ int getStatus()
 {
     return 1;
 }
-
+//std::string Global::myglobalstring = "DefaultGlobalString";
 
 
 #ifdef MAIN
@@ -60,14 +60,30 @@ int main(int argc, char* argv[])
                             {inT[2],inS[2],inN[2],inOrigin[2]},
                             {inT[3],inS[3],inN[3],inOrigin[3]}};
 
+    //std::cout << "Global value before function is : " << myglobalint << std::endl;
+    
+    //std::cout << "Global string before function is: " << Global::myglobalstring << std::endl;
 
     SendStringToSlicer(hostname, port, argDeviceName, argMessage);
-    SendStateToSlicer(hostname, port, argDeviceName,argCode,argSubcode, argErrorName,argStatusStringMessage);
-    SendTransformToSlicer(hostname, port, argDeviceName, inMatrix);
+    
+    //SendStringToSlicer(hostname, port, "Device2", "Saluuut");
+
+   
+
+
+
+    //SendStateToSlicer(hostname, port, argDeviceName,argCode,argSubcode, argErrorName,argStatusStringMessage);
+/*
+    SendTransformToSlicer(hostname, port, argDeviceName, inMatrix);*/
+    //int myglobalint = 44;
+
+   
 
     GetStringFromSlicer(hostname, port);
+  
+   
     //GetStateFromSlicer(hostname, port);
-    GetTransformFromSlicer(hostname, port);
+    //GetTransformFromSlicer(hostname, port);
 
     
 }
@@ -107,6 +123,8 @@ void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* arg
     stringMsg->Pack();
     socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
     std::cout << "Sending STRING: " << argMessage << std::endl;
+
+
 }
 
 void SendStateToSlicer(char *hostname, int port, char *argDeviceName, unsigned short argCode, unsigned long long argSubcode, char *argErrorName, char *argStatusStringMessage)
@@ -246,8 +264,10 @@ void GetStringFromSlicer(const char* hostname, int port)
 
       if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
       {
+
         ReceiveString(socket, headerMsg);
         StringReceived = 1;
+        std::cout << "String received from Slicer : " << Global::myglobalstring << std::endl; 
       }
     }     
  }
@@ -394,6 +414,8 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
     std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
               << "String: " << stringMsg->GetString() << std::endl << std::endl;
     }
+     
+     Global::myglobalstring = stringMsg->GetString();
 
   return 1;
 }
