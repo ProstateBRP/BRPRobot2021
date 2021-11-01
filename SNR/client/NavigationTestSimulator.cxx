@@ -36,101 +36,115 @@ int main(int argc, char* argv[])
   //------------------------------------------------------------
   // Parse Arguments
 
-  if (argc != 4) // check number of arguments
-    {
+  // if (argc != 4) // check number of arguments
+  // {
+  //   // If not correct, print usage
+  //   std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>"    << std::endl;
+  //   std::cerr << "    <hostname> : IP or host name"                    << std::endl;
+  //   std::cerr << "    <port>     : Port # (18944 in Slicer default)"   << std::endl;
+  //   std::cerr << "    <test>     : Test # (1-10)"   << std::endl;
+  //   exit(0);
+  // }
+
+  if (argc != 6) // check number of arguments
+  {
     // If not correct, print usage
     std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>"    << std::endl;
-    std::cerr << "    <hostname> : IP or host name"                    << std::endl;
-    std::cerr << "    <port>     : Port # (18944 in Slicer default)"   << std::endl;
+    std::cerr << "    <wpiHostname> : IP or host name"                    << std::endl;
+    std::cerr << "    <wpiPort>     : Port # (18944 in Slicer default)"   << std::endl;
     std::cerr << "    <test>     : Test # (1-10)"   << std::endl;
+    std::cerr << "    <snrHostname> : IP or host name for Slicer server connection" << std::endl;
+    std::cerr << "    <snrPort>     : Port # for Slicer server connection" << std::endl;
     exit(0);
-    }
+  }
 
-  char*  hostname = argv[1];
-  int    port     = atoi(argv[2]);
+  char*  wpiHostname = argv[1];
+  int    wpiPort     = atoi(argv[2]);
   int    test     = atoi(argv[3]);
+  char*  snrHostname = argv[4];
+  int    snrPort     = atoi(argv[5]);
 
   if (test <= 0 || test > 10)
-    {
+  {
     std::cerr << "Invalid test" << std::endl;
     exit(0);
-    }
+  }
 
   //------------------------------------------------------------
   // Establish Connection
 
   igtl::ClientSocket::Pointer socket;
   socket = igtl::ClientSocket::New();
-  int r = socket->ConnectToServer(hostname, port);
+  int r = socket->ConnectToServer(wpiHostname, wpiPort);
 
   if (r != 0)
-    {
+  {
     std::cerr << "Cannot connect to the server." << std::endl;
     exit(0);
-    }
+  }
 
   //------------------------------------------------------------
   // Call Test
   NavigationTestBase* navTest = NULL;
 
   switch (test)
-    {
+  {
     case 1:
       {
-      navTest = (NavigationNormalOperationTest*) new NavigationNormalOperationTest();
-      break;
+        navTest = (NavigationNormalOperationTest*) new NavigationNormalOperationTest();
+        break;
       }
     case 2:
       {
-      navTest = (NavigationStartUpErrorTest*) new NavigationStartUpErrorTest();
-      break;
+        navTest = (NavigationStartUpErrorTest*) new NavigationStartUpErrorTest();
+        break;
       }
     case 3:
       {
-      navTest = (NavigationCalibrationErrorTest*) new NavigationCalibrationErrorTest();
-      break;
+        navTest = (NavigationCalibrationErrorTest*) new NavigationCalibrationErrorTest();
+        break;
       }
     case 4:
       {
-      navTest = (NavigationTargetingWithoutCalibrationTest*) new NavigationTargetingWithoutCalibrationTest();
-      break;
+        navTest = (NavigationTargetingWithoutCalibrationTest*) new NavigationTargetingWithoutCalibrationTest();
+        break;
       }
     case 5:
       {
-      navTest = (NavigationOutOfRangeTest*) new NavigationOutOfRangeTest();
-      break;
+        navTest = (NavigationOutOfRangeTest*) new NavigationOutOfRangeTest();
+        break;
       }
     case 6:
       {
-      navTest = (NavigationStopDuringOperationTest*) new NavigationStopDuringOperationTest();
-      break;
+        navTest = (NavigationStopDuringOperationTest*) new NavigationStopDuringOperationTest();
+        break;
       }
     case 7:
       {
-      navTest = (NavigationEmergencyStopDuringOperationTest*) new NavigationEmergencyStopDuringOperationTest();
-      break;
+        navTest = (NavigationEmergencyStopDuringOperationTest*) new NavigationEmergencyStopDuringOperationTest();
+        break;
       }
     case 8:
       {
-      navTest = (NavigationMoveToWithoutTargetTest*) new NavigationMoveToWithoutTargetTest();
-      break;
+        navTest = (NavigationMoveToWithoutTargetTest*) new NavigationMoveToWithoutTargetTest();
+        break;
       }
     case 9:
       {
-      navTest = (NavigationAccidentalCommandDuringManualModeTest*) new NavigationAccidentalCommandDuringManualModeTest();
-      break;
+        navTest = (NavigationAccidentalCommandDuringManualModeTest*) new NavigationAccidentalCommandDuringManualModeTest();
+        break;
       }
     case 10:
       {
-      navTest = (NavigationHardwareErrorDuringOperationTest*) new NavigationHardwareErrorDuringOperationTest();
-      break;
+        navTest = (NavigationHardwareErrorDuringOperationTest*) new NavigationHardwareErrorDuringOperationTest();
+        break;
       }
     default:
       break;
-    }
+  }
 
   if (navTest)
-    {
+  {
     // Set timeout values (ms)
     navTest->SetTimeoutShort(1000);
     navTest->SetTimeoutMedium(5000);
@@ -138,7 +152,7 @@ int main(int argc, char* argv[])
 
     navTest->SetSocket(socket);
     navTest->Exec();
-    }
+  }
 
   //------------------------------------------------------------
   // Close connection

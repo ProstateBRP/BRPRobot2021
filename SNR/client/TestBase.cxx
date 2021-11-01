@@ -122,7 +122,7 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
 
         // Call SendStringToSlicer function in Lisa's script
         SendStringToSlicer(slicerHostname, slicerPort, deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-        std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << std::endl;
+        std::cout << "---> Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << ".\n" << std::endl;
       }
       else
       {
@@ -228,7 +228,7 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
       int slicerPort = 18944;
 
       SendStateToSlicer(slicerHostname, slicerPort, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-      std::cout << "Called SendStateToSlicer function in script.cxx." << std::endl;
+      std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
     }
   }
 
@@ -315,7 +315,7 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
 
         // Send the contents of the transformMessage to script.cxx
         SendTransformToSlicer(slicerHostname, slicerPort, deviceName, matrix);
-        std::cout << "Called SendTransformToSlicer function in Lisa's script." << std::endl;
+        std::cout << "---> Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
       }
 
     }
