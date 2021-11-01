@@ -8,5 +8,5 @@ endif(COMMAND cmake_policy)
 find_package(OpenIGTLink REQUIRED)
 
 include(${OpenIGTLink_USE_FILE})
-ADD_SUBDIRECTORY(SNR)
+ADD_SUBDIRECTORY(SNR/client)
 ADD_SUBDIRECTORY(WPI/server)

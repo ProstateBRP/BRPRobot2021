@@ -25,24 +25,5 @@ set(NAVIGATION_SIM_SOURCE
   NavigationHardwareErrorDuringOperationTest.cxx
 )
 
-set(ROBOT_SIM_SOURCE
-  RobotSimulatorPhaseBase.cxx
-  RobotSimulatorUndefinedPhase.cxx
-  RobotSimulatorStartUpPhase.cxx
-  RobotSimulatorPlanningPhase.cxx
-  RobotSimulatorCalibrationPhase.cxx
-  RobotSimulatorTargetingPhase.cxx
-  RobotSimulatorMoveToTargetPhase.cxx
-  RobotSimulatorManualPhase.cxx
-  RobotSimulatorStopPhase.cxx
-  RobotSimulatorEmergencyPhase.cxx
-  RobotTestSimulator.cxx
-  TestBase.cxx
-  RobotStatus.cxx
-)
-
-ADD_EXECUTABLE(RobotTestSimulator  ${ROBOT_SIM_SOURCE})
-TARGET_LINK_LIBRARIES(RobotTestSimulator OpenIGTLink)
-
 ADD_EXECUTABLE(NavigationTestSimulator ${NAVIGATION_SIM_SOURCE})
 TARGET_LINK_LIBRARIES(NavigationTestSimulator OpenIGTLink)
