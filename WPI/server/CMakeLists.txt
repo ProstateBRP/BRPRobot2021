@@ -9,23 +9,8 @@ find_package(OpenIGTLink REQUIRED)
 
 include(${OpenIGTLink_USE_FILE})
 
-set(NAVIGATION_SIM_SOURCE
-  TestBase.cxx
-  NavigationTestBase.cxx
-  NavigationTestSimulator.cxx
-  NavigationNormalOperationTest.cxx
-  NavigationStartUpErrorTest.cxx
-  NavigationCalibrationErrorTest.cxx
-  NavigationTargetingWithoutCalibrationTest.cxx
-  NavigationOutOfRangeTest.cxx
-  NavigationStopDuringOperationTest.cxx
-  NavigationEmergencyStopDuringOperationTest.cxx
-  NavigationMoveToWithoutTargetTest.cxx
-  NavigationAccidentalCommandDuringManualModeTest.cxx
-  NavigationHardwareErrorDuringOperationTest.cxx
-)
-
 set(ROBOT_SIM_SOURCE
+  main.cxx
   RobotSimulatorPhaseBase.cxx
   RobotSimulatorUndefinedPhase.cxx
   RobotSimulatorStartUpPhase.cxx
@@ -36,13 +21,10 @@ set(ROBOT_SIM_SOURCE
   RobotSimulatorManualPhase.cxx
   RobotSimulatorStopPhase.cxx
   RobotSimulatorEmergencyPhase.cxx
-  RobotTestSimulator.cxx
+  # RobotTestSimulator.cxx
   TestBase.cxx
   RobotStatus.cxx
 )
 
 ADD_EXECUTABLE(RobotTestSimulator  ${ROBOT_SIM_SOURCE})
 TARGET_LINK_LIBRARIES(RobotTestSimulator OpenIGTLink)
-
-ADD_EXECUTABLE(NavigationTestSimulator ${NAVIGATION_SIM_SOURCE})
-TARGET_LINK_LIBRARIES(NavigationTestSimulator OpenIGTLink)
