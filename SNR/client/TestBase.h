@@ -22,6 +22,8 @@
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
 
+#include "script.hxx"
+
 class TestBase
 {
 public:

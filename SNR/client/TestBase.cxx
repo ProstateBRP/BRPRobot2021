@@ -26,6 +26,8 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
+#include "script.hxx"
+
 TestBase::TestBase()
 {
 }
@@ -109,6 +111,18 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
           strcmp(stringMsg->GetString(), string) == 0)
       {
         success = 1;
+
+        // Print contents of the message 
+        std::cout << "Received message from WPI: " << stringMsg->GetString() << std::endl;
+
+        char *message = (char *)(stringMsg->GetString());
+        char *deviceName = (char *)("stringMessage");
+        char *slicerHostname = (char *)("localhost");
+        int slicerPort = 18944;
+
+        // Call SendStringToSlicer function in Lisa's script
+        SendStringToSlicer(slicerHostname, slicerPort, deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
+        std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << std::endl;
       }
       else
       {
@@ -197,6 +211,25 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
       std::cerr << "ERROR: Invalid CRC." << std::endl;
       success = 0;
     }
+
+    if (success)
+    {
+      // Send the contents of the statusMessage to script.cxx
+      unsigned short argCode = statusMsg->GetCode();
+      unsigned long long argSubcode = statusMsg->GetSubCode();
+      char *argErrorName = (char *)(statusMsg->GetErrorName());
+      char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
+
+      // Print contents of the message 
+      std::cout << "Received status message from WPI." << std::endl;
+
+      char *deviceName = (char *)("statusMessage");
+      char *slicerHostname = (char *)("localhost");
+      int slicerPort = 18944;
+
+      SendStateToSlicer(slicerHostname, slicerPort, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+      std::cout << "Called SendStateToSlicer function in script.cxx." << std::endl;
+    }
   }
 
   if (!success)
@@ -268,6 +301,23 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
           }
         }
       }
+
+      if (success)
+      {
+        // if CRC check is OK. Read transform data.
+        igtl::Matrix4x4 matrix;
+        transMsg->GetMatrix(matrix);
+        igtl::PrintMatrix(matrix);
+
+        char *deviceName = (char *)("transformMessage");
+        char *slicerHostname = (char *)("localhost");
+        int slicerPort = 18944;
+
+        // Send the contents of the transformMessage to script.cxx
+        SendTransformToSlicer(slicerHostname, slicerPort, deviceName, matrix);
+        std::cout << "Called SendTransformToSlicer function in Lisa's script." << std::endl;
+      }
+
     }
     else
     {

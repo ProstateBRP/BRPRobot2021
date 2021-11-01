@@ -25,5 +25,12 @@ set(NAVIGATION_SIM_SOURCE
   NavigationHardwareErrorDuringOperationTest.cxx
 )
 
-ADD_EXECUTABLE(NavigationTestSimulator ${NAVIGATION_SIM_SOURCE})
-TARGET_LINK_LIBRARIES(NavigationTestSimulator OpenIGTLink)
+OPTION(SCRIPT_AS_MAIN "Compiling script.cxx as main" OFF)
+IF(SCRIPT_AS_MAIN)
+    ADD_DEFINITIONS(-DMAIN)
+    ADD_EXECUTABLE(script ./script.cxx)
+    TARGET_LINK_LIBRARIES(script OpenIGTLink)
+ELSE()
+    ADD_EXECUTABLE(NavigationTestSimulator ${NAVIGATION_SIM_SOURCE} ./script.cxx)
+    TARGET_LINK_LIBRARIES(NavigationTestSimulator OpenIGTLink)
+ENDIF()
