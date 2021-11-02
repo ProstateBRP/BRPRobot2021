@@ -42,10 +42,30 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Layout within the path collapsible button
     serverFormLayout = qt.QFormLayout(serverCollapsibleButton)
 
-    self.serverTextbox = qt.QLineEdit("18944")
-    self.serverTextbox.setReadOnly(False)
-    self.serverTextbox.setFixedWidth(75)
-    serverFormLayout.addRow("Server port:", self.serverTextbox)
+    self.wpiPortTextbox = qt.QLineEdit("18944")
+    self.wpiPortTextbox.setReadOnly(False)
+    self.wpiPortTextbox.setFixedWidth(75)
+    serverFormLayout.addRow("WPI server port:", self.wpiPortTextbox)
+
+    self.wpiHostnameTextbox = qt.QLineEdit("localhost")
+    self.wpiHostnameTextbox.setReadOnly(False)
+    self.wpiHostnameTextbox.setFixedWidth(75)
+    serverFormLayout.addRow("WPI hostname:", self.wpiHostnameTextbox)
+
+    self.snrPortTextbox = qt.QLineEdit("18944")
+    self.snrPortTextbox.setReadOnly(False)
+    self.snrPortTextbox.setFixedWidth(75)
+    serverFormLayout.addRow("SNR server port:", self.snrPortTextbox)
+
+    self.snrHostnameTextbox = qt.QLineEdit("localhost")
+    self.snrHostnameTextbox.setReadOnly(False)
+    self.snrHostnameTextbox.setFixedWidth(75)
+    serverFormLayout.addRow("SNR hostname:", self.snrHostnameTextbox)
+
+    self.testNumberTextbox = qt.QLineEdit("1")
+    self.testNumberTextbox.setReadOnly(False)
+    self.testNumberTextbox.setFixedWidth(75)
+    serverFormLayout.addRow("Test number:", self.testNumberTextbox)
 
     # Connect to client button
     self.connectToClientButton = qt.QPushButton("Connect to client")
@@ -250,13 +270,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(self.textNode)
 
   def onConnectToClientButtonClicked(self):
-    portNumber = self.serverTextbox.text
-    print("portNumber: ", portNumber)
+    snrPort = self.snrPortTextbox.text
+    print("Slicer-side port number: ", snrPort)
 
     # Initialize the IGTLink Slicer-side server component
     self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
     slicer.mrmlScene.AddNode(self.openIGTNode)
-    self.openIGTNode.SetTypeServer(int(portNumber))
+    self.openIGTNode.SetTypeServer(int(snrPort))
     Monserver = self.openIGTNode.GetServerHostname()
     print("Server name is: ", Monserver)
     self.openIGTNode.Start()
@@ -265,6 +285,27 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     #print("Mon text: ", self.IGTActive)
     #if (self.IGTActive.GetAttribute(openIGTNode) == False):
      #   print("Could not make Server port active")
+
+    snrHostname = self.snrHostnameTextbox.text
+    wpiPort = self.wpiPortTextbox.text
+    wpiHostname = self.wpiHostnameTextbox.text
+    testNumber = self.testNumberTextbox.text    
+
+    # Auto-run navigationTestSimulator.cxx:
+    # import inspect, platform, subprocess
+    # plt = platform.system()
+    # moduleDirectory = inspect.getabsfile(inspect.currentframe())
+    # print("Directory of SlicerIGTLink.py: ", moduleDirectory)
+    # moduleDirectory = moduleDirectory.split('SlicerIGTlinkExtension')[0]
+
+    # if plt == 'Windows':
+    #   bat_command = moduleDirectory + 'client/RunNavigationTestSimulator.bat'
+    #   c_command = moduleDirectory + 'client/NavigationTestSimulator.cxx'
+    #   subprocess.Popen([bat_command, wpiPort, wpiHostname, snrPort, snrHostname, c_command], creationflags=subprocess.CREATE_NEW_CONSOLE, env=slicer.util.startupEnvironment())
+    # else: # Linux or Mac
+    #   bat_command = moduleDirectory + 'client/RunNavigationTestSimulator.sh'
+    #   c_command = moduleDirectory + 'client/NavigationTestSimulator.cxx'
+    #   subprocess.Popen(args=['%s %s %s %s %s %s' % (bat_command, wpiPort, wpiHostname, snrPort, snrHostname, c_command)], env=slicer.util.startupEnvironment(), shell=True)
 
   def onDisconnectFromSocketButtonClicked(self):
     self.openIGTNode.Stop()
