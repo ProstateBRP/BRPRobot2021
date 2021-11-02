@@ -6,7 +6,6 @@ import logging
 import numpy as np
 import time
 
-
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
@@ -28,7 +27,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   """Uses ScriptedLoadableModuleWidget base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
-
+  start = 0
   def __init__(self, parent=None):
     ScriptedLoadableModuleWidget.__init__(self, parent)
 
@@ -65,7 +64,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Outbound messages collapsible button
     outboundCollapsibleButton = ctk.ctkCollapsibleButton()
-    outboundCollapsibleButton.text = "Outbound messages (Slicer -> WPI)"
+    outboundCollapsibleButton.text = "Outbound string messages (Slicer -> WPI)"
     self.layout.addWidget(outboundCollapsibleButton)
 
     # Layout within the path collapsible button
@@ -169,8 +168,32 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # seen on the GUI without switching to another module
 
     # Receive message Button to show last message received
-    self.ReceiveButton = qt.QPushButton("Receive")
-    self.ReceiveButton.toolTip = "Print last received message"
+
+    #self.ReceiveStrButton = qt.QPushButton("Receive String")
+    #self.ReceiveStrButton.toolTip = "Print last received message"
+    #self.ReceiveStrButton.enabled = True
+    #self.ReceiveStrButton.setMaximumWidth(150)
+    #inboundFormLayout.addRow(self.ReceiveStrButton)
+    #self.ReceiveStrButton.connect('clicked()', self.onReceiveStrButtonClicked)
+
+    # Receive status Button to show last status received
+    #self.ReceiveStatusButton = qt.QPushButton("Receive Status")
+    #self.ReceiveStatusButton.toolTip = "Print last received message"
+    #self.ReceiveStatusButton.enabled = True
+    #self.ReceiveStatusButton.setMaximumWidth(150)
+    #inboundFormLayout.addRow(self.ReceiveStatusButton)
+    #self.ReceiveStatusButton.connect('clicked()', self.onReceiveStatusButtonClicked)
+
+    # Receive transforn Button to show last transform received
+    #self.ReceiveTransformButton = qt.QPushButton("Receive Transform"
+    #self.ReceiveTransformButton.toolTip = "Print last received transform"
+    #self.ReceiveTransformButton.enabled = True
+    #self.ReceiveTransformButton.setMaximumWidth(150)
+    #inboundFormLayout.addRow(self.ReceiveTransformButton)
+    #self.ReceiveTransformButton.connect('clicked()', self.onReceiveTransformButtonClicked)
+
+    self.ReceiveButton = qt.QPushButton("Receive")   
+    self.ReceiveButton.toolTip = "Print last message received"
     self.ReceiveButton.enabled = True
     self.ReceiveButton.setMaximumWidth(150)
     inboundFormLayout.addRow(self.ReceiveButton)
@@ -181,27 +204,40 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.messageTextbox.setFixedWidth(200)
     inboundFormLayout.addRow("Message received:", self.messageTextbox)
 
+    self.statusTextbox = qt.QLineEdit("No status received")
+    self.statusTextbox.setReadOnly(True)
+    self.statusTextbox.setFixedWidth(200)
+    inboundFormLayout.addRow("Status received (Code:Subcode:Error name:Message):", self.statusTextbox)
+   #self.mamatrix = qt.QMatrix4x4 ()
+
+
+    #self.transformTextbox = qt.QLineEdit("No transform received")
+    #self.transformTextbox.setReadOnly(True)
+    #self.transformTextbox.setFixedWidth(200)
+    #inboundFormLayout.addRow("Transform received:", self.transformTextbox)
+    
+
     #slicer.vtkMRMLTableNode()
 
     # choosing phase collapsible button
-    phaseCollapsibleButton = ctk.ctkCollapsibleButton()
-    phaseCollapsibleButton.text = "Choosing phase to enter"
-    self.layout.addWidget(phaseCollapsibleButton)
+    #phaseCollapsibleButton = ctk.ctkCollapsibleButton()
+    #phaseCollapsibleButton.text = "Choosing phase to enter"
+    #self.layout.addWidget(phaseCollapsibleButton)
 
     # Layout within the path collapsible button
-    outboundFormLayout = qt.QFormLayout(phaseCollapsibleButton)
+    #outboundFormLayout = qt.QFormLayout(phaseCollapsibleButton)
 
     # Allow user to enter different phases of protocol
     #
     # the text selectors
     #
 
-    self.textSelector = slicer.qMRMLNodeComboBox()
-    self.textSelector.nodeTypes = ["vtkMRMLTextNode"]
-    self.textSelector.addEnabled = False
-    self.textSelector.removeEnabled = False
-    self.textSelector.setMRMLScene(slicer.mrmlScene)
-    outboundFormLayout.addRow("Text input: ", self.textSelector)
+    #self.textSelector = slicer.qMRMLNodeComboBox()
+    #self.textSelector.nodeTypes = ["vtkMRMLTextNode"]
+    #self.textSelector.addEnabled = False
+    #self.textSelector.removeEnabled = False
+    #self.textSelector.setMRMLScene(slicer.mrmlScene)
+    #outboundFormLayout.addRow("Text input: ", self.textSelector)
 
   
 
@@ -286,6 +322,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(startupNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(startupNode)
     self.openIGTNode.PushNode(startupNode)
+    global start   
+    start = time.time()
 
   def onStatusButtonClicked(self):
     #Send Status message
@@ -295,6 +333,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(statusNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(statusNode)
     self.openIGTNode.PushNode(statusNode)
+
+  def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+    transformMatrix = vtk.vtkMatrix4x4()
+    #transformNode.GetMatrixTransformToWorld(transformMatrix)
+    print("New transform was received")
+    print("Position: [{0}, {1}, {2}]".format(transformMatrix.GetElement(0,3), transformMatrix.GetElement(1,3), transformMatrix.GetElement(2,3)))
 
   def onTransformButtonClicked(self):
     #Send Transform message
@@ -306,15 +350,82 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(transformNode)
     #self.openIGTNode.RegisterOutgoingMRMLNode(transformNode)
     #self.openIGTNode.PushNode(transformNode)
+  
+  def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
+    print("New string was received")
+    ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
 
- 
+  #def onReceiveStrButtonClicked(self):
+    #ReceivedString = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+    #ReceivedString.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+
+    #self.messageTextbox.setText(ReceivedString.GetText())
+    #end = time.time()
+    #elapsed_time = (end - start)*100
+    #print("Elapsed time is:", elapsed_time)
+    #if (elapsed_time > 10000):
+     #   print("Operation failed: too long before aknowledgement")
+    #else:
+     #   print("Acknowledgment received, wait for statusmsg")
+
+    
+  #def onReceiveStatusButtonClicked(self):
+   # print("Receiving a status from shell")
+    #ReceivedStatus = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+    #self.statusTextbox.setText(ReceivedStatus.GetText())
+
+
+  #def onReceiveTransformButtonClicked(self):
+   # ReceivedTransform = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+    #self.transformTextbox.setText(ReceivedTransform.GetText())
+    #transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") vtkMRMLLinearTransformNode
+    #ReceivedTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+
+
 
   def onReceiveButtonClicked(self):
+    print("Waiting for messages")
+    ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+    #ReceivedMsg = slicer.mrmlScene.GetNodesByClass("vtkMRMLIGTLStatusNode")
+
+    ReceivedClassName = ReceivedMsg.GetClassName()
+    nodetype1 = "vtkMRMLTextNode"
+    nodetype2 = "vtkMRMLIGTLStatusNode"
+    nodetype3 = "vtkMRMLLinearTransformNode"
+    
+    if( ReceivedClassName == nodetype1):
+      print("It is string message")
+      ReceivedMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+      self.messageTextbox.setText(ReceivedMsg.GetText())
+
+    elif(ReceivedClassName == nodetype2):
+      print("It is status message")
+      ReceivedMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onStatusNodeModified)
+      s1 = str(ReceivedMsg.GetCode())
+      sep = ':'
+      s2 = str(ReceivedMsg.GetSubCode())
+      s3 = ReceivedMsg.GetErrorName()
+      s4 = ReceivedMsg.GetStatusString()
+      s = s1 + sep + s2 + sep + s3 + sep + s4
+      self.statusTextbox.setText(s)
+    elif(ReceivedClassName == nodetype3):
+      print("It is transform message")
+      ReceivedTransform = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+      transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") #vtkMRMLLinearTransformNode
+      ReceivedMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+    else:
+      print("Message type sent not supported")
+
+
+
+
+    #Mavaleur = slicer.mrmlScene.GetNodeByID("vtkMRMLTextNode1")
     #self.messageTextbox.text = startupNode.GetText()
     #text = vtkMRMLTextNode2->GetText(); 
     #self.messageTextbox.text = getNode(vtkMRMLTextNode2)
-    print("Wait for message:")
 
+    #Mavaleur = slicer.mrmlScene.GetNodeByID(vtkMRMLTextNode3)
+    #slicer.vtkIGTLToMRMLLinearTransform.CreateNewNode(mrmlScene, MaTransform)
  #def observeIncomingMessages(self):
    # while(1):
     #self.openIGTNode.RegisterIncomingMRMLNode(vtkMRMLNode* node);
@@ -323,4 +434,5 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       # and execute tasks accordingly
        #NodeInfoType* RegisterIncomingMRMLNode(vtkMRMLNode* node);
        # print("i'm waiting for messages")
+
 
