@@ -60,9 +60,9 @@ int main(int argc, char* argv[])
 
   char*  wpiHostname = argv[1];
   int    wpiPort     = atoi(argv[2]);
-  int    test     = atoi(argv[3]);
-  char*  snrHostname = argv[4];
-  int    snrPort     = atoi(argv[5]);
+  char*  snrHostname = argv[3];
+  int    snrPort     = atoi(argv[4]);
+  int    test     = atoi(argv[5]);
 
   if (test <= 0 || test > 10)
   {
