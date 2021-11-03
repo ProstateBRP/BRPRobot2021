@@ -27,6 +27,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   """Uses ScriptedLoadableModuleWidget base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
+  last_string_sent = "nostring"
   start = 0
   def __init__(self, parent=None):
     ScriptedLoadableModuleWidget.__init__(self, parent)
@@ -295,6 +296,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(calibrationNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(calibrationNode)
     self.openIGTNode.PushNode(calibrationNode)
+    last_string_sent = calibrationNode.GetText() 
+
 
   def onPlanningButtonClicked(self):
     # Send stringMessage containing the command "PLANNING" to the script via IGTLink
@@ -304,6 +307,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(planningNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(planningNode)
     self.openIGTNode.PushNode(planningNode)
+    last_string_sent = planningNode.GetText() 
 
   def onLockButtonClicked(self):
     print("Asking to Lock the robot")
@@ -313,6 +317,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(lockNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(lockNode)
     self.openIGTNode.PushNode(lockNode)
+    last_string_sent = lockNode.GetText() 
 
   def onStopButtonClicked(self):
     print("Sending STOP command")
@@ -322,6 +327,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(stopNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(stopNode)
     self.openIGTNode.PushNode(stopNode);
+    last_string_sent = stopNode.GetText() 
 
   def onEmergencyButtonClicked(self):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
@@ -331,6 +337,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(emergencyNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(emergencyNode)
     self.openIGTNode.PushNode(emergencyNode)
+    last_string_sent = emergencyNode.GetText() 
     
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
@@ -342,6 +349,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.PushNode(startupNode)
     global start   
     start = time.time()
+    global last_string_sent
+    last_string_sent = startupNode.GetText() 
 
   def onStatusButtonClicked(self):
     #Send Status message
@@ -373,6 +382,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("New string was received")
     ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
     textNode.messageTextbox.setText(ReceivedMsg.GetText())
+    if(last_string_sent == ReceivedMsg.GetText()):
+      print("Acknowledgment received")
+    else:
+      print("Waiting for aknowledgment")
 
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
@@ -411,8 +424,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     if( ReceivedClassName == nodetype1):
       print("It is string message")
       ReceivedMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-      self.messageTextbox.setText(ReceivedMsg.GetText())
-
+      self.messageTextbox.setText(ReceivedMsg.GetText()) 
     elif(ReceivedClassName == nodetype2):
       print("It is status message")
       ReceivedMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
@@ -423,6 +435,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       s4 = ReceivedMsg.GetStatusString()
       s = s1 + sep + s2 + sep + s3 + sep + s4
       self.statusTextbox.setText(s)
+
     elif(ReceivedClassName == nodetype3):
       print("It is transform message")
       ReceivedTransform = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
