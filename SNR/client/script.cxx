@@ -226,8 +226,7 @@ void SendStringToSlicer(char* argDeviceName, char* argMessage)
     stringMsg->SetString(argMessage);
     stringMsg->Pack();
     socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
-    std::cout << "Sending STRING: " << argMessage << std::endl;
-
+    std::cout << "Sending stringMessage from script.cxx to Slicer: " << argMessage << std::endl;
 
 }
 
@@ -263,7 +262,7 @@ void SendStateToSlicer(char *argDeviceName, unsigned short argCode, unsigned lon
         statusMsg->SetStatusString(argStatusStringMessage);
         statusMsg->Pack();
         socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
-        std::cout << "Sending STATUS: " << statusMsg << std::endl;
+        std::cout << "Sending statusMessage from script.cxx to Slicer:\n" << statusMsg << std::endl;
         i = 1;
     }
 }
@@ -290,7 +289,7 @@ void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix)
     transMsg = igtl::TransformMessage::New();
     transMsg->SetDeviceName(argDeviceName);
 
-    std::cout << "Sending TRANSFORM" << std::endl;
+    std::cout << "Sending transformMessage from script.cxx to Slicer:" << std::endl;
 
     igtl::TimeStamp::Pointer ts;
     ts = igtl::TimeStamp::New();
@@ -339,7 +338,7 @@ void GetStringFromSlicer(const char* hostname, int port)
     //------------------------------------------------------------
     // Wait for String message from Slicer until it sends one string message
 
-    std::cout << "inside GetSTringFromSlicer debut " <<std::endl;
+    std::cout << "inside GettTringFromSlicer debut " <<std::endl;
     bool StringReceived = 0;
     // loop
     while (StringReceived == 0)

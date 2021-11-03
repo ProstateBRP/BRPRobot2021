@@ -120,7 +120,7 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
 
         // Call SendStringToSlicer function in Lisa's script
         SendStringToSlicer(deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-        std::cout << "---> Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << ".\n" << std::endl;
+        std::cout << "\n---> Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << ".\n" << std::endl;
       }
       else
       {
@@ -200,7 +200,7 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
 
             SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
             std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
-      
+
           }
           else
           {
