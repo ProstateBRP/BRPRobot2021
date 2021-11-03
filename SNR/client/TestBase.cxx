@@ -116,12 +116,10 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
         std::cout << "Received message from WPI: " << stringMsg->GetString() << std::endl;
 
         char *message = (char *)(stringMsg->GetString());
-        char *deviceName = (char *)("stringMessage");
-        char *slicerHostname = (char *)("localhost");
-        int slicerPort = 18944;
+        char *deviceName = (char *)("BridgeDevice");
 
         // Call SendStringToSlicer function in Lisa's script
-        SendStringToSlicer(slicerHostname, slicerPort, deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
+        SendStringToSlicer(deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
         std::cout << "---> Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << ".\n" << std::endl;
       }
       else
@@ -223,11 +221,9 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
       // Print contents of the message 
       std::cout << "Received status message from WPI." << std::endl;
 
-      char *deviceName = (char *)("statusMessage");
-      char *slicerHostname = (char *)("localhost");
-      int slicerPort = 18944;
+      char *deviceName = (char *)("BridgeDevice");
 
-      SendStateToSlicer(slicerHostname, slicerPort, deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+      SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
       std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
     }
   }
@@ -309,12 +305,10 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
         transMsg->GetMatrix(matrix);
         igtl::PrintMatrix(matrix);
 
-        char *deviceName = (char *)("transformMessage");
-        char *slicerHostname = (char *)("localhost");
-        int slicerPort = 18944;
+        char *deviceName = (char *)("BridgeDevice");
 
         // Send the contents of the transformMessage to script.cxx
-        SendTransformToSlicer(slicerHostname, slicerPort, deviceName, matrix);
+        SendTransformToSlicer(deviceName, matrix);
         std::cout << "---> Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
       }
 

@@ -43,15 +43,15 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Layout within the path collapsible button
     serverFormLayout = qt.QFormLayout(serverCollapsibleButton)
 
-    self.wpiPortTextbox = qt.QLineEdit("18944")
-    self.wpiPortTextbox.setReadOnly(False)
-    self.wpiPortTextbox.setFixedWidth(75)
-    serverFormLayout.addRow("WPI server port:", self.wpiPortTextbox)
+    # self.wpiPortTextbox = qt.QLineEdit("18944")
+    # self.wpiPortTextbox.setReadOnly(False)
+    # self.wpiPortTextbox.setFixedWidth(75)
+    # serverFormLayout.addRow("WPI server port:", self.wpiPortTextbox)
 
-    self.wpiHostnameTextbox = qt.QLineEdit("localhost")
-    self.wpiHostnameTextbox.setReadOnly(False)
-    self.wpiHostnameTextbox.setFixedWidth(75)
-    serverFormLayout.addRow("WPI hostname:", self.wpiHostnameTextbox)
+    # self.wpiHostnameTextbox = qt.QLineEdit("localhost")
+    # self.wpiHostnameTextbox.setReadOnly(False)
+    # self.wpiHostnameTextbox.setFixedWidth(75)
+    # serverFormLayout.addRow("WPI hostname:", self.wpiHostnameTextbox)
 
     self.snrPortTextbox = qt.QLineEdit("18944")
     self.snrPortTextbox.setReadOnly(False)
@@ -63,10 +63,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.snrHostnameTextbox.setFixedWidth(75)
     serverFormLayout.addRow("SNR hostname:", self.snrHostnameTextbox)
 
-    self.testNumberTextbox = qt.QLineEdit("1")
-    self.testNumberTextbox.setReadOnly(False)
-    self.testNumberTextbox.setFixedWidth(75)
-    serverFormLayout.addRow("Test number:", self.testNumberTextbox)
+    # self.testNumberTextbox = qt.QLineEdit("1")
+    # self.testNumberTextbox.setReadOnly(False)
+    # self.testNumberTextbox.setFixedWidth(75)
+    # serverFormLayout.addRow("Test number:", self.testNumberTextbox)
 
     # Connect to client button
     self.connectToClientButton = qt.QPushButton("Connect to client")
@@ -249,6 +249,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
   def onConnectToClientButtonClicked(self):
     snrPort = self.snrPortTextbox.text
+    snrHostname = self.snrHostnameTextbox.text
     print("Slicer-side port number: ", snrPort)
 
     # Initialize the IGTLink Slicer-side server component
@@ -264,12 +265,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     #if (self.IGTActive.GetAttribute(openIGTNode) == False):
      #   print("Could not make Server port active")
 
-    snrHostname = self.snrHostnameTextbox.text
-    wpiPort = self.wpiPortTextbox.text
-    wpiHostname = self.wpiHostnameTextbox.text
-    testNumber = self.testNumberTextbox.text    
+    # wpiPort = self.wpiPortTextbox.text
+    # wpiHostname = self.wpiHostnameTextbox.text
+    # testNumber = self.testNumberTextbox.text    
 
-    # Auto-run navigationTestSimulator.cxx:
+    # # Auto-run navigationTestSimulator.cxx:
     # import inspect, platform, subprocess
     # plt = platform.system()
     # moduleDirectory = inspect.getabsfile(inspect.currentframe())
@@ -278,12 +278,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # if plt == 'Windows':
     #   bat_command = moduleDirectory + 'client/RunNavigationTestSimulator.bat'
-    #   c_command = moduleDirectory + 'client/NavigationTestSimulator.cxx'
-    #   subprocess.Popen([bat_command, wpiPort, wpiHostname, snrPort, snrHostname, c_command], creationflags=subprocess.CREATE_NEW_CONSOLE, env=slicer.util.startupEnvironment())
+    #   moduleDirectory = moduleDirectory + 'client'
+    #   subprocess.Popen([bat_command, wpiHostname, wpiPort, snrHostname, snrPort, testNumber, moduleDirectory], creationflags=subprocess.CREATE_NEW_CONSOLE, env=slicer.util.startupEnvironment())
     # else: # Linux or Mac
     #   bat_command = moduleDirectory + 'client/RunNavigationTestSimulator.sh'
-    #   c_command = moduleDirectory + 'client/NavigationTestSimulator.cxx'
-    #   subprocess.Popen(args=['%s %s %s %s %s %s' % (bat_command, wpiPort, wpiHostname, snrPort, snrHostname, c_command)], env=slicer.util.startupEnvironment(), shell=True)
+    #   #c_command = moduleDirectory + 'client/NavigationTestSimulator'
+    #   moduleDirectory = moduleDirectory + 'client'
+    #   subprocess.Popen(args=['%s %s %s %s %s %s %s' % (bat_command, wpiHostname, wpiPort, snrHostname, snrPort, testNumber, moduleDirectory)], env=slicer.util.startupEnvironment(), shell=True)
 
   def onDisconnectFromSocketButtonClicked(self):
     self.openIGTNode.Stop()

@@ -4,9 +4,11 @@
 
 // Prototype function declarations
 
-void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* argMessage);
-void SendStateToSlicer(char*  hostname, int port, char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);
-void SendTransformToSlicer(const char* hostname, int port, char* argDeviceName, igtl::Matrix4x4& matrix);
+void setSocketVars(char* hostname, int port);
+
+void SendStringToSlicer(char* argDeviceName,char* argMessage);
+void SendStateToSlicer(char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);
+void SendTransformToSlicer(char* argDeviceName, igtl::Matrix4x4& matrix);
 
 
 int getTransform();
@@ -25,6 +27,8 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 
 
 struct Global{
+   static char * hostname;
+   static int port;
    static std::string myglobalstring;
    static std::string past_globalstring;
 };

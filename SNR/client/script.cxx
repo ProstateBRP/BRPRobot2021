@@ -14,13 +14,13 @@
 #define FPS 200
 #define interval 5
 
+// Set default values for the hostname and port (to be updated by a function call to setSocketVars)
+char * Global::hostname = (char*)"localhost";
+int Global::port = 18944;
+
 std::string Global::past_globalstring = "DefaultPastString";
 std::string Global::myglobalstring = "DefaultGlobalString";
 
-int getStatus()
-{
-    return 1;
-}
 
 #ifdef MAIN
 
@@ -174,40 +174,51 @@ else
     //SendTransformToSlicer(hostname, port, argDeviceName, inMatrix2);
 }
     
-
-   
-
-
-
-
-    
     //int myglobalint = 44;
 
-   
-
     //GetStringFromSlicer(hostname, port);
-  
-   
     //GetStateFromSlicer(hostname, port);
     //GetTransformFromSlicer(hostname, port);
 
-    
 }
-
 
 
 #else
 
 #endif
-void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* argMessage)
+
+void setSocketVars(char* snrHostname, int snrPort)
 {
-    //------------------------------------------------------------
+    std::cout << "hostname: " << snrHostname << std::endl;
+    std::cout << "port: " << snrPort << std::endl;
+
+    Global::hostname = snrHostname;
+    Global::port = snrPort;
+
+//     //------------------------------------------------------------
+//     // Establish Connection
+
+//     igtl::ClientSocket::Pointer socket;
+//     socket = igtl::ClientSocket::New();
+//     int r = socket->ConnectToServer(hostname, port);
+
+//     if (r != 0)
+//     {
+//         std::cerr << "Cannot connect to the server." << std::endl;
+//         exit(0);
+//     }
+}
+
+
+void SendStringToSlicer(char* argDeviceName, char* argMessage)
+{
+    // //------------------------------------------------------------
     // Establish Connection
 
   
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(hostname, port);
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
 
     if (r != 0)
     {
@@ -233,14 +244,14 @@ void SendStringToSlicer(char*  hostname, int port, char* argDeviceName,char* arg
 
 }
 
-void SendStateToSlicer(char *hostname, int port, char *argDeviceName, unsigned short argCode, unsigned long long argSubcode, char *argErrorName, char *argStatusStringMessage)
+void SendStateToSlicer(char *argDeviceName, unsigned short argCode, unsigned long long argSubcode, char *argErrorName, char *argStatusStringMessage)
 {
-    //------------------------------------------------------------
-    // Establish Connection
+    // //------------------------------------------------------------
+    // // Establish Connection
 
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(hostname, port);
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
 
     if (r != 0)
     {
@@ -270,15 +281,14 @@ void SendStateToSlicer(char *hostname, int port, char *argDeviceName, unsigned s
     }
 }
 
-void SendTransformToSlicer(const char *hostname, int port, char *argDeviceName, igtl::Matrix4x4 &matrix)
+void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix)
 {
-
-    //------------------------------------------------------------
-    // Establish Connection
+    // //------------------------------------------------------------
+    // // Establish Connection
 
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(hostname, port);
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
 
     if (r != 0)
     {
@@ -320,13 +330,12 @@ void SendTransformToSlicer(const char *hostname, int port, char *argDeviceName, 
 
 void GetStringFromSlicer(const char* hostname, int port)
 {
-
-    //------------------------------------------------------------
-    // Establish Connection
+    // //------------------------------------------------------------
+    // // Establish Connection
 
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(hostname, port);
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
 
     if (r != 0)
     {
@@ -382,12 +391,12 @@ void GetStringFromSlicer(const char* hostname, int port)
 void GetStateFromSlicer(const char* hostname, int port)
 {
 
-    //------------------------------------------------------------
-    // Establish Connection
+    // //------------------------------------------------------------
+    // // Establish Connection
 
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(hostname, port);
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
 
     if (r != 0)
     {
@@ -441,12 +450,12 @@ void GetStateFromSlicer(const char* hostname, int port)
 void GetTransformFromSlicer(const char* hostname, int port)
 {
 
-    //------------------------------------------------------------
-    // Establish Connection
+    // //------------------------------------------------------------
+    // // Establish Connection
 
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(hostname, port);
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
 
     if (r != 0)
     {

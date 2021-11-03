@@ -31,6 +31,8 @@
 #include "NavigationAccidentalCommandDuringManualModeTest.h"
 #include "NavigationHardwareErrorDuringOperationTest.h"
 
+#include "script.hxx"
+
 int main(int argc, char* argv[])
 {
   //------------------------------------------------------------
@@ -50,11 +52,11 @@ int main(int argc, char* argv[])
   {
     // If not correct, print usage
     std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>"    << std::endl;
-    std::cerr << "    <wpiHostname> : IP or host name"                    << std::endl;
-    std::cerr << "    <wpiPort>     : Port # (18944 in Slicer default)"   << std::endl;
-    std::cerr << "    <test>     : Test # (1-10)"   << std::endl;
-    std::cerr << "    <snrHostname> : IP or host name for Slicer server connection" << std::endl;
+    std::cerr << "    <wpiHostname> : IP or hostname for WPI robot server connection" << std::endl;
+    std::cerr << "    <wpiPort>     : Port # for WPI robot server connection"   << std::endl;
+    std::cerr << "    <snrHostname> : IP or hostname for Slicer server connection" << std::endl;
     std::cerr << "    <snrPort>     : Port # for Slicer server connection" << std::endl;
+    std::cerr << "    <test>     : Test # (1-10)"   << std::endl;
     exit(0);
   }
 
@@ -83,6 +85,9 @@ int main(int argc, char* argv[])
     exit(0);
   }
 
+  // Call function in script.cxx to establish connection
+  setSocketVars(snrHostname, snrPort);
+
   //------------------------------------------------------------
   // Call Test
   NavigationTestBase* navTest = NULL;
@@ -92,55 +97,56 @@ int main(int argc, char* argv[])
     case 1:
       {
         navTest = (NavigationNormalOperationTest*) new NavigationNormalOperationTest();
+        std::cout << "navTest 1" << std::endl;
         break;
       }
-    case 2:
-      {
-        navTest = (NavigationStartUpErrorTest*) new NavigationStartUpErrorTest();
-        break;
-      }
-    case 3:
-      {
-        navTest = (NavigationCalibrationErrorTest*) new NavigationCalibrationErrorTest();
-        break;
-      }
-    case 4:
-      {
-        navTest = (NavigationTargetingWithoutCalibrationTest*) new NavigationTargetingWithoutCalibrationTest();
-        break;
-      }
-    case 5:
-      {
-        navTest = (NavigationOutOfRangeTest*) new NavigationOutOfRangeTest();
-        break;
-      }
-    case 6:
-      {
-        navTest = (NavigationStopDuringOperationTest*) new NavigationStopDuringOperationTest();
-        break;
-      }
-    case 7:
-      {
-        navTest = (NavigationEmergencyStopDuringOperationTest*) new NavigationEmergencyStopDuringOperationTest();
-        break;
-      }
-    case 8:
-      {
-        navTest = (NavigationMoveToWithoutTargetTest*) new NavigationMoveToWithoutTargetTest();
-        break;
-      }
-    case 9:
-      {
-        navTest = (NavigationAccidentalCommandDuringManualModeTest*) new NavigationAccidentalCommandDuringManualModeTest();
-        break;
-      }
-    case 10:
-      {
-        navTest = (NavigationHardwareErrorDuringOperationTest*) new NavigationHardwareErrorDuringOperationTest();
-        break;
-      }
-    default:
-      break;
+    // case 2:
+    //   {
+    //     navTest = (NavigationStartUpErrorTest*) new NavigationStartUpErrorTest();
+    //     break;
+    //   }
+    // case 3:
+    //   {
+    //     navTest = (NavigationCalibrationErrorTest*) new NavigationCalibrationErrorTest();
+    //     break;
+    //   }
+    // case 4:
+    //   {
+    //     navTest = (NavigationTargetingWithoutCalibrationTest*) new NavigationTargetingWithoutCalibrationTest();
+    //     break;
+    //   }
+    // case 5:
+    //   {
+    //     navTest = (NavigationOutOfRangeTest*) new NavigationOutOfRangeTest();
+    //     break;
+    //   }
+    // case 6:
+    //   {
+    //     navTest = (NavigationStopDuringOperationTest*) new NavigationStopDuringOperationTest();
+    //     break;
+    //   }
+    // case 7:
+    //   {
+    //     navTest = (NavigationEmergencyStopDuringOperationTest*) new NavigationEmergencyStopDuringOperationTest();
+    //     break;
+    //   }
+    // case 8:
+    //   {
+    //     navTest = (NavigationMoveToWithoutTargetTest*) new NavigationMoveToWithoutTargetTest();
+    //     break;
+    //   }
+    // case 9:
+    //   {
+    //     navTest = (NavigationAccidentalCommandDuringManualModeTest*) new NavigationAccidentalCommandDuringManualModeTest();
+    //     break;
+    //   }
+    // case 10:
+    //   {
+    //     navTest = (NavigationHardwareErrorDuringOperationTest*) new NavigationHardwareErrorDuringOperationTest();
+    //     break;
+    //   }
+    // default:
+    //   break;
   }
 
   if (navTest)
