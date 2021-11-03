@@ -187,31 +187,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # are received via IGTLink so that the incoming messages can be
     # seen on the GUI without switching to another module
 
-    # Receive message Button to show last message received
-
-    #self.ReceiveStrButton = qt.QPushButton("Receive String")
-    #self.ReceiveStrButton.toolTip = "Print last received message"
-    #self.ReceiveStrButton.enabled = True
-    #self.ReceiveStrButton.setMaximumWidth(150)
-    #inboundFormLayout.addRow(self.ReceiveStrButton)
-    #self.ReceiveStrButton.connect('clicked()', self.onReceiveStrButtonClicked)
-
-    # Receive status Button to show last status received
-    #self.ReceiveStatusButton = qt.QPushButton("Receive Status")
-    #self.ReceiveStatusButton.toolTip = "Print last received message"
-    #self.ReceiveStatusButton.enabled = True
-    #self.ReceiveStatusButton.setMaximumWidth(150)
-    #inboundFormLayout.addRow(self.ReceiveStatusButton)
-    #self.ReceiveStatusButton.connect('clicked()', self.onReceiveStatusButtonClicked)
-
-    # Receive transforn Button to show last transform received
-    #self.ReceiveTransformButton = qt.QPushButton("Receive Transform"
-    #self.ReceiveTransformButton.toolTip = "Print last received transform"
-    #self.ReceiveTransformButton.enabled = True
-    #self.ReceiveTransformButton.setMaximumWidth(150)
-    #inboundFormLayout.addRow(self.ReceiveTransformButton)
-    #self.ReceiveTransformButton.connect('clicked()', self.onReceiveTransformButtonClicked)
-
+    # Receive Button to show last message received
+    
     self.ReceiveButton = qt.QPushButton("Receive")   
     self.ReceiveButton.toolTip = "Print last message received"
     self.ReceiveButton.enabled = True
@@ -395,6 +372,18 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string was received")
     ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+    textNode.messageTextbox.setText(ReceivedMsg.GetText())
+
+  def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
+    print("New Status was received")
+    ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+    s1 = str(ReceivedMsg.GetCode())
+    sep = ':'
+    s2 = str(ReceivedMsg.GetSubCode())
+    s3 = ReceivedMsg.GetErrorName()
+    s4 = ReceivedMsg.GetStatusString()
+    s = s1 + sep + s2 + sep + s3 + sep + s4
+    statusNode.statusTextbox.setText(s)
 
   #def onReceiveStrButtonClicked(self):
     #ReceivedString = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
@@ -408,21 +397,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
      #   print("Operation failed: too long before aknowledgement")
     #else:
      #   print("Acknowledgment received, wait for statusmsg")
-
-    
-  #def onReceiveStatusButtonClicked(self):
-   # print("Receiving a status from shell")
-    #ReceivedStatus = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-    #self.statusTextbox.setText(ReceivedStatus.GetText())
-
-
-  #def onReceiveTransformButtonClicked(self):
-   # ReceivedTransform = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-    #self.transformTextbox.setText(ReceivedTransform.GetText())
-    #transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") vtkMRMLLinearTransformNode
-    #ReceivedTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-
-
 
   def onReceiveButtonClicked(self):
     print("Waiting for messages")
@@ -441,7 +415,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     elif(ReceivedClassName == nodetype2):
       print("It is status message")
-      ReceivedMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onStatusNodeModified)
+      ReceivedMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
       s1 = str(ReceivedMsg.GetCode())
       sep = ':'
       s2 = str(ReceivedMsg.GetSubCode())
