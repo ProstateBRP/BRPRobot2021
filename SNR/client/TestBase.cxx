@@ -116,7 +116,7 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
         std::cout << "Received message from WPI: " << stringMsg->GetString() << std::endl;
 
         char *message = (char *)(stringMsg->GetString());
-        char *deviceName = (char *)("BridgeDevice");
+        char *deviceName = (char *)("StringMessage");
 
         // Call SendStringToSlicer function in Lisa's script
         SendStringToSlicer(deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
@@ -186,6 +186,21 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
           if (strcmp(statusMsg->GetErrorName(), errorName) == 0)
           {
             success = 1;
+
+            // Send the contents of the statusMessage to script.cxx
+            unsigned short argCode = statusMsg->GetCode();
+            unsigned long long argSubcode = statusMsg->GetSubCode();
+            char *argErrorName = (char *)(statusMsg->GetErrorName());
+            char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
+
+            // Print contents of the message 
+            std::cout << "Received status message from WPI." << std::endl;
+
+            char *deviceName = (char *)("StatusMessage");
+
+            SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+            std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
+      
           }
           else
           {
@@ -196,6 +211,21 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
         else
         {
           success = 1;
+
+          // Send the contents of the statusMessage to script.cxx
+          unsigned short argCode = statusMsg->GetCode();
+          unsigned long long argSubcode = statusMsg->GetSubCode();
+          char *argErrorName = (char *)(statusMsg->GetErrorName());
+          char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
+
+          // Print contents of the message 
+          std::cout << "Received status message from WPI." << std::endl;
+
+          char *deviceName = (char *)("StatusMessage");
+
+          SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+          std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
+
         }
       }
       else
@@ -210,22 +240,22 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
       success = 0;
     }
 
-    if (success)
-    {
-      // Send the contents of the statusMessage to script.cxx
-      unsigned short argCode = statusMsg->GetCode();
-      unsigned long long argSubcode = statusMsg->GetSubCode();
-      char *argErrorName = (char *)(statusMsg->GetErrorName());
-      char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
+    // if (success == 0)
+    // {
+    //   // Send the contents of the statusMessage to script.cxx
+    //   unsigned short argCode = statusMsg->GetCode();
+    //   unsigned long long argSubcode = statusMsg->GetSubCode();
+    //   char *argErrorName = (char *)(statusMsg->GetErrorName());
+    //   char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
-      // Print contents of the message 
-      std::cout << "Received status message from WPI." << std::endl;
+    //   // Print contents of the message 
+    //   std::cout << "Received status message from WPI." << std::endl;
 
-      char *deviceName = (char *)("BridgeDevice");
+    //   char *deviceName = (char *)("StatusMessage");
 
-      SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-      std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
-    }
+    //   SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+    //   std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
+    // }
   }
 
   if (!success)
@@ -305,7 +335,7 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
         transMsg->GetMatrix(matrix);
         igtl::PrintMatrix(matrix);
 
-        char *deviceName = (char *)("BridgeDevice");
+        char *deviceName = (char *)("TransformMessage");
 
         // Send the contents of the transformMessage to script.cxx
         SendTransformToSlicer(deviceName, matrix);

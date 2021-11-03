@@ -195,20 +195,7 @@ void setSocketVars(char* snrHostname, int snrPort)
     Global::hostname = snrHostname;
     Global::port = snrPort;
 
-//     //------------------------------------------------------------
-//     // Establish Connection
-
-//     igtl::ClientSocket::Pointer socket;
-//     socket = igtl::ClientSocket::New();
-//     int r = socket->ConnectToServer(hostname, port);
-
-//     if (r != 0)
-//     {
-//         std::cerr << "Cannot connect to the server." << std::endl;
-//         exit(0);
-//     }
 }
-
 
 void SendStringToSlicer(char* argDeviceName, char* argMessage)
 {

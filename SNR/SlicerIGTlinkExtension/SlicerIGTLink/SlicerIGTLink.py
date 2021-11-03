@@ -158,7 +158,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Outbound tranform collapsible button
     outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
-    outboundTransformCollapsibleButton.text = "Outbound transforms (WPI -> Slicer)"
+    outboundTransformCollapsibleButton.text = "Outbound transforms (Slicer -> WPI)"
     self.layout.addWidget(outboundTransformCollapsibleButton)
 
 
@@ -190,12 +190,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Receive Button to show last message received
     
-    self.ReceiveButton = qt.QPushButton("Receive")   
-    self.ReceiveButton.toolTip = "Print last message received"
-    self.ReceiveButton.enabled = True
-    self.ReceiveButton.setMaximumWidth(150)
-    inboundFormLayout.addRow(self.ReceiveButton)
-    self.ReceiveButton.connect('clicked()', self.onReceiveButtonClicked)
+    # self.ReceiveButton = qt.QPushButton("Receive")   
+    # self.ReceiveButton.toolTip = "Print last message received"
+    # self.ReceiveButton.enabled = True
+    # self.ReceiveButton.setMaximumWidth(150)
+    # inboundFormLayout.addRow(self.ReceiveButton)
+    # self.ReceiveButton.connect('clicked()', self.onReceiveButtonClicked)
 
     self.messageTextbox = qt.QLineEdit("No message received")
     self.messageTextbox.setReadOnly(True)
@@ -261,6 +261,26 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.Start()
     print("openIGTNode: ", self.openIGTNode)
     self.IGTActive = True
+
+    # Make a node for each message type
+    ReceivedStringMsg = slicer.vtkMRMLTextNode()
+    ReceivedStringMsg.SetName("StringMessage")
+    slicer.mrmlScene.AddNode(ReceivedStringMsg)
+
+    ReceivedStatusMsg = slicer.vtkMRMLIGTLStatusNode()
+    ReceivedStatusMsg.SetName("StatusMessage")
+    slicer.mrmlScene.AddNode(ReceivedStatusMsg)
+
+    ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
+    ReceivedTransformMsg.SetName("TransformMessage")
+    slicer.mrmlScene.AddNode(ReceivedTransformMsg)
+
+
+    ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+    ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
+    ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+
+
     #print("Mon text: ", self.IGTActive)
     #if (self.IGTActive.GetAttribute(openIGTNode) == False):
      #   print("Could not make Server port active")
@@ -297,7 +317,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(calibrationNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(calibrationNode)
     self.openIGTNode.PushNode(calibrationNode)
-    last_string_sent = calibrationNode.GetText() 
+    #last_string_sent = calibrationNode.GetText() 
 
 
   def onPlanningButtonClicked(self):
@@ -308,7 +328,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(planningNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(planningNode)
     self.openIGTNode.PushNode(planningNode)
-    last_string_sent = planningNode.GetText() 
+    #last_string_sent = planningNode.GetText() 
 
   def onLockButtonClicked(self):
     print("Asking to Lock the robot")
@@ -318,7 +338,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(lockNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(lockNode)
     self.openIGTNode.PushNode(lockNode)
-    last_string_sent = lockNode.GetText() 
+    #last_string_sent = lockNode.GetText() 
 
   def onStopButtonClicked(self):
     print("Sending STOP command")
@@ -328,7 +348,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(stopNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(stopNode)
     self.openIGTNode.PushNode(stopNode);
-    last_string_sent = stopNode.GetText() 
+    #last_string_sent = stopNode.GetText() 
 
   def onEmergencyButtonClicked(self):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
@@ -338,7 +358,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(emergencyNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(emergencyNode)
     self.openIGTNode.PushNode(emergencyNode)
-    last_string_sent = emergencyNode.GetText() 
+    #last_string_sent = emergencyNode.GetText() 
     
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
@@ -351,7 +371,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global start   
     start = time.time()
     global last_string_sent
-    last_string_sent = startupNode.GetText() 
+    #last_string_sent = startupNode.GetText() 
 
   def onStatusButtonClicked(self):
     #Send Status message
@@ -381,21 +401,21 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string was received")
-    ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-    textNode.messageTextbox.setText(ReceivedMsg.GetText())
-    if(last_string_sent == ReceivedMsg.GetText()):
-      print("Acknowledgment received")
-    else:
-      print("Waiting for aknowledgment")
+    ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
+    textNode.messageTextbox.setText(ReceivedStringMsg.GetText())
+    #if(last_string_sent == ReceivedStringMsg.GetText()):
+    #  print("Acknowledgment received")
+    #else:
+    #  print("Waiting for aknowledgment")
 
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
-    ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-    s1 = str(ReceivedMsg.GetCode())
+    ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
+    s1 = str(ReceivedStatusMsg.GetCode())
     sep = ':'
-    s2 = str(ReceivedMsg.GetSubCode())
-    s3 = ReceivedMsg.GetErrorName()
-    s4 = ReceivedMsg.GetStatusString()
+    s2 = str(ReceivedStatusMsg.GetSubCode())
+    s3 = ReceivedStatusMsg.GetErrorName()
+    s4 = ReceivedStatusMsg.GetStatusString()
     s = s1 + sep + s2 + sep + s3 + sep + s4
     statusNode.statusTextbox.setText(s)
 
@@ -412,38 +432,60 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     #else:
      #   print("Acknowledgment received, wait for statusmsg")
 
-  def onReceiveButtonClicked(self):
-    print("Waiting for messages")
-    ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-    #ReceivedMsg = slicer.mrmlScene.GetNodesByClass("vtkMRMLIGTLStatusNode")
+  # def onReceiveButtonClicked(self):
+  #   print("Waiting for messages")
+  #   #ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
+  #   ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
+  #   ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
+  #   ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+  #   #ReceivedMsg = slicer.mrmlScene.GetNodesByClass("vtkMRMLIGTLStatusNode")
 
-    ReceivedClassName = ReceivedMsg.GetClassName()
-    nodetype1 = "vtkMRMLTextNode"
-    nodetype2 = "vtkMRMLIGTLStatusNode"
-    nodetype3 = "vtkMRMLLinearTransformNode"
+  #   # if statement -- if none of the receivedMsgs are None, then do....
+  #   if not (ReceivedStringMsg == None) and not (ReceivedStatusMsg == None) and not (ReceivedTransformMsg == None):
+
+  #     ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+  #     #self.messageTextbox.setText(ReceivedStringMsg.GetText()) 
+      
+  #     ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
+  #     # s1 = str(ReceivedStatusMsg.GetCode())
+  #     # sep = ':'
+  #     # s2 = str(ReceivedStatusMsg.GetSubCode())
+  #     # s3 = ReceivedStatusMsg.GetErrorName()
+  #     # s4 = ReceivedStatusMsg.GetStatusString()
+  #     # s = s1 + sep + s2 + sep + s3 + sep + s4
+  #     # self.statusTextbox.setText(s)
+
+  #     # transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") #vtkMRMLLinearTransformNode
+  #     ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+
+
+    # ReceivedClassName = ReceivedMsg.GetClassName()
+    # nodetype1 = "vtkMRMLTextNode"
+    # nodetype2 = "vtkMRMLIGTLStatusNode"
+    # nodetype3 = "vtkMRMLLinearTransformNode"
     
-    if( ReceivedClassName == nodetype1):
-      print("It is string message")
-      ReceivedMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-      self.messageTextbox.setText(ReceivedMsg.GetText()) 
-    elif(ReceivedClassName == nodetype2):
-      print("It is status message")
-      ReceivedMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
-      s1 = str(ReceivedMsg.GetCode())
-      sep = ':'
-      s2 = str(ReceivedMsg.GetSubCode())
-      s3 = ReceivedMsg.GetErrorName()
-      s4 = ReceivedMsg.GetStatusString()
-      s = s1 + sep + s2 + sep + s3 + sep + s4
-      self.statusTextbox.setText(s)
+    # if( ReceivedClassName == nodetype1):
+    #   print("It is string message")
+    #   ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+    #   self.messageTextbox.setText(ReceivedMsg.GetText()) 
+    # elif(ReceivedClassName == nodetype2):
+    #   print("It is status message")
+    #   ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
+    #   s1 = str(ReceivedStatusMsg.GetCode())
+    #   sep = ':'
+    #   s2 = str(ReceivedStatusMsg.GetSubCode())
+    #   s3 = ReceivedStatusMsg.GetErrorName()
+    #   s4 = ReceivedStatusMsg.GetStatusString()
+    #   s = s1 + sep + s2 + sep + s3 + sep + s4
+    #   self.statusTextbox.setText(s)
 
-    elif(ReceivedClassName == nodetype3):
-      print("It is transform message")
-      ReceivedTransform = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-      transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") #vtkMRMLLinearTransformNode
-      ReceivedMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-    else:
-      print("Message type sent not supported")
+    # elif(ReceivedClassName == nodetype3):
+    #   print("It is transform message")
+    #   ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+    #   transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") #vtkMRMLLinearTransformNode
+    #   ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+    # else:
+    #   print("Message type sent not supported")
 
 
 

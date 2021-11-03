@@ -43,12 +43,14 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
 
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
+
   ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
   if (!CheckAndReceiveStringMessage(headerMsg, "ACK_0001", "START_UP")) return Error(1,1);
   ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
   if (!CheckAndReceiveStatusMessage(headerMsg, "CURRENT_STATUS", 1, 0, "START_UP")) return Error(1,2);
   ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
   if (!CheckAndReceiveStatusMessage(headerMsg, "START_UP", 1)) return Error(1,3);
+
 
   std::cerr << "MESSAGE: ===== Step 2: PLANNING =====" << std::endl;
   SendStringMessage("CMD_0002", "PLANNING");
