@@ -29,6 +29,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   """
   last_string_sent = "nostring"
   start = 0
+  # Status codes -- see igtl_status.h
+  #status_codes = {'STATUS_INVALID': 0, 'STATUS_OK':1, 'STATUS_UNKNOWN_ERROR': 2, 'STATUS_PANICK_MODE': 3, 'STATUS_NOT_FOUND': 4, 'STATUS_ACCESS_DENIED': 5, 'STATUS_BUSY':6, 'STATUS_TIME_OUT':7, 'STATUS_OVERFLOW':8,'STATUS_CHECKSUM_ERROR':9,'STATUS_CONFIG_ERROR':10,'STATUS_RESOURCE_ERROR':11,'STATUS_UNKNOWN_INSTRUCTION':12,'STATUS_NOT_READY':13,'STATUS_MANUAL_MODE':14,'STATUS_DISABLED':15,'STATUS_NOT_PRESENT':16,'STATUS_UNKNOWN_VERSION':17,'STATUS_HARDWARE_FAILURE':18,'STATUS_SHUT_DOWN':19,'STATUS_NUM_TYPES':20}
+  status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
+ 
   def __init__(self, parent=None):
     ScriptedLoadableModuleWidget.__init__(self, parent)
 
@@ -206,6 +210,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.statusTextbox.setReadOnly(True)
     self.statusTextbox.setFixedWidth(200)
     inboundFormLayout.addRow("Status received (Code:Subcode:Error name:Message):", self.statusTextbox)
+
+    self.statusCodeTextbox = qt.QLineEdit("No status Code received")
+    self.statusCodeTextbox.setReadOnly(True)
+    self.statusCodeTextbox.setFixedWidth(200)
+    inboundFormLayout.addRow("Status Code meaning: ", self.statusCodeTextbox)
    #self.mamatrix = qt.QMatrix4x4 ()
 
 
@@ -418,6 +427,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     s4 = ReceivedStatusMsg.GetStatusString()
     s = s1 + sep + s2 + sep + s3 + sep + s4
     statusNode.statusTextbox.setText(s)
+    global status_codes
+    status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
+    statusNode.statusCodeTextbox.setText(status_codes[ReceivedStatusMsg.GetCode()])
 
   #def onReceiveStrButtonClicked(self):
     #ReceivedString = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")

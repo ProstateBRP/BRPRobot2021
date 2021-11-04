@@ -27,15 +27,12 @@ std::string Global::myglobalstring = "DefaultGlobalString";
 int main(int argc, char* argv[])
 {
 
-    if (argc != 10) // check number of arguments
+    if (argc != 7) // check number of arguments
     {
         // If not correct, print usage
-        std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>"    << std::endl;
-        std::cerr << "    <hostname>    : IP or host name"                    << std::endl;
-        std::cerr << "    <port>        : Port # (18944 in Slicer default)"   << std::endl;
-        std::cerr << "    <devicename>  : Name of the device " << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <message> <argCode> <argSubcode> <argErrorName><argStatusStringMessage> <boolSending> "    << std::endl;
         std::cerr << "    <message>     : string message to be sent to slicer, write anything is no message has to be sent" << std::endl;
-        std::cerr << "    <argCode>     : STATUS_OK" << std::endl;
+        std::cerr << "    <argCode>     : 1" << std::endl;
         std::cerr << "    <argSubcode>     : 128" << std::endl;
         std::cerr << "    <argErrorName>     : OK!" << std::endl;
         std::cerr << "    <argStatusStringMessage>     : This is a test to send status message." << std::endl;
@@ -43,15 +40,15 @@ int main(int argc, char* argv[])
         exit(0);
     }
 
-    char* hostname = argv[1];
-    int port = atoi(argv[2]);
-    char* argDeviceName = argv[3];
-    char*  argMessage = argv[4]; 
-    unsigned short argCode = atoi(argv[5]);
-    unsigned  long  long argSubcode = atoi(argv[6]);
-    char* argErrorName = argv[7];
-    char* argStatusStringMessage = argv[8];
-    bool boolSending = atoi(argv[9]);
+    char*  argMessage = argv[1]; 
+    unsigned short argCode = atoi(argv[2]);
+    unsigned  long  long argSubcode = atoi(argv[3]);
+    char* argErrorName = argv[4];
+    char* argStatusStringMessage = argv[5];
+    bool boolSending = atoi(argv[6]);
+    char *deviceName1 = (char *)("StringMessage");
+    char *deviceName2 = (char *)("StatusMessage");
+    char *deviceName3 = (char *)("TransformMessage");
 
     // Matrix defined for testing transform exchange
     float inT[4] = {-0.954892f, 0.196632f, -0.222525f, 0.0};
@@ -73,24 +70,6 @@ int main(int argc, char* argv[])
                             {inT2[2],inS2[2],inN2[2],inOrigin2[2]},
                             {inT2[3],inS2[3],inN2[3],inOrigin2[3]}};
 
-    //std::cout << "Global value before function is : " << myglobalint << std::endl;
-    
-    //std::cout << "Global string before function is: " << Global::myglobalstring << std::endl;
-    /*while (1)
-    {
-        SendStringToSlicer(hostname, port, argDeviceName, argMessage);
-        igtl::Sleep(interval); // wait
-    }*/
-
-
-
-    /*while(1)
-    {
-        //GetStringFromSlicer(hostname, port);
-        //GetStateFromSlicer(hostname, port);
-        GetTransformFromSlicer(hostname, port);
-
-    }   */
 
 
 if(boolSending == 0)
@@ -102,7 +81,7 @@ if(boolSending == 0)
 
     igtl::ClientSocket::Pointer socket;
     socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(hostname, port);
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
 
     if (r != 0)
     {
@@ -166,12 +145,12 @@ if(boolSending == 0)
 }
 else
 {
-
-    SendStringToSlicer(hostname, port, argDeviceName, argMessage);
-    //SendStringToSlicer(hostname, port, argDeviceName, "Lemessagedeux");
-    //SendStateToSlicer(hostname, port, argDeviceName,argCode,argSubcode, argErrorName,argStatusStringMessage);
-    //SendTransformToSlicer(hostname, port, argDeviceName, inMatrix);
-    //SendTransformToSlicer(hostname, port, argDeviceName, inMatrix2);
+    
+    //SendStringToSlicer(deviceName1, argMessage);
+    //SendStringToSlicer(deviceName1, "Lemessagedeux");
+    SendStateToSlicer(deviceName2,argCode,argSubcode, argErrorName,argStatusStringMessage);
+    //SendTransformToSlicer(deviceName3, inMatrix);
+    //SendTransformToSlicer(deviceName3, inMatrix2);
 }
     
     //int myglobalint = 44;
