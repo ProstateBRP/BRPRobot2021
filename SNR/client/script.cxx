@@ -146,19 +146,13 @@ if(boolSending == 0)
 else
 {
     
-    //SendStringToSlicer(deviceName1, argMessage);
+    SendStringToSlicer(deviceName1, argMessage);
     //SendStringToSlicer(deviceName1, "Lemessagedeux");
-    SendStateToSlicer(deviceName2,argCode,argSubcode, argErrorName,argStatusStringMessage);
+    //SendStateToSlicer(deviceName2,argCode,argSubcode, argErrorName,argStatusStringMessage);
     //SendTransformToSlicer(deviceName3, inMatrix);
     //SendTransformToSlicer(deviceName3, inMatrix2);
 }
     
-    //int myglobalint = 44;
-
-    //GetStringFromSlicer(hostname, port);
-    //GetStateFromSlicer(hostname, port);
-    //GetTransformFromSlicer(hostname, port);
-
 }
 
 
