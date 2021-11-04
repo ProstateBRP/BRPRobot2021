@@ -20,6 +20,7 @@
 
 #include "igtlSocket.h"
 #include "NavigationTestBase.h"
+#include "script.hxx"
 
 class NavigationNormalOperationTest : public NavigationTestBase
 {

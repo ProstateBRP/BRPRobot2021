@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     wlist.push_back(new RobotSimulatorUndefinedPhase);
     wlist.push_back(new RobotSimulatorStartUpPhase);
     wlist.push_back(new RobotSimulatorPlanningPhase);
-    // wlist.push_back(new RobotSimulatorCalibrationPhase);
+    wlist.push_back(new RobotSimulatorCalibrationPhase);
     // wlist.push_back(new RobotSimulatorTargetingPhase);
     // wlist.push_back(new RobotSimulatorMoveToTargetPhase);
     // wlist.push_back(new RobotSimulatorManualPhase);

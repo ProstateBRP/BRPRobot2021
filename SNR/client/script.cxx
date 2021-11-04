@@ -18,8 +18,9 @@
 char * Global::hostname = (char*)"localhost";
 int Global::port = 18944;
 
-std::string Global::past_globalstring = "DefaultPastString";
-std::string Global::myglobalstring = "DefaultGlobalString";
+//std::string Global::past_globalString = "DefaultPastString";
+std::string Global::globalString = "DefaultGlobalString";
+std::string Global::globalEncoding = "DefaultGlobalEncoding";
 
 
 #ifdef MAIN
@@ -72,86 +73,85 @@ int main(int argc, char* argv[])
 
 
 
-if(boolSending == 0)
-{
-    // Other implementation
-
-    //------------------------------------------------------------
-    // Establish Connection
-
-    igtl::ClientSocket::Pointer socket;
-    socket = igtl::ClientSocket::New();
-    int r = socket->ConnectToServer(Global::hostname, Global::port);
-
-    if (r != 0)
+    if(boolSending == 0)
     {
-        std::cerr << "Cannot connect to the server." << std::endl;
-        exit(0);
+        // Other implementation
+
+        //------------------------------------------------------------
+        // Establish Connection
+
+        igtl::ClientSocket::Pointer socket;
+        socket = igtl::ClientSocket::New();
+        int r = socket->ConnectToServer(Global::hostname, Global::port);
+
+        if (r != 0)
+        {
+            std::cerr << "Cannot connect to the server." << std::endl;
+            exit(0);
+        }
+
+        //------------------------------------------------------------
+        // Create a message buffer to receive header
+
+        igtl::MessageHeader::Pointer headerMsg;
+        headerMsg = igtl::MessageHeader::New();
+
+        //------------------------------------------------------------
+        // Wait for Slicer to send something
+
+        bool Received = 0;
+        // loop
+        while (1)
+        { 
+            // Initialize receive buffer
+            headerMsg->InitPack();
+
+            // Receive generic header from the socket
+
+            bool timeout(false);
+            igtlUint64 r = socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), timeout);
+            if (r == 0)
+            {
+            socket->CloseSocket();
+            exit(0);
+            }
+            if (r != headerMsg->GetPackSize())
+            {
+            continue;
+            }
+
+            // Deserialize the header
+            headerMsg->Unpack();
+
+            if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
+            {
+
+            ReceiveString(socket, headerMsg);
+            Received = 1;
+            std::cout << "String received from Slicer : " << Global::globalString << std::endl; 
+            std::cout << "String encoding received from Slicer : " << Global::globalEncoding << std::endl; 
+            }
+            else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
+            {
+            ReceiveStatus(socket, headerMsg);
+            std::cout << "Receiving status from Slicer " << headerMsg <<std::endl;
+            Received = 1;
+            }
+            else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
+            {
+            ReceiveTransform(socket, headerMsg);
+            Received = 1;
+            }
+        }     
     }
-
-    //------------------------------------------------------------
-    // Create a message buffer to receive header
-
-    igtl::MessageHeader::Pointer headerMsg;
-    headerMsg = igtl::MessageHeader::New();
-
-    //------------------------------------------------------------
-    // Wait for Slicer to send something
-
-    bool Received = 0;
-    // loop
-    while (1)
-    { 
-      // Initialize receive buffer
-      headerMsg->InitPack();
-
-      // Receive generic header from the socket
-
-      bool timeout(false);
-      igtlUint64 r = socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), timeout);
-      if (r == 0)
-      {
-        socket->CloseSocket();
-        exit(0);
-      }
-      if (r != headerMsg->GetPackSize())
-      {
-        continue;
-      }
-
-      // Deserialize the header
-      headerMsg->Unpack();
-
-      if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
-      {
-
-        ReceiveString(socket, headerMsg);
-        Received = 1;
-        std::cout << "String received from Slicer : " << Global::myglobalstring << std::endl; 
-      }
-      else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
-      {
-        ReceiveStatus(socket, headerMsg);
-        std::cout << "Receiving status from Slicer " << headerMsg <<std::endl;
-        Received = 1;
-      }
-        else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
-      {
-        ReceiveTransform(socket, headerMsg);
-        Received = 1;
-      }
-    }     
-
-}
-else
-{
-    
-    SendStringToSlicer(deviceName1, argMessage);
-    //SendStringToSlicer(deviceName1, "Lemessagedeux");
-    //SendStateToSlicer(deviceName2,argCode,argSubcode, argErrorName,argStatusStringMessage);
-    //SendTransformToSlicer(deviceName3, inMatrix);
-    //SendTransformToSlicer(deviceName3, inMatrix2);
-}
+    else
+    {
+        SendStringToSlicer(deviceName1, argMessage);
+        //SendStringToSlicer(deviceName1, "Lemessagedeux");
+        //SendStateToSlicer(deviceName2,argCode,argSubcode, argErrorName,argStatusStringMessage);
+        //SendTransformToSlicer(deviceName3, inMatrix);
+        //SendTransformToSlicer(deviceName3, inMatrix2);
+    }
     
 }
 
@@ -311,7 +311,7 @@ void GetStringFromSlicer(const char* hostname, int port)
     //------------------------------------------------------------
     // Wait for String message from Slicer until it sends one string message
 
-    std::cout << "inside GettTringFromSlicer debut " <<std::endl;
+    std::cout << "inside GetStringFromSlicer debut " <<std::endl;
     bool StringReceived = 0;
     // loop
     while (StringReceived == 0)
@@ -342,8 +342,10 @@ void GetStringFromSlicer(const char* hostname, int port)
 
         ReceiveString(socket, headerMsg);
         StringReceived = 1;
-        std::cout << "String received from Slicer : " << Global::myglobalstring << std::endl; 
+        std::cout << "String received from Slicer : " << Global::globalString << std::endl; 
+        std::cout << "String encoding received from Slicer : " << Global::globalEncoding << std::endl; 
       //}
+
     }     
  }
 
@@ -489,9 +491,10 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
     std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
               << "String: " << stringMsg->GetString() << std::endl << std::endl;
     }
-     std::cout << "inside ReceiveString " <<std::endl;
-     Global::myglobalstring = stringMsg->GetString();
-     std::cout << "myglobalstring is " << Global::myglobalstring << std::endl;
+     Global::globalString = stringMsg->GetString();
+     std::cout << "globalString is " << Global::globalString << std::endl;
+     Global::globalEncoding = stringMsg->GetEncoding();
+     std::cout << "globalEncoding is " << Global::globalEncoding << std::endl;
 
   return 1;
 }

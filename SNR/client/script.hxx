@@ -29,8 +29,8 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 struct Global{
    static char * hostname;
    static int port;
-   static std::string myglobalstring;
-   static std::string past_globalstring;
+   static std::string globalString;
+   static std::string globalEncoding;
 };
 
 #endif
