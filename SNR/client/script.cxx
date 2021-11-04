@@ -20,7 +20,7 @@ int Global::port = 18944;
 
 //std::string Global::past_globalString = "DefaultPastString";
 std::string Global::globalString = "DefaultGlobalString";
-std::string Global::globalEncoding = "DefaultGlobalEncoding";
+int Global::globalEncoding = 0;
 
 
 #ifdef MAIN
@@ -128,13 +128,13 @@ int main(int argc, char* argv[])
 
             ReceiveString(socket, headerMsg);
             Received = 1;
-            std::cout << "String received from Slicer : " << Global::globalString << std::endl; 
-            std::cout << "String encoding received from Slicer : " << Global::globalEncoding << std::endl; 
+            // std::cout << "String received from Slicer : " << Global::globalString << std::endl; 
+            // std::cout << "String encoding received from Slicer : " << Global::globalEncoding << std::endl; 
             }
             else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
             {
             ReceiveStatus(socket, headerMsg);
-            std::cout << "Receiving status from Slicer " << headerMsg <<std::endl;
+            //std::cout << "Receiving status from Slicer " << headerMsg <<std::endl;
             Received = 1;
             }
             else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
@@ -160,15 +160,94 @@ int main(int argc, char* argv[])
 
 #endif
 
+
+
+
 void setSocketVars(char* snrHostname, int snrPort)
 {
-    std::cout << "hostname: " << snrHostname << std::endl;
-    std::cout << "port: " << snrPort << std::endl;
-
     Global::hostname = snrHostname;
     Global::port = snrPort;
-
 }
+
+void *startThread(void *ptr)
+{
+    std::cout << "\n---> Starting thread in script.cxx to receive messages from Slicer \n" << std::endl;
+    // Create thread for the receiving function
+    pthread_t thread;
+    pthread_create(&thread, NULL, receivingFunction, NULL);
+
+    //pthread_exit(NULL);
+    return NULL;
+}
+
+// another function here that is continuously run by the thread
+void *receivingFunction(void *ptr)
+{
+    //------------------------------------------------------------
+    // Establish Connection
+
+    igtl::ClientSocket::Pointer socket;
+    socket = igtl::ClientSocket::New();
+    int r = socket->ConnectToServer(Global::hostname, Global::port);
+
+    if (r != 0)
+    {
+        std::cerr << "Cannot connect to the server." << std::endl;
+        exit(0);
+    }
+
+    //------------------------------------------------------------
+    // Create a message buffer to receive header
+
+    igtl::MessageHeader::Pointer headerMsg;
+    headerMsg = igtl::MessageHeader::New();
+
+    // Continuously running while loop to listen for messages from Slicer
+    while (1)
+    {
+        // Initialize receive buffer
+        headerMsg->InitPack();
+
+        // Receive generic header from the socket
+
+        bool timeout(false);
+        igtlUint64 r = socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), timeout);
+        if (r == 0)
+        {
+        socket->CloseSocket();
+        exit(0);
+        }
+        if (r != headerMsg->GetPackSize())
+        {
+        continue;
+        }
+
+        // Deserialize the header
+        headerMsg->Unpack();
+
+        if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
+        {
+
+        ReceiveString(socket, headerMsg);
+        // Received = 1;
+        // std::cout << "String received from Slicer : " << Global::globalString << std::endl; 
+        // std::cout << "String encoding received from Slicer : " << std::to_string(Global::globalEncoding) << std::endl; 
+        }
+        else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
+        {
+        ReceiveStatus(socket, headerMsg);
+        std::cout << "Receiving status from Slicer " << headerMsg <<std::endl;
+        // Received = 1;
+        }
+        else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
+        {
+        ReceiveTransform(socket, headerMsg);
+        // Received = 1;
+        }
+    } 
+    return NULL;
+}
+
 
 void SendStringToSlicer(char* argDeviceName, char* argMessage)
 {
@@ -342,8 +421,8 @@ void GetStringFromSlicer(const char* hostname, int port)
 
         ReceiveString(socket, headerMsg);
         StringReceived = 1;
-        std::cout << "String received from Slicer : " << Global::globalString << std::endl; 
-        std::cout << "String encoding received from Slicer : " << Global::globalEncoding << std::endl; 
+        std::cout << "StringMessage received in script.cxx from Slicer : " << Global::globalString << std::endl; 
+        std::cout << "StringEncoding received in script.cxx from Slicer : " << std::to_string(Global::globalEncoding) << std::endl; 
       //}
 
     }     
@@ -469,7 +548,7 @@ void GetTransformFromSlicer(const char* hostname, int port)
 int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
 
-  std::cerr << "Receiving STRING data type." << std::endl;
+  std::cerr << "\n---> Receiving StringMessage in script.cxx from Slicer." << std::endl;
 
   // Create a message buffer to receive transform data
   igtl::StringMessage::Pointer stringMsg;
@@ -489,12 +568,10 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
   if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
     {
     std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
-              << "String: " << stringMsg->GetString() << std::endl << std::endl;
+              << "String: " << stringMsg->GetString() << std::endl;
     }
      Global::globalString = stringMsg->GetString();
-     std::cout << "globalString is " << Global::globalString << std::endl;
      Global::globalEncoding = stringMsg->GetEncoding();
-     std::cout << "globalEncoding is " << Global::globalEncoding << std::endl;
 
   return 1;
 }

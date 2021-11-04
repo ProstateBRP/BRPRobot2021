@@ -26,7 +26,7 @@
 
 #include "NavigationNormalOperationTest.h"
 #include "script.hxx"
-
+#include "pthread.h"
 
 NavigationNormalOperationTest::NavigationNormalOperationTest()
 {
@@ -42,29 +42,12 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   igtl::MessageHeader::Pointer headerMsg;
   headerMsg = igtl::MessageHeader::New();
 
-  std::cerr << "MESSAGE: ===== Threading Test =====" << std::endl;
-  // create a thread here to continuously check whether Global::myglobalstring == saved blank string message
-  // if not, then call TestBase::SendStringMessage(const char *name, const char *string)
-  std::string currentStringMessage = Global::globalString;
-  std::string currentStringEncoding = Global::globalEncoding;
-  std::cerr << "Global string: " << Global::globalString << std::endl;
-  std::cerr << "Global encoding: " << Global::globalEncoding << std::endl;
- 
-  // TODO: implement threading here s.t. NavigationNormalOperationTest.cxx is constantly checking for updates
-  // to the string message global variables
+  // Create a thread to continuously check whether Global::myglobalstring == saved blank string message.
+  // (if not, then call TestBase::SendStringMessage(const char *name, const char *string) to send updated
+  // stringMessage to WPI Robot)
+  // pthread_t thread;
+  // pthread_create(&thread, NULL, ReceiveStringFromScript, NULL);
 
-  // while(1)
-  // {
-  //   std::cout << "OUTSIDE IF: Global::globalString: " << Global::globalString << std::endl;
-  //   if (currentStringMessage.compare(Global::globalString) != 0)
-  //   {
-  //     std::cout << "INSIDE IF: Global::globalString: " << Global::globalString << std::endl;
-  //     std::cout << "hi: " << currentStringMessage << std::endl;
-  //     currentStringMessage = Global::globalString;
-  //     currentStringEncoding = Global::globalEncoding;
-  //     SendStringMessage(currentStringEncoding.c_str(), currentStringMessage.c_str());
-  //   }
-  // }
 
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
@@ -198,3 +181,26 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   
   return SUCCESS;
 }
+
+// // threading function
+// void *ReceiveStringFromSlicer(void *ptr)
+// {
+//   std::cerr << "MESSAGE: ===== Threading Test =====" << std::endl;
+//   std::string currentStringMessage = Global::globalString;
+//   int currentStringEncoding = Global::globalEncoding;
+//   std::cerr << "Global string: " << Global::globalString << std::endl;
+//   std::cerr << "Global encoding: " << std::to_string(Global::globalEncoding) << std::endl;
+
+//    while(1)
+//   {
+//     std::cout << "OUTSIDE IF: Global::globalString: " << Global::globalString << std::endl;
+//     if (currentStringMessage.compare(Global::globalString) != 0)
+//     {
+//       std::cout << "INSIDE IF: Global::globalString: " << Global::globalString << std::endl;
+//       currentStringMessage = Global::globalString;
+//       currentStringEncoding = Global::globalEncoding;
+//       TestBase::SendStringMessage(std::to_string(currentStringEncoding).c_str(), currentStringMessage.c_str());
+//     }
+//   }
+// }
+

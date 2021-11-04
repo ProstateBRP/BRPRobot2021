@@ -405,10 +405,16 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.PushNode(statusNode)
 
   def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+    ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
     transformMatrix = vtk.vtkMatrix4x4()
-    #transformNode.GetMatrixTransformToWorld(transformMatrix)
-    print("New transform was received")
-    print("Position: [{0}, {1}, {2}]".format(transformMatrix.GetElement(0,3), transformMatrix.GetElement(1,3), transformMatrix.GetElement(2,3)))
+    ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
+    print(transformMatrix)
+    nbRows = transformNode.tableWidget.rowCount
+    nbColumns = transformNode.tableWidget.columnCount
+    for i in range(nbRows):
+      for j in range(nbColumns):
+        val = transformMatrix.GetElement(i,j)
+        transformNode.tableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
 
   def onTransformButtonClicked(self):
     #Send Transform message

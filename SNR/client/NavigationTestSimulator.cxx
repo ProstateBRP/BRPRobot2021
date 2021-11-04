@@ -32,21 +32,14 @@
 #include "NavigationHardwareErrorDuringOperationTest.h"
 
 #include "script.hxx"
+#include "pthread.h"
+
+void *startTests(void *socketPtr);
 
 int main(int argc, char* argv[])
 {
   //------------------------------------------------------------
   // Parse Arguments
-
-  // if (argc != 4) // check number of arguments
-  // {
-  //   // If not correct, print usage
-  //   std::cerr << "Usage: " << argv[0] << " <hostname> <port> <string>"    << std::endl;
-  //   std::cerr << "    <hostname> : IP or host name"                    << std::endl;
-  //   std::cerr << "    <port>     : Port # (18944 in Slicer default)"   << std::endl;
-  //   std::cerr << "    <test>     : Test # (1-10)"   << std::endl;
-  //   exit(0);
-  // }
 
   if (argc != 6) // check number of arguments
   {
@@ -85,8 +78,14 @@ int main(int argc, char* argv[])
     exit(0);
   }
 
-  // Call function in script.cxx to establish connection
+  // Call function in script.cxx to establish connection and start the thread that receives messages from Slicer
   setSocketVars(snrHostname, snrPort);
+
+  // Call startThread function in script.cxx in a thread s.t. the rest of main() continues to run simultaneously
+  pthread_t thread;
+  pthread_create(&thread, NULL, startThread, NULL);
+  //pthread_exit(NULL);
+
 
   //------------------------------------------------------------
   // Call Test
@@ -96,8 +95,8 @@ int main(int argc, char* argv[])
   {
     case 1:
       {
+        std::cout << "------------------- Starting NavTest 1 -------------------" << std::endl;
         navTest = (NavigationNormalOperationTest*) new NavigationNormalOperationTest();
-        std::cout << "navTest 1" << std::endl;
         break;
       }
     // case 2:

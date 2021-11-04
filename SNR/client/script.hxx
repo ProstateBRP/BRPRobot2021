@@ -5,6 +5,8 @@
 // Prototype function declarations
 
 void setSocketVars(char* hostname, int port);
+void *startThread(void *ptr);
+void *receivingFunction(void *);
 
 void SendStringToSlicer(char* argDeviceName,char* argMessage);
 void SendStateToSlicer(char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);
@@ -30,7 +32,7 @@ struct Global{
    static char * hostname;
    static int port;
    static std::string globalString;
-   static std::string globalEncoding;
+   static int globalEncoding;
 };
 
 #endif

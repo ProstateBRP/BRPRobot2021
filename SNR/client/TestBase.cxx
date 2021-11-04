@@ -41,6 +41,29 @@ void TestBase::SetSocket(igtl::Socket *socket)
   this->Socket = socket;
 }
 
+// // threading function
+// void* TestBase::ReceiveStringFromScript(void *ptr)
+// {
+//   std::cerr << "MESSAGE: ===== Threading Test =====" << std::endl;
+//   std::string currentStringMessage = Global::globalString;
+//   std::string currentStringEncoding = Global::globalEncoding;
+//   std::cerr << "Global string: " << Global::globalString << std::endl;
+//   std::cerr << "Global encoding: " << Global::globalEncoding << std::endl;
+
+//    while(1)
+//   {
+//     std::cout << "OUTSIDE IF: Global::globalString: " << Global::globalString << std::endl;
+//     if (currentStringMessage.compare(Global::globalString) != 0)
+//     {
+//       std::cout << "INSIDE IF: Global::globalString: " << Global::globalString << std::endl;
+//       std::cout << "hi: " << currentStringMessage << std::endl;
+//       currentStringMessage = Global::globalString;
+//       currentStringEncoding = Global::globalEncoding;
+//       SendStringMessage(currentStringEncoding.c_str(), currentStringMessage.c_str());
+//     }
+//   }
+// }
+
 int TestBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
 {
 
@@ -113,14 +136,14 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
         success = 1;
 
         // Print contents of the message 
-        std::cout << "Received message from WPI: " << stringMsg->GetString() << std::endl;
+        std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
 
         char *message = (char *)(stringMsg->GetString());
         char *deviceName = (char *)("StringMessage");
 
         // Call SendStringToSlicer function in Lisa's script
         SendStringToSlicer(deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-        std::cout << "\n---> Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << ".\n" << std::endl;
+        std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
       }
       else
       {
@@ -194,12 +217,12 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
             char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
             // Print contents of the message 
-            std::cout << "Received status message from WPI." << std::endl;
+            std::cout << "\n---> Received statusMessage from WPI." << std::endl;
 
             char *deviceName = (char *)("StatusMessage");
 
             SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-            std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
+            std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
 
           }
           else
@@ -219,12 +242,12 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
           char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
           // Print contents of the message 
-          std::cout << "Received status message from WPI." << std::endl;
+          std::cout << "\n---> Received statusMessage from WPI." << std::endl;
 
           char *deviceName = (char *)("StatusMessage");
 
           SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-          std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
+          std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
 
         }
       }
@@ -330,6 +353,8 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
 
       if (success)
       {
+        std::cout << "\n---> Received transformMessage from WPI." << std::endl;
+
         // if CRC check is OK. Read transform data.
         igtl::Matrix4x4 matrix;
         transMsg->GetMatrix(matrix);
@@ -339,7 +364,7 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
 
         // Send the contents of the transformMessage to script.cxx
         SendTransformToSlicer(deviceName, matrix);
-        std::cout << "---> Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
+        std::cout << "Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
       }
 
     }
