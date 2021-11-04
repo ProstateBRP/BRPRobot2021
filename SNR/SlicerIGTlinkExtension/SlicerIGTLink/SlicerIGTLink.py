@@ -200,15 +200,38 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.statusTextbox = qt.QLineEdit("No status received")
     self.statusTextbox.setReadOnly(True)
     self.statusTextbox.setFixedWidth(200)
-    inboundFormLayout.addRow("Status received (Code:Subcode:Error name:Message):", self.statusTextbox)
+    inboundFormLayout.addRow("Status received\n(Code:Subcode:ErrorName:Message):", self.statusTextbox)
 
     self.statusCodeTextbox = qt.QLineEdit("No status Code received")
     self.statusCodeTextbox.setReadOnly(True)
     self.statusCodeTextbox.setFixedWidth(200)
     inboundFormLayout.addRow("Status Code meaning: ", self.statusCodeTextbox)
+
+    #self.newItem = qt.QTableWidgetItem()
+    row = 4
+    column = 4
+    self.tableWidget = qt.QTableWidget(row, column)
+    self.tableWidget.verticalHeader().hide() # Remove line numbers
+    self.tableWidget.horizontalHeader().hide() # Remove column numbers
+    self.tableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.tableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+
+    verticalheader = self.tableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    inboundFormLayout.addRow("Transform received: ", self.tableWidget)
+
+
+    #self.MonWidget = qt.QTableWidget.setItem(row, column, self.newItem);
+    #QTableWidgetItem *newItem = new QTableWidgetItem(tr("%1").arg(pow(row, column+1)));
+    #tableWidget->setItem(row, column, newItem);
     #self.mamatrix = qt.QMatrix4x4 ()
-
-
     #self.transformTextbox = qt.QLineEdit("No transform received")
     #self.transformTextbox.setReadOnly(True)
     #self.transformTextbox.setFixedWidth(200)
