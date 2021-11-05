@@ -96,6 +96,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout = qt.QFormLayout(outboundCollapsibleButton)
 
     # TODO -- send messages
+    self.phaseTextbox = qt.QLineEdit("")
+    self.phaseTextbox.setReadOnly(True)
+    self.phaseTextbox.setFixedWidth(150)
+    outboundFormLayout.addRow("Current phase:", self.phaseTextbox)
+
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
     self.startupButton.toolTip = "Send the startup command to the WPI robot."
@@ -567,13 +572,14 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global loading_phase
     print(ack)
     if((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack == 1)): #and (elapsed_time *100< 100)
-      print("Robot is transitioning to phase: ", s3, "after", elapsed_time*100, "ms")
+      print("Robot is in phase: ", s3, "after", elapsed_time*100, "ms")
+      statusNode.phaseTextbox.setText(s3)
       if(s3 == "PLANNING"):
         ack = 0
       else:
         ack = 2
         loading_phase = s3
     elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==2)): #and (elapsed_time<= 10)
-      print("Robot is sucessfully in phase: ", loading_phase, "after", elapsed_time, "s") 
+      print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s") 
       ack = 0
     
