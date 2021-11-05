@@ -344,6 +344,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
     ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
 
+    # Create a node for sending transforms
+    SendTransformNode = slicer.vtkMRMLLinearTransformNode()
+    SendTransformNode.SetName("SendTransform")
+    slicer.mrmlScene.AddNode(SendTransformNode)
+
     # Initialize las_string_sent 
     global last_string_sent 
     last_string_sent = "nostring"
@@ -557,13 +562,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onTransformButtonClicked(self):
     #Send Transform message
     print("Sending Transform")
-    obj = vtk.vtkMatrix4x4()
-    print(obj)
-    transformNode = slicer.vtkMRMLLinearTransformNode()
-    transformNode.SetMatrixTransformToParent(obj);
-    slicer.mrmlScene.AddNode(transformNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(transformNode)
-    self.openIGTNode.PushNode(transformNode)
+    transformMatrix = vtk.vtkMatrix4x4()
+    SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
+    SendTransformNode.GetMatrixTransformToParent(transformMatrix)
+    print(transformMatrix)
+    self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNode)
+    self.openIGTNode.PushNode(SendTransformNode)
   
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string was received")
