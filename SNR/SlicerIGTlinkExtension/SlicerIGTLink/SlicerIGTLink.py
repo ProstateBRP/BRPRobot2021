@@ -133,6 +133,14 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout.addRow(self.targetingButton)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
 
+    # moveButton Button
+    self.moveButton = qt.QPushButton("MOVE")
+    self.moveButton.toolTip = "Send the move to target command to the WPI robot."
+    self.moveButton.enabled = True
+    self.moveButton.setMaximumWidth(150)
+    outboundFormLayout.addRow(self.moveButton)
+    self.moveButton.connect('clicked()', self.onMoveButtonClicked)
+
     # Lock Button to ask WPI to lock robot
     self.LockButton = qt.QPushButton("LOCK")
     self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
@@ -372,7 +380,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
     print("Send command to get current status of the robot")
     getstatusNode = slicer.vtkMRMLTextNode()
-    getstatusNode.SetText("GET STATUS")
+    getstatusNode.SetText("GET_STATUS")
     slicer.mrmlScene.AddNode(getstatusNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(getstatusNode)
     self.openIGTNode.PushNode(getstatusNode)
@@ -381,7 +389,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
     print("Send command to get current position of the robot")
     getposeNode = slicer.vtkMRMLTextNode()
-    getposeNode.SetText("GET POSE")
+    getposeNode.SetText("GET_POSE")
     slicer.mrmlScene.AddNode(getposeNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
     self.openIGTNode.PushNode(getposeNode)
@@ -395,6 +403,21 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(targetingNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(targetingNode)
     self.openIGTNode.PushNode(targetingNode)
+    global start   
+    start = time.time()
+    global last_string_sent
+    last_string_sent = targetingNode.GetText()
+    global ack
+    ack = 0
+
+  def onMoveButtonClicked(self):
+    # Send stringMessage containing the command "MOVE" to the script via IGTLink
+    print("Send command to ask robot to move to target")
+    moveNode = slicer.vtkMRMLTextNode()
+    moveNode.SetText("MOVE_TO_TARGET")
+    slicer.mrmlScene.AddNode(moveNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(moveNode)
+    self.openIGTNode.PushNode(moveNode)
     global start   
     start = time.time()
     global last_string_sent
