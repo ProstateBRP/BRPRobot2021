@@ -99,6 +99,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.phaseTextbox = qt.QLineEdit("")
     self.phaseTextbox.setReadOnly(True)
     self.phaseTextbox.setFixedWidth(150)
+    self.phaseTextbox.toolTip = "Blue if in the phase, green if phase successfully achieved"
     outboundFormLayout.addRow("Current phase:", self.phaseTextbox)
 
     # startupButton Button
@@ -548,11 +549,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       print("Acknowledgment received for command:", last_string_sent, "after", elapsed_time, "ms")
       global ack
       ack = 1
-      #textNode.messageTextbox.setStyleSheet("color: rgb(o, 255, 0);")
     else: # if(elapsed_time > 100) print("Received knowledgment too late, after", elapsed_time, "ms")
       print("Received something different than aknowledgment, received: ", ReceivedStringMsg.GetText())
-      #textNode.messageTextbox.setStyleSheet("color: rgb(255, 0, 0);")
-
+      
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
     ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
@@ -574,12 +573,14 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     if((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack == 1)): #and (elapsed_time *100< 100)
       print("Robot is in phase: ", s3, "after", elapsed_time*100, "ms")
       statusNode.phaseTextbox.setText(s3)
+      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 0, 255);")
       if(s3 == "PLANNING"):
         ack = 0
       else:
         ack = 2
         loading_phase = s3
     elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==2)): #and (elapsed_time<= 10)
-      print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s") 
+      print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s")
+      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);")
       ack = 0
     
