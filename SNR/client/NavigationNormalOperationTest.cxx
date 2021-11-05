@@ -48,11 +48,22 @@ void *NavigationNormalOperationTest::ReceiveFromSlicer(void *ptr)
   {
     if (currentStringMessage.compare(Global::globalString) != 0)
     {
-      std::cout << "INSIDE IF: Global::globalString: " << Global::globalString << std::endl;
+      std::cout << "New stringMessage received from Slicer: Global::globalString: " << Global::globalString << std::endl;
       currentStringMessage = Global::globalString;
       currentStringEncoding = Global::globalEncoding;
-      SendStringMessage(std::to_string(currentStringEncoding).c_str(), currentStringMessage.c_str());
+      SendStringMessage((char*)"CMD_0001", (char*)"START_UP");
+      //SendStringMessage(std::to_string(currentStringEncoding).c_str(), currentStringMessage.c_str());
     }
+
+    // if (currentStatusMessage.compare(Global::globalStatus) != 0)
+    // {
+    //   //todo
+    // }
+
+    // if (currentTransformMessage.compare(Global::globalTransform) != 0)
+    // {
+    //   //todo
+    // }
   }
   return NULL;
 }
@@ -71,7 +82,7 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   typedef void *(*THREADFUNCPTR)(void *);
   pthread_t thread;
   pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, navTestPtr);
-  
+
 
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
