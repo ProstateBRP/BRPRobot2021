@@ -28,6 +28,7 @@
 #include "script.hxx"
 #include "pthread.h"
 
+
 NavigationNormalOperationTest::NavigationNormalOperationTest()
 {
 }
@@ -35,6 +36,27 @@ NavigationNormalOperationTest::NavigationNormalOperationTest()
 NavigationNormalOperationTest::~NavigationNormalOperationTest()
 {
 }
+
+// NEW??
+void *NavigationNormalOperationTest::ReceiveFromSlicer(void *ptr)
+{
+  std::cerr << "---> Starting thread to receive messages from Slicer and send to WPI." << std::endl;
+  std::string currentStringMessage = Global::globalString;
+  int currentStringEncoding = Global::globalEncoding;
+
+  while(1)
+  {
+    if (currentStringMessage.compare(Global::globalString) != 0)
+    {
+      std::cout << "INSIDE IF: Global::globalString: " << Global::globalString << std::endl;
+      currentStringMessage = Global::globalString;
+      currentStringEncoding = Global::globalEncoding;
+      SendStringMessage(std::to_string(currentStringEncoding).c_str(), currentStringMessage.c_str());
+    }
+  }
+  return NULL;
+}
+
 
 NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Test()
 {
@@ -45,9 +67,11 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   // Create a thread to continuously check whether Global::myglobalstring == saved blank string message.
   // (if not, then call TestBase::SendStringMessage(const char *name, const char *string) to send updated
   // stringMessage to WPI Robot)
-  // pthread_t thread;
-  // pthread_create(&thread, NULL, ReceiveStringFromScript, NULL);
-
+  NavigationNormalOperationTest * navTestPtr = new NavigationNormalOperationTest();
+  typedef void *(*THREADFUNCPTR)(void *);
+  pthread_t thread;
+  pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, navTestPtr);
+  
 
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
@@ -57,7 +81,6 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   if (!CheckAndReceiveStatusMessage(headerMsg, "CURRENT_STATUS", 1, 0, "START_UP")) return Error(1,2);
   ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
   if (!CheckAndReceiveStatusMessage(headerMsg, "START_UP", 1)) return Error(1,3);
-
 
   std::cerr << "MESSAGE: ===== Step 2: PLANNING =====" << std::endl;
   SendStringMessage("CMD_0002", "PLANNING");

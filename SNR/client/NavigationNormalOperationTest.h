@@ -30,8 +30,9 @@ public:
 
   virtual const char* Name() { return "Normal Operation Test"; };
 
-  virtual ErrorPointType Test();
+  void* ReceiveFromSlicer(void *ptr);
 
+  virtual ErrorPointType Test();
 };
 
 #endif //__NavigationNormalOperationTest_h

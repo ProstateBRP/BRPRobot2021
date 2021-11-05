@@ -24,6 +24,8 @@
 
 #include "script.hxx"
 
+//void* ReceiveFromSlicer(void *ptr);
+
 class TestBase
 {
 public:
@@ -40,6 +42,8 @@ public:
   virtual const char *Name() = 0;
 
   void SetSocket(igtl::Socket *socket);
+  //void CreateThreadToReceiveFromSlicer();
+  //void* ReceiveFromSlicer(void *ptr);
   int ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout);
   int SkipMesage(igtl::MessageHeader *headerMsg);
   void GetRandomTestMatrix(igtl::Matrix4x4 &matrix);
