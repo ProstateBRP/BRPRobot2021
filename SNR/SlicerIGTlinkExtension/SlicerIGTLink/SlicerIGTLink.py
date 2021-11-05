@@ -421,7 +421,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global start   
     start = time.time()
     global last_string_sent
-    last_string_sent = targetingNode.GetText()
+    last_string_sent = moveNode.GetText()
     global ack
     ack = 0
   
