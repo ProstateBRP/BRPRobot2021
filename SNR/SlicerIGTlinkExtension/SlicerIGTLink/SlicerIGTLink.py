@@ -8,7 +8,7 @@ import time
 
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
-  https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
+  https://github.com/Slicer/Slicer/blob/master/Bakse/Python/slicer/ScriptedLoadableModule.py
   """
 
   def __init__(self, parent):
@@ -104,15 +104,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout.addRow(self.startupButton)
     self.startupButton.connect('clicked()', self.onStartupButtonClicked)
 
-    # STOP Button 
-    self.StopButton = qt.QPushButton("STOP")
-    self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
-    self.StopButton.enabled = True
-    self.StopButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.StopButton)
-    self.StopButton.connect('clicked()', self.onStopButtonClicked)
-
-    # planningButton Button
+    # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
     self.planningButton = qt.QPushButton("PLANNING")
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
     self.planningButton.enabled = True
@@ -128,13 +120,53 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout.addRow(self.calibrationButton)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
 
+    # targetingButton Button
+    self.targetingButton = qt.QPushButton("TARGETING")
+    self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
+    self.targetingButton.enabled = True
+    self.targetingButton.setMaximumWidth(150)
+    outboundFormLayout.addRow(self.targetingButton)
+    self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
+
     # Lock Button to ask WPI to lock robot
-    self.askLockButton = qt.QPushButton("LOCK")
-    self.askLockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
-    self.askLockButton.enabled = True
-    self.askLockButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.askLockButton)
-    self.askLockButton.connect('clicked()', self.onLockButtonClicked)
+    self.LockButton = qt.QPushButton("LOCK")
+    self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
+    self.LockButton.enabled = True
+    self.LockButton.setMaximumWidth(150)
+    outboundFormLayout.addRow(self.LockButton)
+    self.LockButton.connect('clicked()', self.onLockButtonClicked)
+
+    # Unlock Button to ask WPI to unlock robot
+    self.UnlockButton = qt.QPushButton("UNLOCK")
+    self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
+    self.UnlockButton.enabled = True
+    self.UnlockButton.setMaximumWidth(150)
+    outboundFormLayout.addRow(self.UnlockButton)
+    self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
+
+    # Get robot pose Button to ask WPI to send the current robot position
+    self.GetPoseButton = qt.QPushButton("GET POSE")
+    self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
+    self.GetPoseButton.enabled = True
+    self.GetPoseButton.setMaximumWidth(150)
+    outboundFormLayout.addRow(self.GetPoseButton)
+    self.GetPoseButton.connect('clicked()', self.onGetPoseButtonClicked)
+
+    # Get robot status Button to ask WPI to send the current status position
+    self.GetStatusButton = qt.QPushButton("GET STATUS")
+    self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
+    self.GetStatusButton.enabled = True
+    self.GetStatusButton.setMaximumWidth(150)
+    outboundFormLayout.addRow(self.GetStatusButton)
+    self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
+
+    # STOP Button 
+    self.StopButton = qt.QPushButton("STOP")
+    self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
+    self.StopButton.enabled = True
+    self.StopButton.setMaximumWidth(150)
+    outboundFormLayout.addRow(self.StopButton)
+    self.StopButton.connect('clicked()', self.onStopButtonClicked)
 
     # EMERGENCY Button 
     self.EmergencyButton = qt.QPushButton("EMERGENCY")
@@ -326,6 +358,41 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onDisconnectFromSocketButtonClicked(self):
     self.openIGTNode.Stop()
 
+   
+  def onGetStatusButtonClicked(self):
+    # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
+    print("Send command to get current status of the robot")
+    getstatusNode = slicer.vtkMRMLTextNode()
+    getstatusNode.SetText("GET STATUS")
+    slicer.mrmlScene.AddNode(getstatusNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(getstatusNode)
+    self.openIGTNode.PushNode(getstatusNode)
+
+  def onGetPoseButtonClicked(self):
+    # Send stringMessage containing the command "GET POSE" to the script via IGTLink
+    print("Send command to get current position of the robot")
+    getposeNode = slicer.vtkMRMLTextNode()
+    getposeNode.SetText("GET POSE")
+    slicer.mrmlScene.AddNode(getposeNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
+    self.openIGTNode.PushNode(getposeNode)
+
+
+  def onTargetingButtonClicked(self):
+    # Send stringMessage containing the command "TARGETING" to the script via IGTLink
+    print("Send command to enter targeting mode")
+    targetingNode = slicer.vtkMRMLTextNode()
+    targetingNode.SetText("TARGETING")
+    slicer.mrmlScene.AddNode(targetingNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(targetingNode)
+    self.openIGTNode.PushNode(targetingNode)
+    global start   
+    start = time.time()
+    global last_string_sent
+    last_string_sent = targetingNode.GetText()
+    global ack
+    ack = 0
+  
   def onCalibrationButtonClicked(self):
     # Send stringMessage containing the command "CALIBRATION" to the script via IGTLink
     print("Sending calibration command to WPI robot")
@@ -334,8 +401,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(calibrationNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(calibrationNode)
     self.openIGTNode.PushNode(calibrationNode)
+    global start   
+    start = time.time()
     global last_string_sent
-    last_string_sent = calibrationNode.GetText() 
+    last_string_sent = calibrationNode.GetText()
+    global ack
+    ack = 0
 
 
   def onPlanningButtonClicked(self):
@@ -346,8 +417,28 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(planningNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(planningNode)
     self.openIGTNode.PushNode(planningNode)
+    global start   
+    start = time.time()
     global last_string_sent
     last_string_sent = planningNode.GetText()
+    global ack
+    ack = 0
+    
+
+  def onUnlockButtonClicked(self):
+    print("Asking to Unlock the robot")
+    # Send stringMessage containing the command "UNLOCK" to the script via IGTLink
+    unlockNode = slicer.vtkMRMLTextNode()
+    unlockNode.SetText("UNLOCK")
+    slicer.mrmlScene.AddNode(unlockNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(unlockNode)
+    self.openIGTNode.PushNode(unlockNode)
+    global start   
+    start = time.time()
+    global last_string_sent
+    last_string_sent = unlockNode.GetText()
+    global ack
+    ack = 0
 
   def onLockButtonClicked(self):
     print("Asking to Lock the robot")
@@ -357,8 +448,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(lockNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(lockNode)
     self.openIGTNode.PushNode(lockNode)
+    global start   
+    start = time.time()
     global last_string_sent
-    last_string_sent = lockNode.GetText() 
+    last_string_sent = lockNode.GetText()
+    global ack
+    ack = 0
 
   def onStopButtonClicked(self):
     print("Sending STOP command")
@@ -368,8 +463,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(stopNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(stopNode)
     self.openIGTNode.PushNode(stopNode);
+    global start   
+    start = time.time()
     global last_string_sent
-    last_string_sent = stopNode.GetText() 
+    last_string_sent = stopNode.GetText()
+    global ack
+    ack = 0
 
   def onEmergencyButtonClicked(self):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
@@ -379,8 +478,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(emergencyNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(emergencyNode)
     self.openIGTNode.PushNode(emergencyNode)
+    global start   
+    start = time.time()
     global last_string_sent
-    last_string_sent = emergencyNode.GetText() 
+    last_string_sent = emergencyNode.GetText()
+    global ack
+    ack = 0
     
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
@@ -393,7 +496,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global start   
     start = time.time()
     global last_string_sent
-    last_string_sent = startupNode.GetText() 
+    last_string_sent = startupNode.GetText()
+    global ack
+    ack = 0
+
 
   def onStatusButtonClicked(self):
     #Send Status message
@@ -431,10 +537,16 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("New string was received")
     ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
     textNode.messageTextbox.setText(ReceivedStringMsg.GetText())
-    if(last_string_sent == ReceivedStringMsg.GetText()):
-      print("Acknowledgment received")
-    else:
-      print("Received something different than aknowledgment")
+    end = time.time()
+    elapsed_time = (end - start)*100
+    if(last_string_sent == ReceivedStringMsg.GetText()): #and (elapsed_time<= 100)
+      print("Acknowledgment received for command:", last_string_sent, "after", elapsed_time, "ms")
+      global ack
+      ack = 1
+      #textNode.messageTextbox.setStyleSheet("color: rgb(o, 255, 0);")
+    else: # if(elapsed_time > 100) print("Received knowledgment too late, after", elapsed_time, "ms")
+      print("Received something different than aknowledgment, received: ", ReceivedStringMsg.GetText())
+      #textNode.messageTextbox.setStyleSheet("color: rgb(255, 0, 0);")
 
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
@@ -449,92 +561,19 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global status_codes
     status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
     statusNode.statusCodeTextbox.setText(status_codes[ReceivedStatusMsg.GetCode()])
-
-  #def onReceiveStrButtonClicked(self):
-    #ReceivedString = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-    #ReceivedString.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-
-    #self.messageTextbox.setText(ReceivedString.GetText())
-    #end = time.time()
-    #elapsed_time = (end - start)*100
-    #print("Elapsed time is:", elapsed_time)
-    #if (elapsed_time > 10000):
-     #   print("Operation failed: too long before aknowledgement")
-    #else:
-     #   print("Acknowledgment received, wait for statusmsg")
-
-  # def onReceiveButtonClicked(self):
-  #   print("Waiting for messages")
-  #   #ReceivedMsg = slicer.mrmlScene.GetFirstNodeByName("BridgeDevice")
-  #   ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
-  #   ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
-  #   ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-  #   #ReceivedMsg = slicer.mrmlScene.GetNodesByClass("vtkMRMLIGTLStatusNode")
-
-  #   # if statement -- if none of the receivedMsgs are None, then do....
-  #   if not (ReceivedStringMsg == None) and not (ReceivedStatusMsg == None) and not (ReceivedTransformMsg == None):
-
-  #     ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-  #     #self.messageTextbox.setText(ReceivedStringMsg.GetText()) 
-      
-  #     ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
-  #     # s1 = str(ReceivedStatusMsg.GetCode())
-  #     # sep = ':'
-  #     # s2 = str(ReceivedStatusMsg.GetSubCode())
-  #     # s3 = ReceivedStatusMsg.GetErrorName()
-  #     # s4 = ReceivedStatusMsg.GetStatusString()
-  #     # s = s1 + sep + s2 + sep + s3 + sep + s4
-  #     # self.statusTextbox.setText(s)
-
-  #     # transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") #vtkMRMLLinearTransformNode
-  #     ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-
-
-    # ReceivedClassName = ReceivedMsg.GetClassName()
-    # nodetype1 = "vtkMRMLTextNode"
-    # nodetype2 = "vtkMRMLIGTLStatusNode"
-    # nodetype3 = "vtkMRMLLinearTransformNode"
+    end = time.time()
+    elapsed_time = end - start
+    global ack
+    global loading_phase
+    print(ack)
+    if((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack == 1)): #and (elapsed_time *100< 100)
+      print("Robot is transitioning to phase: ", s3, "after", elapsed_time*100, "ms")
+      if(s3 == "PLANNING"):
+        ack = 0
+      else:
+        ack = 2
+        loading_phase = s3
+    elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==2)): #and (elapsed_time<= 10)
+      print("Robot is sucessfully in phase: ", loading_phase, "after", elapsed_time, "s") 
+      ack = 0
     
-    # if( ReceivedClassName == nodetype1):
-    #   print("It is string message")
-    #   ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-    #   self.messageTextbox.setText(ReceivedMsg.GetText()) 
-    # elif(ReceivedClassName == nodetype2):
-    #   print("It is status message")
-    #   ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
-    #   s1 = str(ReceivedStatusMsg.GetCode())
-    #   sep = ':'
-    #   s2 = str(ReceivedStatusMsg.GetSubCode())
-    #   s3 = ReceivedStatusMsg.GetErrorName()
-    #   s4 = ReceivedStatusMsg.GetStatusString()
-    #   s = s1 + sep + s2 + sep + s3 + sep + s4
-    #   self.statusTextbox.setText(s)
-
-    # elif(ReceivedClassName == nodetype3):
-    #   print("It is transform message")
-    #   ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-    #   transformNode1 = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLTransformNode") #vtkMRMLLinearTransformNode
-    #   ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-    # else:
-    #   print("Message type sent not supported")
-
-
-
-
-    #Mavaleur = slicer.mrmlScene.GetNodeByID("vtkMRMLTextNode1")
-    #self.messageTextbox.text = startupNode.GetText()
-    #text = vtkMRMLTextNode2->GetText(); 
-    #self.messageTextbox.text = getNode(vtkMRMLTextNode2)
-
-    #Mavaleur = slicer.mrmlScene.GetNodeByID(vtkMRMLTextNode3)
-    #slicer.vtkIGTLToMRMLLinearTransform.CreateNewNode(mrmlScene, MaTransform)
- #def observeIncomingMessages(self):
-   # while(1):
-    #self.openIGTNode.RegisterIncomingMRMLNode(vtkMRMLNode* node);
-      # continuously observe for incoming messages
-      # when the messages are received, update the GUI
-      # and execute tasks accordingly
-       #NodeInfoType* RegisterIncomingMRMLNode(vtkMRMLNode* node);
-       # print("i'm waiting for messages")
-
-
