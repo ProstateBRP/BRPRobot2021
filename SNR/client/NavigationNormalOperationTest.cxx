@@ -81,7 +81,7 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   NavigationNormalOperationTest * navTestPtr = new NavigationNormalOperationTest();
   typedef void *(*THREADFUNCPTR)(void *);
   pthread_t thread;
-  pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, navTestPtr);
+  //pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, navTestPtr);
 
 
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;

@@ -171,7 +171,7 @@ void setSocketVars(char* snrHostname, int snrPort)
 
 void *startThread(void *ptr)
 {
-    std::cout << "\n---> Starting thread in script.cxx to receive messages from Slicer." << std::endl;
+    std::cout << "\n---> Starting thread in script.cxx to receive messages from Slicer \n" << std::endl;
     // Create thread for the receiving function
     pthread_t thread;
     pthread_create(&thread, NULL, receivingFunction, NULL);
@@ -341,7 +341,7 @@ void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix)
     transMsg = igtl::TransformMessage::New();
     transMsg->SetDeviceName(argDeviceName);
 
-    std::cout << "Sending transformMessage from script.cxx to Slicer." << std::endl;
+    std::cout << "Sending transformMessage from script.cxx to Slicer:" << std::endl;
 
     igtl::TimeStamp::Pointer ts;
     ts = igtl::TimeStamp::New();
