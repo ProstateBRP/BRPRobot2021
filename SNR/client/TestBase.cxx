@@ -41,39 +41,6 @@ void TestBase::SetSocket(igtl::Socket *socket)
   this->Socket = socket;
 }
 
-
-// void TestBase::CreateThreadToReceiveFromSlicer()
-// {
-//   pthread_t thread;
-//   pthread_create(&thread, NULL, TestBase::ReceiveFromSlicer, NULL);
-//   //return NULL;
-// }
-
-// threading function
-// void *TestBase::ReceiveFromSlicer(void *ptr)
-// {
-//   std::cerr << "MESSAGE: ===== Threading Test =====" << std::endl;
-//   std::string currentStringMessage = Global::globalString;
-//   int currentStringEncoding = Global::globalEncoding;
-//   std::cerr << "Global string: " << Global::globalString << std::endl;
-//   std::cerr << "Global encoding: " << std::to_string(Global::globalEncoding) << std::endl;
-
-//    while(1)
-//   {
-//     std::cout << "OUTSIDE IF: Global::globalString: " << Global::globalString << std::endl;
-//     if (currentStringMessage.compare(Global::globalString) != 0)
-//     {
-//       std::cout << "INSIDE IF: Global::globalString: " << Global::globalString << std::endl;
-//       currentStringMessage = Global::globalString;
-//       currentStringEncoding = Global::globalEncoding;
-//       TestBase tb;
-//       tb.SendStringMessage(std::to_string(currentStringEncoding).c_str(), currentStringMessage.c_str());
-//     }
-//   }
-//   return NULL;
-// }
-
-
 int TestBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
 {
 

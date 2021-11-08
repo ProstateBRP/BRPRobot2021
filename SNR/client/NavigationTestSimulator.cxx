@@ -30,6 +30,7 @@
 #include "NavigationMoveToWithoutTargetTest.h"
 #include "NavigationAccidentalCommandDuringManualModeTest.h"
 #include "NavigationHardwareErrorDuringOperationTest.h"
+#include "NavigationDynamicCommunicationTest.h"
 
 #include "script.hxx"
 #include "pthread.h"
@@ -59,7 +60,7 @@ int main(int argc, char* argv[])
   int    snrPort     = atoi(argv[4]);
   int    test     = atoi(argv[5]);
 
-  if (test <= 0 || test > 10)
+  if (test < 0 || test > 10)
   {
     std::cerr << "Invalid test" << std::endl;
     exit(0);
@@ -93,12 +94,18 @@ int main(int argc, char* argv[])
 
   switch (test)
   {
+    case 0:
+    {
+      std::cout << "------------------- Starting NavigationDynamicCommunicationTest -------------------" << std::endl;
+      navTest = (NavigationDynamicCommunicationTest*) new NavigationDynamicCommunicationTest();
+      break;
+    }
     case 1:
-      {
-        std::cout << "------------------- Starting NavTest 1 -------------------" << std::endl;
-        navTest = (NavigationNormalOperationTest*) new NavigationNormalOperationTest();
-        break;
-      }
+    {
+      std::cout << "------------------- Starting NavigationNormalOperationTest -------------------" << std::endl;
+      navTest = (NavigationNormalOperationTest*) new NavigationNormalOperationTest();
+      break;
+    }
     // case 2:
     //   {
     //     navTest = (NavigationStartUpErrorTest*) new NavigationStartUpErrorTest();

@@ -27,12 +27,15 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 
 // Global Variables
 
-
 struct Global{
    static char * hostname;
    static int port;
    static std::string globalString;
-   static int globalEncoding;
+   static std::string globalEncoding;
+   static int globalArgCode;
+   static int globalArgSubcode;
+   static std::string globalArgErrorName;
+   static std::string globalArgStatusStringMessage;
 };
 
 #endif

@@ -13,6 +13,7 @@ set(NAVIGATION_SIM_SOURCE
   TestBase.cxx
   NavigationTestBase.cxx
   NavigationTestSimulator.cxx
+  NavigationDynamicCommunicationTest.cxx
   NavigationNormalOperationTest.cxx
   NavigationStartUpErrorTest.cxx
   NavigationCalibrationErrorTest.cxx

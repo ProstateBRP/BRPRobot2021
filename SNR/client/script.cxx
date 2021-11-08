@@ -20,7 +20,12 @@ int Global::port = 18944;
 
 //std::string Global::past_globalString = "DefaultPastString";
 std::string Global::globalString = "DefaultGlobalString";
-int Global::globalEncoding = 0;
+std::string Global::globalEncoding = "DefaultGlobalEncoding";
+
+int Global::globalArgCode = 0;
+int Global::globalArgSubcode = 0;
+std::string Global::globalArgErrorName = "DefaultGlobalArgErrorName";
+std::string Global::globalArgStatusStringMessage = "DefaultArgStatusStringMessage";
 
 
 #ifdef MAIN
@@ -422,7 +427,7 @@ void GetStringFromSlicer(const char* hostname, int port)
         ReceiveString(socket, headerMsg);
         StringReceived = 1;
         std::cout << "StringMessage received in script.cxx from Slicer : " << Global::globalString << std::endl; 
-        std::cout << "StringEncoding received in script.cxx from Slicer : " << std::to_string(Global::globalEncoding) << std::endl; 
+        std::cout << "StringEncoding received in script.cxx from Slicer : " << Global::globalEncoding << std::endl; 
       //}
 
     }     
@@ -548,112 +553,107 @@ void GetTransformFromSlicer(const char* hostname, int port)
 int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
 
-  std::cerr << "\n---> Receiving StringMessage in script.cxx from Slicer." << std::endl;
+    std::cerr << "\n---> Receiving StringMessage in script.cxx from Slicer." << std::endl;
 
-  // Create a message buffer to receive transform data
-  igtl::StringMessage::Pointer stringMsg;
-  stringMsg = igtl::StringMessage::New();
-  stringMsg->SetMessageHeader(header);
-  stringMsg->AllocatePack();
+    // Create a message buffer to receive transform data
+    igtl::StringMessage::Pointer stringMsg;
+    stringMsg = igtl::StringMessage::New();
+    stringMsg->SetMessageHeader(header);
+    stringMsg->AllocatePack();
 
-  // Receive transform data from the socket
-  bool timeout(false);
-  socket->Receive(stringMsg->GetPackBodyPointer(), stringMsg->GetPackBodySize(), timeout);
+    // Receive transform data from the socket
+    bool timeout(false);
+    socket->Receive(stringMsg->GetPackBodyPointer(), stringMsg->GetPackBodySize(), timeout);
 
-  // Deserialize the transform data
-  // If you want to skip CRC check, call Unpack() without argument.
+    // Deserialize the transform data
+    // If you want to skip CRC check, call Unpack() without argument.
 
-  int c = stringMsg->Unpack(1);
+    int c = stringMsg->Unpack(1);
 
-  if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
     {
-    std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
+        std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
               << "String: " << stringMsg->GetString() << std::endl;
     }
-     Global::globalString = stringMsg->GetString();
-     Global::globalEncoding = stringMsg->GetEncoding();
+    Global::globalString = stringMsg->GetString();
+    Global::globalEncoding = stringMsg->GetEncoding();
 
-  return 1;
+    return 1;
 }
 
 
 int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
 
-  std::cerr << "Receiving STATUS data type." << std::endl;
+    std::cerr << "Receiving STATUS data type." << std::endl;
 
-  // Create a message buffer to receive transform data
-  igtl::StatusMessage::Pointer statusMsg;
-  statusMsg = igtl::StatusMessage::New();
-  statusMsg->SetMessageHeader(header);
-  statusMsg->AllocatePack();
+    // Create a message buffer to receive transform data
+    igtl::StatusMessage::Pointer statusMsg;
+    statusMsg = igtl::StatusMessage::New();
+    statusMsg->SetMessageHeader(header);
+    statusMsg->AllocatePack();
 
-  // Receive transform data from the socket
-  bool timeout(false);
-  socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
+    // Receive transform data from the socket
+    bool timeout(false);
+    socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
 
-  // Deserialize the transform data
-  // If you want to skip CRC check, call Unpack() without argument.
+    // Deserialize the transform data
+    // If you want to skip CRC check, call Unpack() without argument.
 
-  int c = statusMsg->Unpack(1);
+    int c = statusMsg->Unpack(1);
 
-  if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
     {
-    std::cerr << "========== STATUS ==========" << std::endl;
-    std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
-    std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
-    std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
-    std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
-    std::cerr << "============================" << std::endl << std::endl;
+        std::cerr << "========== STATUS ==========" << std::endl;
+        std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
+        std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
+        std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
+        std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
+        std::cerr << "============================" << std::endl << std::endl;
 
-    // Modify global variable with status received
-    
-    //Global::current_globalargCode = statusMsg->GetCode();
-    //Global::globalargSubcode = statusMsg->GetSubCode();
-    //Global::globalargErrorName = statusMsg->GetErrorName();
-    //Global::argStatusStringMessage = statusMsg->GetStatusString();
-    
-
+        // Modify global variables with status received    
+        Global::globalArgCode = statusMsg->GetCode();
+        Global::globalArgSubcode = statusMsg->GetSubCode();
+        Global::globalArgErrorName = statusMsg->GetErrorName();
+        Global::globalArgStatusStringMessage = statusMsg->GetStatusString();
     }
-    
-  return 0;
+
+    return 0;
 
 }
 
 
 int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
-  //bool TransformReceived = 0;
-  std::cerr << "Receiving TRANSFORM data type." << std::endl;
-  //while(TransformReceived == 0)
-  //{
-  // Create a message buffer to receive transform datag
-  igtl::TransformMessage::Pointer transMsg;
-  transMsg = igtl::TransformMessage::New();
-  transMsg->SetMessageHeader(header);
-  transMsg->AllocatePack();
+    //bool TransformReceived = 0;
+    std::cerr << "Receiving TRANSFORM data type." << std::endl;
+    //while(TransformReceived == 0)
+    //{
+    // Create a message buffer to receive transform datag
+    igtl::TransformMessage::Pointer transMsg;
+    transMsg = igtl::TransformMessage::New();
+    transMsg->SetMessageHeader(header);
+    transMsg->AllocatePack();
 
-  // Receive transform data from the socket
-  bool timeout(false);
-  socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
+    // Receive transform data from the socket
+    bool timeout(false);
+    socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
 
-  // Deserialize the transform data
-  // If you want to skip CRC check, call Unpack() without argument.
+    // Deserialize the transform data
+    // If you want to skip CRC check, call Unpack() without argument.
 
-  int c = transMsg->Unpack(1);
-  std::cout << "inside Transform " <<std::endl;
-  if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    int c = transMsg->Unpack(1);
+    std::cout << "inside Transform " <<std::endl;
+    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
     {
-    std::cout << "inside GetTransformFromSlicer " <<std::endl;
-    // Retrive the transform data
-    igtl::Matrix4x4 matrix;
-    transMsg->GetMatrix(matrix);
-    igtl::PrintMatrix(matrix);
-    std::cerr << std::endl;
-    //TransformReceived = 1;
-    return 1;
-    
-    //}
-   }
+        std::cout << "inside GetTransformFromSlicer " <<std::endl;
+        // Retrive the transform data
+        igtl::Matrix4x4 matrix;
+        transMsg->GetMatrix(matrix);
+        igtl::PrintMatrix(matrix);
+        std::cerr << std::endl;
+        //TransformReceived = 1;
+        return 1;
+    }
   return 0;
 }
