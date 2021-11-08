@@ -359,6 +359,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = 0
     global ack
     ack = 0
+
     # wpiPort = self.wpiPortTextbox.text
     # wpiHostname = self.wpiHostnameTextbox.text
     # testNumber = self.testNumberTextbox.text    
@@ -435,8 +436,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = targetingNode.GetText()
-    global ack
-    ack = 0
 
   def onMoveButtonClicked(self):
     # Send stringMessage containing the command "MOVE" to the script via IGTLink
@@ -453,8 +452,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = moveNode.GetText()
-    global ack
-    ack = 0
+
   
   def onCalibrationButtonClicked(self):
     # Send stringMessage containing the command "CALIBRATION" to the script via IGTLink
@@ -471,8 +469,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = calibrationNode.GetText()
-    global ack
-    ack = 0
+
 
 
   def onPlanningButtonClicked(self):
@@ -490,8 +487,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = planningNode.GetText()
-    global ack
-    ack = 0
+
     
 
   def onUnlockButtonClicked(self):
@@ -509,8 +505,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = unlockNode.GetText()
-    global ack
-    ack = 0
+
 
   def onLockButtonClicked(self):
     print("Asking to Lock the robot")
@@ -527,8 +522,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = lockNode.GetText()
-    global ack
-    ack = 0
+
 
   def onStopButtonClicked(self):
     print("Sending STOP command")
@@ -545,8 +539,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = stopNode.GetText()
-    global ack
-    ack = 0
 
   def onEmergencyButtonClicked(self):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
@@ -563,8 +555,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = emergencyNode.GetText()
-    global ack
-    ack = 0
+
     
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
@@ -581,9 +572,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = startupNode.GetText()
-    global ack
-    ack = 0
-
 
 
   def onStatusButtonClicked(self):
@@ -620,16 +608,26 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string was received")
     ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
-    print("Received encoding in ASCII is: ", ReceivedStringMsg.GetEncoding())
-    textNode.messageTextbox.setText(ReceivedStringMsg.GetText())
     end = time.time()
     elapsed_time = (end - start)*100
-    if(last_string_sent == ReceivedStringMsg.GetText()): #and (elapsed_time<= 100)
+    concatenateMsg = ReceivedStringMsg.GetText()
+    delimit = ":"
+    nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
+    msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
+    #print(nameonly) # TODO Add display output based on string received
+ 
+    textNode.messageTextbox.setText(msgonly)
+    delimit2 = "_"
+    nameonlyType = nameonly[0: nameonly.index(delimit2)]
+    nameonlyID = nameonly[nameonly.index(delimit2) + 1: len(nameonly)]
+    print(nameonlyType)
+    print(nameonlyID)
+    if((last_string_sent == nameonlyID) and (nameonlyType == 'ACK')):
       print("Acknowledgment received for command:", last_string_sent, "after", elapsed_time, "ms")
       global ack
       ack = 1
     else: # if(elapsed_time > 100) print("Received knowledgment too late, after", elapsed_time, "ms")
-      print("Received something different than aknowledgment, received: ", ReceivedStringMsg.GetText())
+      print("Received something different than expected, received: ", ReceivedStringMsg.GetText())
       
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
@@ -648,7 +646,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     elapsed_time = end - start
     global ack
     global loading_phase
-    #print(ack)
     if((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack == 1)): #and (elapsed_time *100< 100)
       print("Robot is in phase: ", s3, "after", elapsed_time*100, "ms")
       statusNode.phaseTextbox.setText(s3)
