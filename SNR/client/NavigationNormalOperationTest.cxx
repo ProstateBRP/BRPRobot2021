@@ -49,16 +49,30 @@ void *NavigationNormalOperationTest::ReceiveFromSlicer(void *ptr)
   // std::string currentStatusArgErrorName = Global::globalArgErrorName;
   // std::string currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
 
+  int i = 0;
+
   while(1)
   {
     //std::cout << "Current globalString: " << Global::globalString << std::endl;
     if (currentStringMessage.compare(Global::globalString) != 0)
     {
       std::cout << "Sending stringMessage from Slicer to WPI: Global::globalString: " << Global::globalString << std::endl;
+      std::cout << "Sending stringEncoding from Slicer to WPI: Global::globalEncoding: " << Global::globalEncoding << std::endl;
       currentStringMessage = Global::globalString;
       currentStringEncoding = Global::globalEncoding;
+      std::cout << "currentStringMessage: " << currentStringMessage << std::endl;
+      std::cout << "currentStringEncoding: " << currentStringEncoding << std::endl;
+      std::cout << "currentStringMessage.c_str: " << currentStringMessage.c_str() << std::endl;
+      std::cout << "currentStringEncoding.c_str: " << currentStringEncoding.c_str() << std::endl;
+
       SendStringMessage(currentStringEncoding.c_str(), currentStringMessage.c_str());
     }
+
+    // if (i%500 == 0)
+    // {
+    //   std::cout << "the current globalString is: " << Global::globalString << std::endl;
+    // }
+    // i++;
 
     // if (currentStatusArgErrorName.compare(Global::globalArgErrorName) != 0)
     // {

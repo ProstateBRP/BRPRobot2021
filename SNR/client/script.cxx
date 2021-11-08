@@ -428,6 +428,7 @@ void GetStringFromSlicer(const char* hostname, int port)
         StringReceived = 1;
         std::cout << "StringMessage received in script.cxx from Slicer : " << Global::globalString << std::endl; 
         std::cout << "StringEncoding received in script.cxx from Slicer : " << Global::globalEncoding << std::endl; 
+        //std::cout << "Current deviceName : " << Global::globalDeviceName << std::endl;
       //}
 
     }     

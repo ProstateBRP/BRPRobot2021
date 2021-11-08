@@ -115,11 +115,13 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
         // Print contents of the message 
         std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
 
-        char *message = (char *)(stringMsg->GetString());
-        char *deviceName = (char *)("StringMessage");
+        char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
+        char *message = strcat(wpiDeviceName, ": ");
+        message = strcat(message, stringMsg->GetString());
+        char *slicerDeviceName = (char *)("StringMessage");
 
         // Call SendStringToSlicer function in Lisa's script
-        SendStringToSlicer(deviceName, message); // TODO -- SLICERHOSTNAME AND PORT
+        SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
         std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
       }
       else
