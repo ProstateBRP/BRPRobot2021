@@ -60,11 +60,11 @@ int main(int argc, char *argv[])
     wlist.push_back(new RobotSimulatorStartUpPhase);
     wlist.push_back(new RobotSimulatorPlanningPhase);
     wlist.push_back(new RobotSimulatorCalibrationPhase);
-    // wlist.push_back(new RobotSimulatorTargetingPhase);
-    // wlist.push_back(new RobotSimulatorMoveToTargetPhase);
-    // wlist.push_back(new RobotSimulatorManualPhase);
-    // wlist.push_back(new RobotSimulatorStopPhase);
-    // wlist.push_back(new RobotSimulatorEmergencyPhase);
+    wlist.push_back(new RobotSimulatorTargetingPhase);
+    wlist.push_back(new RobotSimulatorMoveToTargetPhase);
+    wlist.push_back(new RobotSimulatorManualPhase);
+    wlist.push_back(new RobotSimulatorStopPhase);
+    wlist.push_back(new RobotSimulatorEmergencyPhase);
 
     std::cerr << std::endl;
 

@@ -22,7 +22,7 @@ OpenIGTLink::OpenIGTLink(Robot *robot, Robot *cachedRobot, int port)
 	// On new connections retransmit robot state
 	_retransmit = false;
 
-	// Does the client have a keep alive functionality ?
+	// Does the client have a keep alive functionality?
 	_keepAlive = false;
 }
 
