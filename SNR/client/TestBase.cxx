@@ -60,6 +60,7 @@ int TestBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
     {
       std::cerr << "MESSAGE: Socket closed." << std::endl;
       this->Socket->CloseSocket();
+      Global::testRunning = false;
       exit(EXIT_SUCCESS);
     }
     else
@@ -103,39 +104,77 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
 
     // Deserialize the transform data
     // If you want to skip CRC check, call Unpack() without argument.
-    int c = stringMsg->Unpack(1);
+    // int c = stringMsg->Unpack(1);
 
-    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
-    {
-      if (stringMsg->GetEncoding() == 3 &&
-          strcmp(stringMsg->GetString(), string) == 0)
-      {
-        success = 1;
+    // Skip CRC check:
+    int c = stringMsg->Unpack();
 
-        // Print contents of the message 
-        std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
+    // if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    // {
+    // if (stringMsg->GetEncoding() == 3 &&
+    //     strcmp(stringMsg->GetString(), string) == 0)
+    // {
+    success = 1;
 
-        char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
-        char *message = strcat(wpiDeviceName, ": ");
-        message = strcat(message, stringMsg->GetString());
-        char *slicerDeviceName = (char *)("StringMessage");
+    // Print contents of the message 
+    std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
 
-        // Call SendStringToSlicer function in Lisa's script
-        SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-        std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
-      }
-      else
-      {
-        std::cerr << "ERROR: Invalid string: Encoding=" << stringMsg->GetEncoding()
-                  << ", String=" << string << std::endl;
-        success = 0;
-      }
-    }
-    else
-    {
-      std::cerr << "ERROR: Invalid CRC." << std::endl;
-      success = 0;
-    }
+    char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
+    char *message = strcat(wpiDeviceName, ": ");
+    message = strcat(message, stringMsg->GetString());
+    char *slicerDeviceName = (char *)("StringMessage");
+
+    // Call SendStringToSlicer function in Lisa's script
+    SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
+    std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
+    // }
+      // else
+      // {
+      //   std::cerr << "ERROR: Invalid string: Encoding=" << stringMsg->GetEncoding()
+      //             << ", String=" << string << std::endl;
+      //   success = 0;
+      // }
+    // }
+    // else
+    // {
+    //   std::cerr << "ERROR: Invalid CRC." << std::endl;
+    //   success = 0;
+    // }
+
+
+    // IF NOT SKIP CRC CHECK (Original function):
+
+    // if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    // {
+    //   if (stringMsg->GetEncoding() == 3 &&
+    //       strcmp(stringMsg->GetString(), string) == 0)
+    //   {
+    //     success = 1;
+
+    //     // Print contents of the message 
+    //     std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
+
+    //     char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
+    //     char *message = strcat(wpiDeviceName, ": ");
+    //     message = strcat(message, stringMsg->GetString());
+    //     char *slicerDeviceName = (char *)("StringMessage");
+
+    //     // Call SendStringToSlicer function in Lisa's script
+    //     SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
+    //     std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
+    //   }
+    //   else
+    //   {
+    //     std::cerr << "ERROR: Invalid string: Encoding=" << stringMsg->GetEncoding()
+    //               << ", String=" << string << std::endl;
+    //     success = 0;
+    //   }
+    // }
+    // else
+    // {
+    //   std::cerr << "ERROR: Invalid CRC." << std::endl;
+    //   success = 0;
+    // }
   }
 
   if (!success)

@@ -18,9 +18,12 @@
 char * Global::hostname = (char*)"localhost";
 int Global::port = 18944;
 
+bool Global::testRunning = true;
+
 //std::string Global::past_globalString = "DefaultPastString";
 std::string Global::globalString = "DefaultGlobalString";
-std::string Global::globalEncoding = "DefaultGlobalEncoding";
+std::string Global::globalDeviceName = "DefaultGlobalDeviceName";
+//std::string Global::globalEncoding = "DefaultGlobalEncoding";
 
 int Global::globalArgCode = 0;
 int Global::globalArgSubcode = 0;
@@ -176,7 +179,7 @@ void setSocketVars(char* snrHostname, int snrPort)
 
 void *startThread(void *ptr)
 {
-    std::cout << "\n---> Starting thread in script.cxx to receive messages from Slicer \n" << std::endl;
+    std::cout << "\n---> Starting thread in script.cxx to receive messages from Slicer." << std::endl;
     // Create thread for the receiving function
     pthread_t thread;
     pthread_create(&thread, NULL, receivingFunction, NULL);
@@ -427,10 +430,9 @@ void GetStringFromSlicer(const char* hostname, int port)
         ReceiveString(socket, headerMsg);
         StringReceived = 1;
         std::cout << "StringMessage received in script.cxx from Slicer : " << Global::globalString << std::endl; 
-        std::cout << "StringEncoding received in script.cxx from Slicer : " << Global::globalEncoding << std::endl; 
-        //std::cout << "Current deviceName : " << Global::globalDeviceName << std::endl;
+        //std::cout << "StringEncoding received in script.cxx from Slicer : " << Global::globalEncoding << std::endl; 
+        std::cout << "Current deviceName : " << Global::globalDeviceName << std::endl;
       //}
-
     }     
  }
 
@@ -577,7 +579,8 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
               << "String: " << stringMsg->GetString() << std::endl;
     }
     Global::globalString = stringMsg->GetString();
-    Global::globalEncoding = stringMsg->GetEncoding();
+    Global::globalDeviceName = header->GetDeviceName();
+    //Global::globalEncoding = stringMsg->GetEncoding();
 
     return 1;
 }

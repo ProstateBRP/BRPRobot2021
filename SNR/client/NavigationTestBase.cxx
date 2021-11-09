@@ -26,6 +26,8 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
+#include "script.hxx"
+
 NavigationTestBase::NavigationTestBase()
 {
   this->TimeoutShort  = DEFULT_TIMEOUT_SHORT;
@@ -48,17 +50,20 @@ int NavigationTestBase::Exec()
     if (errorPoint == SUCCESS)
       {
       std::cerr << "MESSAGE: The test has been completed successfully." << std::endl;
+      Global::testRunning = false;
       return 1;
       }
     else
       {
       std::cerr << "ERROR: Test failed at check point #" << GetStep(errorPoint) << "." << GetPoint(errorPoint) << std::endl;
+      Global::testRunning = false;
       return 0;
       }
     }
   else
     {
     std::cerr << "ERROR: Socket is not available."  << std::endl;
+    Global::testRunning = false;
     return 0;
     }
 }

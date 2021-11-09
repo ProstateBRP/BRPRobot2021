@@ -27,6 +27,8 @@
 #include "NavigationNormalOperationTest.h"
 #include "script.hxx"
 #include "pthread.h"
+#include "chrono"
+#include "thread"
 
 
 NavigationNormalOperationTest::NavigationNormalOperationTest()
@@ -40,39 +42,31 @@ NavigationNormalOperationTest::~NavigationNormalOperationTest()
 // Threaded function to receive messages from Slicer via updated global variables and pass them along to WPI
 void *NavigationNormalOperationTest::ReceiveFromSlicer(void *ptr)
 {
-  std::cerr << "---> Starting thread to receive messages from Slicer and send to WPI." << std::endl;
-  std::cout << "Current global stringMessage: " << Global::globalString << std::endl;
-  std::cout << "Current global stringEncoding: " << Global::globalEncoding << std::endl;
-  std::string currentStringMessage = Global::globalString;
-  std::string currentStringEncoding = Global::globalEncoding;
+  std::cerr << "---> Starting thread in NavigationNormalOperationTest to receive messages from Slicer and send to WPI." << std::endl;
+  // std::cout << "Current global stringMessage: " << Global::globalString << std::endl;
+  // std::cout << "Current global deviceName: " << Global::globalDeviceName << std::endl;
 
+  // String arguments:
+  std::string currentStringMessage = Global::globalString;
+  std::string currentDeviceName = Global::globalDeviceName;
+
+  // Status arguments:
   // std::string currentStatusArgErrorName = Global::globalArgErrorName;
   // std::string currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
 
-  int i = 0;
+  // Transform arguments:
+  // TODO
 
   while(1)
   {
     //std::cout << "Current globalString: " << Global::globalString << std::endl;
-    if (currentStringMessage.compare(Global::globalString) != 0)
+    if (currentStringMessage.compare(Global::globalString) != 0 && Global::testRunning == true)
     {
-      std::cout << "Sending stringMessage from Slicer to WPI: Global::globalString: " << Global::globalString << std::endl;
-      std::cout << "Sending stringEncoding from Slicer to WPI: Global::globalEncoding: " << Global::globalEncoding << std::endl;
+      std::cout << "Sending stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
       currentStringMessage = Global::globalString;
-      currentStringEncoding = Global::globalEncoding;
-      std::cout << "currentStringMessage: " << currentStringMessage << std::endl;
-      std::cout << "currentStringEncoding: " << currentStringEncoding << std::endl;
-      std::cout << "currentStringMessage.c_str: " << currentStringMessage.c_str() << std::endl;
-      std::cout << "currentStringEncoding.c_str: " << currentStringEncoding.c_str() << std::endl;
-
-      SendStringMessage(currentStringEncoding.c_str(), currentStringMessage.c_str());
+      //std::cout << "Sending new deviceName from Slicer to WPI: Global::globalDeviceName: " << Global::globalDeviceName << std::endl;
+      SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
     }
-
-    // if (i%500 == 0)
-    // {
-    //   std::cout << "the current globalString is: " << Global::globalString << std::endl;
-    // }
-    // i++;
 
     // if (currentStatusArgErrorName.compare(Global::globalArgErrorName) != 0)
     // {
@@ -231,5 +225,6 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   // ReceiveMessageHeader(headerMsg, this->TimeoutLong); // TODO: timeout is not valid
   // if (!CheckAndReceiveStatusMessage(headerMsg, "EMERGENCY", 1)) return Error(10,3);
   
+  std::this_thread::sleep_for(std::chrono::seconds(15));
   return SUCCESS;
 }

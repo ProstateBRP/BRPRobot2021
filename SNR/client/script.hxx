@@ -30,8 +30,10 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 struct Global{
    static char * hostname;
    static int port;
+   static bool testRunning;
    static std::string globalString;
-   static std::string globalEncoding;
+   // static std::string globalEncoding;
+   static std::string globalDeviceName;
    static int globalArgCode;
    static int globalArgSubcode;
    static std::string globalArgErrorName;

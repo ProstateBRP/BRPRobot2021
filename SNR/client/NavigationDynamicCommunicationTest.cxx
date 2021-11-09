@@ -39,32 +39,41 @@ NavigationDynamicCommunicationTest::~NavigationDynamicCommunicationTest()
 {
 }
 
-// NEW??
 void *NavigationDynamicCommunicationTest::ReceiveFromSlicer(void *ptr)
 {
-  std::cerr << "---> Starting thread to receive messages from Slicer and send to WPI." << std::endl;
-  std::cout << "Current global stringMessage: " << Global::globalString << std::endl;
-  std::cout << "Current global stringEncoding: " << Global::globalEncoding << std::endl;
+  std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from Slicer and send to WPI." << std::endl;
+
+  // String arguments:
   std::string currentStringMessage = Global::globalString;
-  std::string currentStringEncoding = Global::globalEncoding;
-  
+  std::string currentDeviceName = Global::globalDeviceName;
+
+  // Status arguments:
+  // std::string currentStatusArgErrorName = Global::globalArgErrorName;
+  // std::string currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
+
+  // Transform arguments:
+  // TODO
+
   while(1)
   {
-    if (currentStringMessage.compare(Global::globalString) != 0)
+    //std::cout << "Current globalString: " << Global::globalString << std::endl;
+    if (currentStringMessage.compare(Global::globalString) != 0 && Global::testRunning == true)
     {
-      std::cout << "Sending stringMessage from Slicer to WPI: Global::globalString: " << Global::globalString << "; Global::globalEncoding: " << Global::globalEncoding << std::endl;
+      std::cout << "Sending stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
       currentStringMessage = Global::globalString;
-      currentStringEncoding = Global::globalEncoding;
-      SendStringMessage(currentStringEncoding.c_str(), currentStringMessage.c_str());
-      //SendStringMessage((char *)"CMD_0001", (char*)"START_UP");
+      //std::cout << "Sending new deviceName from Slicer to WPI: Global::globalDeviceName: " << Global::globalDeviceName << std::endl;
+      SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
     }
 
-    // if (currentStatusMessage.compare(Global::globalStatus) != 0)
+    // if (currentStatusArgErrorName.compare(Global::globalArgErrorName) != 0 && Global::testRunning == true)
     // {
-    //   // TODO
+    //   std::cout << "Sending statusMessage from Slicer to WPI: Global::globalArgStatusStringMessage: " << Global::globalArgStatusStringMessage << std::endl;
+    //   currentStatusArgErrorName = Global::globalArgErrorName;
+    //   currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
+    //   SendStatusMessage((char*)"statusMessage", Global::globalArgCode, Global::globalArgSubcode, (Global::globalArgErrorName).c_str(), (Global::globalArgStatusStringMessage).c_str());
     // }
 
-    // if (currentTransformMessage.compare(Global::globalTransform) != 0)
+    // if (currentTransformMessage.compare(Global::globalTransform) != 0 && Global::testRunning == true)
     // {
     //   // TODO
     // }
@@ -74,7 +83,7 @@ void *NavigationDynamicCommunicationTest::ReceiveFromSlicer(void *ptr)
 
 void *NavigationDynamicCommunicationTest::SendToSlicer(void *ptr)
 {
-  std::cerr << "---> Starting thread to receive messages from WPI and send to Slicer." << std::endl;
+  std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from WPI and send to Slicer." << std::endl;
   igtl::MessageHeader::Pointer headerMsg;
   headerMsg = igtl::MessageHeader::New();
 
@@ -85,12 +94,17 @@ void *NavigationDynamicCommunicationTest::SendToSlicer(void *ptr)
     // Incoming message is a stringMessage:
     if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
     {
+      // Receive stringMessage from WPI and send to Slicer
       igtl::StringMessage::Pointer stringMsg;
       stringMsg = igtl::StringMessage::New();
       stringMsg->SetMessageHeader(headerMsg);
       stringMsg->AllocatePack();
-      // Receive stringMessage from WPI and send to Slicer
-      CheckAndReceiveStringMessage(headerMsg, headerMsg->GetDeviceName(), (char *)(stringMsg->GetString()));
+      bool timeout(false);
+      this->Socket->Receive(stringMsg->GetPackBodyPointer(), stringMsg->GetPackBodySize(), timeout);
+      int c = stringMsg->Unpack(1);
+
+      CheckAndReceiveStringMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), (char *)(stringMsg->GetString()));
+  
     }
 
     // Incoming message is a statusMessage:
