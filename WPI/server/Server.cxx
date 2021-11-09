@@ -27,16 +27,6 @@ Server::Server(int port)
   start_up_status = "";
 }
 
-// const char *testString[N_STRINGS] = {
-//     "START_UP",
-//     // "GET_STATUS",
-//     // "GET_TRANSFORM",
-//     // "PLANNING",
-//     // "CALIBRATION",
-//     // "TARGETING",
-//     // "STOP",
-//     // "EMERGENCY",
-// };
 void *Server::ThreadIGT(void *igt)
 {
 

@@ -19,7 +19,9 @@
 #include "igtlCapabilityMessage.h"
 #endif // OpenIGTLink_PROTOCOL_VERSION >= 2
 
-class Server
+#include "RobotSimulatorPhaseBase.h"
+
+class Server : public RobotSimulatorPhaseBase
 {
 public:
     Server(int port){};
