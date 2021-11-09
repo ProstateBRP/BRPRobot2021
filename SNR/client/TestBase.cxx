@@ -237,6 +237,9 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
             // Print contents of the message 
             std::cout << "\n---> Received statusMessage from WPI." << std::endl;
 
+            char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
+            char *addedmsg = strcat(wpiDeviceName, ": ");
+            argStatusStringMessage = strcat(addedmsg, argStatusStringMessage);
             char *deviceName = (char *)("StatusMessage");
 
             SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);

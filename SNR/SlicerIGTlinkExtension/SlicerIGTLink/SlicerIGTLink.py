@@ -359,6 +359,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = 0
     global ack
     ack = 0
+    global last_prefix
+    last_prefix = ""
 
     # wpiPort = self.wpiPortTextbox.text
     # wpiHostname = self.wpiHostnameTextbox.text
@@ -384,13 +386,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onDisconnectFromSocketButtonClicked(self):
     self.openIGTNode.Stop()
 
-  def generateRandomNameID(self):
+  def generateRandomNameID(self,last_prefix):
     # Randomly choose 4 letter from all the ascii_letters
-    randomID = ["CMD_",0,0,0,0]
+    randomID = [last_prefix,"_"]
     for i in range(4):
       randomLetter = random.choice(string.ascii_letters)
       print(randomLetter)
-      randomID[i+1] = str(ord(randomLetter))
+      randomID.append(str(ord(randomLetter)))
     randomIDname = ''.join(randomID)
     print(randomIDname)
     return randomIDname
@@ -399,7 +401,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
     print("Send command to get current status of the robot")
     getstatusNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     getstatusNode.SetName(randomIDname)
     getstatusNode.SetText("GET_STATUS")
     getstatusNode.SetEncoding(3)
@@ -412,7 +416,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
     print("Send command to get current position of the robot")
     getposeNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     getposeNode.SetName(randomIDname)
     getposeNode.SetText("GET_POSE")
     getposeNode.SetEncoding(3)
@@ -425,7 +431,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "TARGETING" to the script via IGTLink
     print("Send command to enter targeting mode")
     targetingNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     targetingNode.SetName(randomIDname)
     targetingNode.SetText("TARGETING")
     targetingNode.SetEncoding(3)
@@ -436,12 +444,15 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = targetingNode.GetText()
+    last_prefix = "TGT"
 
   def onMoveButtonClicked(self):
     # Send stringMessage containing the command "MOVE" to the script via IGTLink
     print("Send command to ask robot to move to target")
     moveNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     moveNode.SetName(randomIDname)
     moveNode.SetText("MOVE_TO_TARGET")
     moveNode.SetEncoding(3)
@@ -458,7 +469,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "CALIBRATION" to the script via IGTLink
     print("Sending calibration command to WPI robot")
     calibrationNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     calibrationNode.SetName(randomIDname)
     calibrationNode.SetText("CALIBRATION")
     calibrationNode.SetEncoding(3)
@@ -469,14 +482,15 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = calibrationNode.GetText()
-
-
+    last_prefix = "CLB"
 
   def onPlanningButtonClicked(self):
     # Send stringMessage containing the command "PLANNING" to the script via IGTLink
     print("Sending planning command to WPI robot")
     planningNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     planningNode.SetName(randomIDname)
     planningNode.SetText("PLANNING")
     planningNode.SetEncoding(3)
@@ -494,7 +508,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("Asking to Unlock the robot")
     # Send stringMessage containing the command "UNLOCK" to the script via IGTLink
     unlockNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     unlockNode.SetName(randomIDname)
     unlockNode.SetText("UNLOCK")
     unlockNode.SetEncoding(3)
@@ -507,11 +523,14 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     last_string_sent = unlockNode.GetText()
 
 
+
   def onLockButtonClicked(self):
     print("Asking to Lock the robot")
     # Send stringMessage containing the command "LOCK" to the script via IGTLink
     lockNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     lockNode.SetName(randomIDname)
     lockNode.SetText("LOCK")
     lockNode.SetEncoding(3)
@@ -528,7 +547,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("Sending STOP command")
     # Send stringMessage containing the command "STOP" to the script via IGTLink
     stopNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     stopNode.SetName(randomIDname)
     stopNode.SetText("STOP")
     stopNode.SetEncoding(3)
@@ -544,7 +565,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
     print("Sending Emergency command")
     emergencyNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     emergencyNode.SetName(randomIDname)
     emergencyNode.SetText("EMERGENCY")
     emergencyNode.SetEncoding(3)
@@ -561,7 +584,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
     print("Sending Start up command")
     startupNode = slicer.vtkMRMLTextNode()
-    randomIDname = self.generateRandomNameID()
+    global last_prefix
+    last_prefix = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix)
     startupNode.SetName(randomIDname)
     startupNode.SetText("START_UP")
     startupNode.SetEncoding(3)
@@ -601,6 +626,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     transformMatrix = vtk.vtkMatrix4x4()
     SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
     SendTransformNode.GetMatrixTransformToParent(transformMatrix)
+    randomIDname = self.generateRandomNameID(last_prefix)
+    SendTransformNode.SetName(randomIDname)
     print(transformMatrix)
     self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNode)
     self.openIGTNode.PushNode(SendTransformNode)
@@ -614,8 +641,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     delimit = ":"
     nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
     msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
-    #print(nameonly) # TODO Add display output based on string received
- 
     textNode.messageTextbox.setText(msgonly)
     delimit2 = "_"
     nameonlyType = nameonly[0: nameonly.index(delimit2)]
@@ -636,8 +661,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     sep = ':'
     s2 = str(ReceivedStatusMsg.GetSubCode())
     s3 = ReceivedStatusMsg.GetErrorName()
-    s4 = ReceivedStatusMsg.GetStatusString()
-    s = s1 + sep + s2 + sep + s3 + sep + s4
+    concatenateMsg = ReceivedStatusMsg.GetStatusString()
+    delimit = ":"
+    nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
+    msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
+    s = s1 + sep + s2 + sep + s3 + sep + msgonly
     statusNode.statusTextbox.setText(s)
     global status_codes
     status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
@@ -645,18 +673,17 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     end = time.time()
     elapsed_time = end - start
     global ack
-    global loading_phase
-    if((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack == 1)): #and (elapsed_time *100< 100)
+    global loading_phase     #print(nameonly) # TODO Add display output based on string received
+    if((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack == 1) and (nameonly == 'CURRENT_STATUS')): #and (elapsed_time *100< 100)
       print("Robot is in phase: ", s3, "after", elapsed_time*100, "ms")
       statusNode.phaseTextbox.setText(s3)
-      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 0, 255);")
-      if(s3 == "PLANNING"):
-        ack = 0
-      else:
-        ack = 2
-        loading_phase = s3
-    elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==2)): #and (elapsed_time<= 10)
+      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 0, 255);") # Sets phase name in blue 
+      loading_phase = s3
+    elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==1) and (loading_phase == nameonly)): #and (elapsed_time<= 10)
       print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s")
       statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);")
       ack = 0
+    else:
+      print("Error in changing phase")
+    
     
