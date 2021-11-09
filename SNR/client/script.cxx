@@ -327,7 +327,7 @@ void SendStateToSlicer(char *argDeviceName, unsigned short argCode, unsigned lon
     }
 }
 
-void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix)
+void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix, char * wpiDeviceName)
 {
     // //------------------------------------------------------------
     // // Establish Connection

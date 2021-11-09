@@ -10,7 +10,7 @@ void *receivingFunction(void *);
 
 void SendStringToSlicer(char* argDeviceName,char* argMessage);
 void SendStateToSlicer(char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);
-void SendTransformToSlicer(char* argDeviceName, igtl::Matrix4x4& matrix);
+void SendTransformToSlicer(char* argDeviceName, igtl::Matrix4x4& matrix, char *wpiDeviceName);
 
 
 int getTransform();

@@ -382,9 +382,10 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
         igtl::PrintMatrix(matrix);
 
         char *deviceName = (char *)("TransformMessage");
+        char * wpiDeviceName = (char*)headerMsg->GetDeviceName();
 
         // Send the contents of the transformMessage to script.cxx
-        SendTransformToSlicer(deviceName, matrix);
+        SendTransformToSlicer(deviceName, matrix, wpiDeviceName);
         std::cout << "Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
       }
 
