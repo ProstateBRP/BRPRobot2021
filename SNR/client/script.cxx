@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
     char *deviceName1 = (char *)("StringMessage");
     char *deviceName2 = (char *)("StatusMessage");
     char *deviceName3 = (char *)("TransformMessage");
+    
 
     // Matrix defined for testing transform exchange
     float inT[4] = {-0.954892f, 0.196632f, -0.222525f, 0.0};
@@ -329,6 +330,9 @@ void SendStateToSlicer(char *argDeviceName, unsigned short argCode, unsigned lon
 
 void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix, char * wpiDeviceName)
 {
+    // Send TransformInfo to Slicer
+    char *deviceName4 = (char *)("TransformMessage");
+    SendStringToSlicer(deviceName4, wpiDeviceName);
     // //------------------------------------------------------------
     // // Establish Connection
 
@@ -348,7 +352,7 @@ void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix, char * 
     igtl::TransformMessage::Pointer transMsg;
     transMsg = igtl::TransformMessage::New();
     transMsg->SetDeviceName(argDeviceName);
-
+    
     std::cout << "Sending transformMessage from script.cxx to Slicer:" << std::endl;
 
     igtl::TimeStamp::Pointer ts;

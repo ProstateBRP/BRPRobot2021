@@ -127,11 +127,11 @@ NavigationDynamicCommunicationTest::ErrorPointType NavigationDynamicCommunicatio
   typedef void *(*THREADFUNCPTR)(void *);
   // Create a thread to receive from Slicer and send to WPI
   pthread_t threadReceive;
-  pthread_create(&threadReceive, NULL, (THREADFUNCPTR) &NavigationDynamicCommunicationTest::ReceiveFromSlicer, this);
+  //pthread_create(&threadReceive, NULL, (THREADFUNCPTR) &NavigationDynamicCommunicationTest::ReceiveFromSlicer, this);
 
   // Create a thread to receive from WPI and send to Slicer
   pthread_t threadSend;
-  pthread_create(&threadSend, NULL, (THREADFUNCPTR) &NavigationDynamicCommunicationTest::SendToSlicer, this);
+  //pthread_create(&threadSend, NULL, (THREADFUNCPTR) &NavigationDynamicCommunicationTest::SendToSlicer, this);
   
   // pthread_join(threadReceive, NULL);
   // pthread_join(threadSend, NULL); 
