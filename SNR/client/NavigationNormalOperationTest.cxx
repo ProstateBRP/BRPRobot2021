@@ -40,7 +40,8 @@ NavigationNormalOperationTest::~NavigationNormalOperationTest()
 }
 
 // Threaded function to receive messages from Slicer via updated global variables and pass them along to WPI
-void *NavigationNormalOperationTest::ReceiveFromSlicer(void *ptr)
+//void *NavigationNormalOperationTest::ReceiveFromSlicer(void *ptr)
+void *NavigationNormalOperationTest::ReceiveFromSlicer()
 {
   std::cerr << "---> Starting thread in NavigationNormalOperationTest to receive messages from Slicer and send to WPI." << std::endl;
   // std::cout << "Current global stringMessage: " << Global::globalString << std::endl;
@@ -92,10 +93,15 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   headerMsg = igtl::MessageHeader::New();
 
   // Create a thread to continuously check whether Global::myglobalstring == saved blank string message.
-  typedef void *(*THREADFUNCPTR)(void *);
-  pthread_t thread;
-  pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, this);
+  // typedef void *(*THREADFUNCPTR)(void *);
+  // pthread_t thread;
+  // pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, this);
   
+  // Using std::thread instead of pthread
+  //NavigationNormalOperationTest * testPtr = new NavigationNormalOperationTest();
+  std::thread threadReceive(&NavigationNormalOperationTest::ReceiveFromSlicer, this);
+  //threadReceive.detach();
+
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
   ReceiveMessageHeader(headerMsg, this->TimeoutFalse);

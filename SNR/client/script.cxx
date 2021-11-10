@@ -10,6 +10,7 @@
 #include "igtlClientSocket.h"
 
 #include "script.hxx"
+#include "igtlMath.h"
 
 #define FPS 200
 #define interval 5
@@ -17,19 +18,18 @@
 // Set default values for the hostname and port (to be updated by a function call to setSocketVars)
 char * Global::hostname = (char*)"localhost";
 int Global::port = 18944;
-
 bool Global::testRunning = true;
-
-//std::string Global::past_globalString = "DefaultPastString";
-std::string Global::globalString = "DefaultGlobalString";
 std::string Global::globalDeviceName = "DefaultGlobalDeviceName";
-//std::string Global::globalEncoding = "DefaultGlobalEncoding";
-
+// Default values for stringMessages, statusMessages, and transformMessage
+std::string Global::globalString = "DefaultGlobalString";
 int Global::globalArgCode = 0;
 int Global::globalArgSubcode = 0;
 std::string Global::globalArgErrorName = "DefaultGlobalArgErrorName";
 std::string Global::globalArgStatusStringMessage = "DefaultArgStatusStringMessage";
-
+igtl::Matrix4x4 Global::globalMatrix = {{0,0,0,0},
+                                        {0,0,0,0},
+                                        {0,0,0,0},
+                                        {0,0,0,0}};
 
 #ifdef MAIN
 
@@ -244,7 +244,6 @@ void *receivingFunction(void *ptr)
         else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
         {
         ReceiveStatus(socket, headerMsg);
-        std::cout << "Receiving status from Slicer " << headerMsg <<std::endl;
         // Received = 1;
         }
         else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
@@ -580,7 +579,6 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
     }
     Global::globalString = stringMsg->GetString();
     Global::globalDeviceName = header->GetDeviceName();
-    //Global::globalEncoding = stringMsg->GetEncoding();
 
     return 1;
 }
@@ -588,8 +586,6 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 
 int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
-
-    std::cerr << "Receiving STATUS data type." << std::endl;
 
     // Create a message buffer to receive transform data
     igtl::StatusMessage::Pointer statusMsg;
@@ -606,20 +602,27 @@ int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 
     int c = statusMsg->Unpack(1);
 
-    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    if (statusMsg->GetSubCode() != 2687068)
     {
-        std::cerr << "========== STATUS ==========" << std::endl;
-        std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
-        std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
-        std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
-        std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
-        std::cerr << "============================" << std::endl << std::endl;
+        std::cout << "\n---> Receiving StatusMessage in script.cxx from Slicer." << std::endl;
 
-        // Modify global variables with status received    
-        Global::globalArgCode = statusMsg->GetCode();
-        Global::globalArgSubcode = statusMsg->GetSubCode();
-        Global::globalArgErrorName = statusMsg->GetErrorName();
-        Global::globalArgStatusStringMessage = statusMsg->GetStatusString();
+        if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+        {
+            // std::cerr << "========== STATUS ==========" << std::endl;
+            // std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
+            // std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
+            // std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
+            // std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
+            // std::cerr << "============================" << std::endl << std::endl;
+
+            // Modify global variables with status received    
+            Global::globalArgCode = statusMsg->GetCode();
+            Global::globalArgSubcode = statusMsg->GetSubCode();
+            Global::globalArgErrorName = statusMsg->GetErrorName();
+            Global::globalArgStatusStringMessage = statusMsg->GetStatusString();
+            Global::globalDeviceName = header->GetDeviceName();
+            return 1;
+        }
     }
 
     return 0;
@@ -629,10 +632,8 @@ int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 
 int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
-    //bool TransformReceived = 0;
-    std::cerr << "Receiving TRANSFORM data type." << std::endl;
-    //while(TransformReceived == 0)
-    //{
+    std::cout << "\n---> Receiving StatusMessage in script.cxx from Slicer." << std::endl;
+
     // Create a message buffer to receive transform datag
     igtl::TransformMessage::Pointer transMsg;
     transMsg = igtl::TransformMessage::New();
@@ -645,17 +646,20 @@ int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header
 
     // Deserialize the transform data
     // If you want to skip CRC check, call Unpack() without argument.
-
     int c = transMsg->Unpack(1);
-    std::cout << "inside Transform " <<std::endl;
+
     if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
     {
-        std::cout << "inside GetTransformFromSlicer " <<std::endl;
         // Retrive the transform data
         igtl::Matrix4x4 matrix;
         transMsg->GetMatrix(matrix);
-        igtl::PrintMatrix(matrix);
+        //igtl::PrintMatrix(matrix);
         std::cerr << std::endl;
+
+        //Global::globalMatrix = matrix;
+        memcpy(Global::globalMatrix, matrix, sizeof(matrix));
+        Global::globalDeviceName = header->GetDeviceName();
+
         //TransformReceived = 1;
         return 1;
     }

@@ -34,7 +34,6 @@
 
 #include "script.hxx"
 #include "pthread.h"
-
 //void *startTests(void *socketPtr);
 
 int main(int argc, char* argv[])

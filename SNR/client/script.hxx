@@ -31,13 +31,16 @@ struct Global{
    static char * hostname;
    static int port;
    static bool testRunning;
-   static std::string globalString;
-   // static std::string globalEncoding;
    static std::string globalDeviceName;
+   // String variables 
+   static std::string globalString;
+   // Status variables
    static int globalArgCode;
    static int globalArgSubcode;
    static std::string globalArgErrorName;
    static std::string globalArgStatusStringMessage;
+   // Transform variables
+   static igtl::Matrix4x4 globalMatrix;
 };
 
 #endif

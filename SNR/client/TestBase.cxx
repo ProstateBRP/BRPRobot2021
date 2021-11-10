@@ -117,7 +117,7 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
     success = 1;
 
     // Print contents of the message 
-    std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
+    std::cout << "\n---> Received StringMessage from WPI: " << stringMsg->GetString() << std::endl;
 
     char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
     char *message = strcat(wpiDeviceName, ": ");

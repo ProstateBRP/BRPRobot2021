@@ -30,8 +30,10 @@ public:
 
   virtual const char* Name() { return "Dynamic Communication Test"; };
 
-  void* ReceiveFromSlicer(void *ptr);
-  void* SendToSlicer(void *ptr);
+  //void* ReceiveFromSlicer(void *ptr);
+  //void* SendToSlicer(void *ptr);
+  void* ReceiveFromSlicer();
+  void* SendToSlicer();
 
   virtual ErrorPointType Test();
 };
