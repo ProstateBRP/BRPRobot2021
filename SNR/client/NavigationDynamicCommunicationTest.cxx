@@ -42,7 +42,7 @@ NavigationDynamicCommunicationTest::~NavigationDynamicCommunicationTest()
 //void *NavigationDynamicCommunicationTest::ReceiveFromSlicer(void *ptr)
 void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
 {
-  std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from Slicer and send to WPI.\n" << std::endl;
+  std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from Slicer and send to WPI." << std::endl;
 
   // String arguments:
   std::string currentStringMessage = Global::globalString;
@@ -118,19 +118,20 @@ void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
 void *NavigationDynamicCommunicationTest::SendToSlicer()
 {
   std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from WPI and send to Slicer." << std::endl;
-  // igtl::MessageHeader::Pointer headerMsg;
-  // headerMsg = igtl::MessageHeader::New();
+  igtl::MessageHeader::Pointer headerMsg;
+  headerMsg = igtl::MessageHeader::New();
 
   while(1)
   {
-    igtl::MessageHeader::Pointer headerMsg;
-    headerMsg = igtl::MessageHeader::New();
-    ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
+    headerMsg->InitPack();
+    int r = this->Socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), this->TimeoutFalse);
+    headerMsg->Unpack();
+
+    std::cout << "Incoming message from WPI with deviceType: " << headerMsg->GetDeviceType() << " and deviceName: " << headerMsg->GetDeviceName() << std::endl;
     
     // Incoming message is a stringMessage:
     if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
     {
-      std::cout << "new string sent from wpi to send to slicer!" << std::endl;
       // Receive stringMessage from WPI and send to Slicer
       igtl::StringMessage::Pointer stringMsg;
       stringMsg = igtl::StringMessage::New();
@@ -147,7 +148,6 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
     // Incoming message is a statusMessage:
     if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
     {
-      std::cout << "new status sent from wpi to send to slicer!" << std::endl;
       // Receive statusMessage from WPI and send to Slicer
       igtl::StatusMessage::Pointer statusMsg;
       statusMsg = igtl::StatusMessage::New();
@@ -167,7 +167,6 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
     // Incoming message is a transformMessage:
     if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
     {
-      std::cout << "new transform sent from wpi to send to slicer!" << std::endl;
       // Receive transformMessage from WPI and send to Slicer
       igtl::TransformMessage::Pointer transMsg;
       transMsg = igtl::TransformMessage::New();
@@ -183,9 +182,7 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
 
       CheckAndReceiveTransformMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), matrix);
     }
-
   }
-
   return NULL;
 }
 
@@ -193,8 +190,8 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
 NavigationDynamicCommunicationTest::ErrorPointType NavigationDynamicCommunicationTest::Test()
 {
   int queryCounter = 0;
-  igtl::MessageHeader::Pointer headerMsg;
-  headerMsg = igtl::MessageHeader::New();
+  // igtl::MessageHeader::Pointer headerMsg;
+  // headerMsg = igtl::MessageHeader::New();
   
   // typedef void *(*THREADFUNCPTR)(void *);
   // // Create a thread to receive from Slicer and send to WPI
