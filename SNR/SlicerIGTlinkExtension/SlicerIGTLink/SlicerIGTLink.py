@@ -115,7 +115,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
     self.planningButton = qt.QPushButton("PLANNING")
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
-    self.planningButton.enabled = True
+    self.planningButton.enabled = False
     self.planningButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.planningButton)
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
@@ -123,7 +123,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # calibrationButton Button
     self.calibrationButton = qt.QPushButton("CALIBRATION")
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
-    self.calibrationButton.enabled = True
+    self.calibrationButton.enabled = False
     self.calibrationButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.calibrationButton)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
@@ -131,7 +131,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # targetingButton Button
     self.targetingButton = qt.QPushButton("TARGETING")
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
-    self.targetingButton.enabled = True
+    self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.targetingButton)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
@@ -139,7 +139,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # moveButton Button
     self.moveButton = qt.QPushButton("MOVE")
     self.moveButton.toolTip = "Send the move to target command to the WPI robot."
-    self.moveButton.enabled = True
+    self.moveButton.enabled = False
     self.moveButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.moveButton)
     self.moveButton.connect('clicked()', self.onMoveButtonClicked)
@@ -147,7 +147,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Lock Button to ask WPI to lock robot
     self.LockButton = qt.QPushButton("LOCK")
     self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
-    self.LockButton.enabled = True
+    self.LockButton.enabled = False
     self.LockButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.LockButton)
     self.LockButton.connect('clicked()', self.onLockButtonClicked)
@@ -155,7 +155,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Unlock Button to ask WPI to unlock robot
     self.UnlockButton = qt.QPushButton("UNLOCK")
     self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
-    self.UnlockButton.enabled = True
+    self.UnlockButton.enabled = False
     self.UnlockButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.UnlockButton)
     self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
@@ -163,7 +163,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Get robot pose Button to ask WPI to send the current robot position
     self.GetPoseButton = qt.QPushButton("GET POSE")
     self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
-    self.GetPoseButton.enabled = True
+    self.GetPoseButton.enabled = False
     self.GetPoseButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.GetPoseButton)
     self.GetPoseButton.connect('clicked()', self.onGetPoseButtonClicked)
@@ -171,7 +171,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Get robot status Button to ask WPI to send the current status position
     self.GetStatusButton = qt.QPushButton("GET STATUS")
     self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
-    self.GetStatusButton.enabled = True
+    self.GetStatusButton.enabled = False
     self.GetStatusButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.GetStatusButton)
     self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
@@ -179,7 +179,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # STOP Button 
     self.StopButton = qt.QPushButton("STOP")
     self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
-    self.StopButton.enabled = True
+    self.StopButton.enabled = False
     self.StopButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.StopButton)
     self.StopButton.connect('clicked()', self.onStopButtonClicked)
@@ -187,7 +187,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # EMERGENCY Button 
     self.EmergencyButton = qt.QPushButton("EMERGENCY")
     self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
-    self.EmergencyButton.enabled = True
+    self.EmergencyButton.enabled = False
     self.EmergencyButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.EmergencyButton)
     self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
@@ -202,7 +202,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # statusButton Button
     self.statusButton = qt.QPushButton("STATUS")
-    self.statusButton.toolTip = "Send the Slicer Status command to the WPI robot."
+    self.statusButton.toolTip = "Send the Slicer Status to the WPI robot."
     self.statusButton.enabled = True
     self.statusButton.setMaximumWidth(150)
     outboundStatusFormLayout.addRow(self.statusButton)
@@ -342,10 +342,15 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     ReceivedTransformMsg.SetName("TransformMessage")
     slicer.mrmlScene.AddNode(ReceivedTransformMsg)
 
-    # Add observers on the 3 message type nodes
+    ReceivedTransformInfo = slicer.vtkMRMLTextNode()
+    ReceivedTransformInfo.SetName("TransformInfo")
+    slicer.mrmlScene.AddNode(ReceivedTransformInfo)
+
+    # Add observers on the 4 message type nodes
     ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
     ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
     ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+    ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
 
     # Create a node for sending transforms
     SendTransformNode = slicer.vtkMRMLLinearTransformNode()
@@ -359,9 +364,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = 0
     global ack
     ack = 0
-    global last_prefix
-    last_prefix = ""
-
+    global last_prefix_sent
+    last_prefix_sent = ""
+    global last_name_sent
+    last_name_sent = ""
     # wpiPort = self.wpiPortTextbox.text
     # wpiHostname = self.wpiHostnameTextbox.text
     # testNumber = self.testNumberTextbox.text    
@@ -386,9 +392,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onDisconnectFromSocketButtonClicked(self):
     self.openIGTNode.Stop()
 
-  def generateRandomNameID(self,last_prefix):
+  def generateRandomNameID(self,last_prefix_sent):
     # Randomly choose 4 letter from all the ascii_letters
-    randomID = [last_prefix,"_"]
+    randomID = [last_prefix_sent,"_"]
     for i in range(4):
       randomLetter = random.choice(string.ascii_letters)
       print(randomLetter)
@@ -396,14 +402,28 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     randomIDname = ''.join(randomID)
     print(randomIDname)
     return randomIDname
+
+  def activateButtons(self):
+    self.planningButton.enabled = True
+    self.EmergencyButton.enabled = True
+    self.StopButton.enabled = True
+    self.GetStatusButton.enabled = True
+    self.GetPoseButton.enabled = True
+    self.UnlockButton.enabled = True
+    self.LockButton.enabled = True
+    self.moveButton.enabled = True
+    self.targetingButton.enabled = True
+    self.calibrationButton.enabled = True
    
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
     print("Send command to get current status of the robot")
     getstatusNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     getstatusNode.SetName(randomIDname)
     getstatusNode.SetText("GET_STATUS")
     getstatusNode.SetEncoding(3)
@@ -416,9 +436,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
     print("Send command to get current position of the robot")
     getposeNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     getposeNode.SetName(randomIDname)
     getposeNode.SetText("GET_POSE")
     getposeNode.SetEncoding(3)
@@ -431,9 +453,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "TARGETING" to the script via IGTLink
     print("Send command to enter targeting mode")
     targetingNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     targetingNode.SetName(randomIDname)
     targetingNode.SetText("TARGETING")
     targetingNode.SetEncoding(3)
@@ -444,15 +468,17 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = targetingNode.GetText()
-    last_prefix = "TGT"
+    last_prefix_sent = "TGT"
 
   def onMoveButtonClicked(self):
     # Send stringMessage containing the command "MOVE" to the script via IGTLink
     print("Send command to ask robot to move to target")
     moveNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     moveNode.SetName(randomIDname)
     moveNode.SetText("MOVE_TO_TARGET")
     moveNode.SetEncoding(3)
@@ -469,9 +495,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "CALIBRATION" to the script via IGTLink
     print("Sending calibration command to WPI robot")
     calibrationNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     calibrationNode.SetName(randomIDname)
     calibrationNode.SetText("CALIBRATION")
     calibrationNode.SetEncoding(3)
@@ -482,15 +510,17 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = calibrationNode.GetText()
-    last_prefix = "CLB"
+    last_prefix_sent = "CLB"
 
   def onPlanningButtonClicked(self):
     # Send stringMessage containing the command "PLANNING" to the script via IGTLink
     print("Sending planning command to WPI robot")
     planningNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     planningNode.SetName(randomIDname)
     planningNode.SetText("PLANNING")
     planningNode.SetEncoding(3)
@@ -508,9 +538,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("Asking to Unlock the robot")
     # Send stringMessage containing the command "UNLOCK" to the script via IGTLink
     unlockNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     unlockNode.SetName(randomIDname)
     unlockNode.SetText("UNLOCK")
     unlockNode.SetEncoding(3)
@@ -528,9 +560,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("Asking to Lock the robot")
     # Send stringMessage containing the command "LOCK" to the script via IGTLink
     lockNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     lockNode.SetName(randomIDname)
     lockNode.SetText("LOCK")
     lockNode.SetEncoding(3)
@@ -547,9 +581,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("Sending STOP command")
     # Send stringMessage containing the command "STOP" to the script via IGTLink
     stopNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     stopNode.SetName(randomIDname)
     stopNode.SetText("STOP")
     stopNode.SetEncoding(3)
@@ -565,9 +601,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
     print("Sending Emergency command")
     emergencyNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     emergencyNode.SetName(randomIDname)
     emergencyNode.SetText("EMERGENCY")
     emergencyNode.SetEncoding(3)
@@ -584,9 +622,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
     print("Sending Start up command")
     startupNode = slicer.vtkMRMLTextNode()
-    global last_prefix
-    last_prefix = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix)
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     startupNode.SetName(randomIDname)
     startupNode.SetText("START_UP")
     startupNode.SetEncoding(3)
@@ -608,25 +648,16 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.RegisterOutgoingMRMLNode(statusNode)
     self.openIGTNode.PushNode(statusNode)
 
-  def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
-    ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-    transformMatrix = vtk.vtkMatrix4x4()
-    ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
-    print(transformMatrix)
-    nbRows = transformNode.tableWidget.rowCount
-    nbColumns = transformNode.tableWidget.columnCount
-    for i in range(nbRows):
-      for j in range(nbColumns):
-        val = transformMatrix.GetElement(i,j)
-        transformNode.tableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
-
+ 
   def onTransformButtonClicked(self):
     #Send Transform message
     print("Sending Transform")
     transformMatrix = vtk.vtkMatrix4x4()
     SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
     SendTransformNode.GetMatrixTransformToParent(transformMatrix)
-    randomIDname = self.generateRandomNameID(last_prefix)
+    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = randomIDname
     SendTransformNode.SetName(randomIDname)
     print(transformMatrix)
     self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNode)
@@ -639,20 +670,30 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     elapsed_time = (end - start)*100
     concatenateMsg = ReceivedStringMsg.GetText()
     delimit = ":"
-    nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
-    msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
-    textNode.messageTextbox.setText(msgonly)
-    delimit2 = "_"
-    nameonlyType = nameonly[0: nameonly.index(delimit2)]
-    nameonlyID = nameonly[nameonly.index(delimit2) + 1: len(nameonly)]
-    print(nameonlyType)
-    print(nameonlyID)
-    if((last_string_sent == nameonlyID) and (nameonlyType == 'ACK')):
-      print("Acknowledgment received for command:", last_string_sent, "after", elapsed_time, "ms")
-      global ack
-      ack = 1
-    else: # if(elapsed_time > 100) print("Received knowledgment too late, after", elapsed_time, "ms")
-      print("Received something different than expected, received: ", ReceivedStringMsg.GetText())
+
+    if(concatenateMsg.find(delimit)!=-1): # found Delimiter is in the string
+      nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
+      msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
+      textNode.messageTextbox.setText(msgonly)
+      delimit2 = "_"
+      if(nameonly.find(delimit2)!=-1):
+        nameonlyType = nameonly[0: nameonly.index(delimit2)]
+        nameonlyID = nameonly[nameonly.index(delimit2) + 1: len(nameonly)]
+        print(nameonlyType)
+        print(nameonlyID)
+        global last_name_sent
+        if(last_name_sent.find(delimit2)!=-1):
+          last_name_sentType = last_name_sent[0: last_name_sent.index(delimit2)]
+          last_name_sentID = last_name_sent[last_name_sent.index(delimit2) + 1: len(last_name_sent)]
+          print(last_name_sentType)
+          print(last_name_sentID)
+          if((last_name_sentID == nameonlyID) and (nameonlyType == 'ACK') and(last_string_sent == msgonly)):  # if(elapsed_time > 100) print("Received knowledgment too late, after", elapsed_time, "ms")
+            print("Acknowledgment received for command:", last_string_sent, "after", elapsed_time, "ms")
+            global ack
+            ack = 1
+    else:
+      textNode.messageTextbox.setText(concatenateMsg)
+      print("Received something different than expected, received: ", ReceivedStringMsg.GetText())      
       
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
@@ -663,8 +704,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     s3 = ReceivedStatusMsg.GetErrorName()
     concatenateMsg = ReceivedStatusMsg.GetStatusString()
     delimit = ":"
-    nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
-    msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
+    if(concatenateMsg.find(delimit)!=-1): # found delimiter is in the string
+      nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
+      msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
+    else:
+      msgonly = concatenateMsg
+      nameonly = concatenateMsg
     s = s1 + sep + s2 + sep + s3 + sep + msgonly
     statusNode.statusTextbox.setText(s)
     global status_codes
@@ -682,8 +727,46 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==1) and (loading_phase == nameonly)): #and (elapsed_time<= 10)
       print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s")
       statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);")
+      if(loading_phase =="START_UP"):
+        self.activateButtons()
       ack = 0
     else:
       print("Error in changing phase")
+
+  def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+    ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+    transformMatrix = vtk.vtkMatrix4x4()
+    ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
+    print(transformMatrix)
+    nbRows = transformNode.tableWidget.rowCount
+    nbColumns = transformNode.tableWidget.columnCount
+    for i in range(nbRows):
+      for j in range(nbColumns):
+        val = transformMatrix.GetElement(i,j)
+        transformNode.tableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
+
+  def onTransformInfoNodeModified(self):
+    print("New transform info was received")
+    ReceivedTransformInfo = slicer.mrmlScene.GetFirstNodeByName("TransformInfo")
+    info = ReceivedTransformInfo.GetText()
+    delimit = "_"
+    if((info == "CURRENT_POSITION") or (info == "TARGET")):
+      print("Transform received")
+    elif(info.find(delimit)!=-1): # found Delimiter is in the string: # TODO Add condition if "_" is in the string 
+      infoType = info[0: info.index(delimit)]
+      infoID = info[info.index(delimit) + 1: len(info)]
+      print(infoType)
+      print(infoID)
+      global last_string_sent
+      #last_string_sentType = last_string_sent[0: last_string_sent.index(delimit2)]
+      last_string_sentID = last_string_sent[last_string_sent.index(delimit2) + 1: len(last_string_sent)]
+      #print(last_string_sentType)
+      print(last_string_sentID)
+      if((last_string_sentID == infoID) and (infoType == 'ACK')):
+        print("Acknowledgment received for transform:", last_string_sent)
+    else:
+      print("Received something different than expected, received: ", info)
+
+    
     
     
