@@ -94,7 +94,7 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   // Create a thread to continuously check whether Global::myglobalstring == saved blank string message.
   typedef void *(*THREADFUNCPTR)(void *);
   pthread_t thread;
-  //pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, this);
+  pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, this);
   
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
