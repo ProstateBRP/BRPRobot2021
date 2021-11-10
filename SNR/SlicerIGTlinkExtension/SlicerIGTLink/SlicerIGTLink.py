@@ -115,7 +115,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
     self.planningButton = qt.QPushButton("PLANNING")
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
-    self.planningButton.enabled = True
+    self.planningButton.enabled = False
     self.planningButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.planningButton)
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
@@ -123,7 +123,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # calibrationButton Button
     self.calibrationButton = qt.QPushButton("CALIBRATION")
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
-    self.calibrationButton.enabled = True
+    self.calibrationButton.enabled = False
     self.calibrationButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.calibrationButton)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
@@ -131,7 +131,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # targetingButton Button
     self.targetingButton = qt.QPushButton("TARGETING")
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
-    self.targetingButton.enabled = True
+    self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.targetingButton)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
@@ -139,7 +139,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # moveButton Button
     self.moveButton = qt.QPushButton("MOVE")
     self.moveButton.toolTip = "Send the move to target command to the WPI robot."
-    self.moveButton.enabled = True
+    self.moveButton.enabled = False
     self.moveButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.moveButton)
     self.moveButton.connect('clicked()', self.onMoveButtonClicked)
@@ -147,7 +147,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Lock Button to ask WPI to lock robot
     self.LockButton = qt.QPushButton("LOCK")
     self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
-    self.LockButton.enabled = True
+    self.LockButton.enabled = False
     self.LockButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.LockButton)
     self.LockButton.connect('clicked()', self.onLockButtonClicked)
@@ -155,7 +155,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Unlock Button to ask WPI to unlock robot
     self.UnlockButton = qt.QPushButton("UNLOCK")
     self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
-    self.UnlockButton.enabled = True
+    self.UnlockButton.enabled = False
     self.UnlockButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.UnlockButton)
     self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
@@ -163,7 +163,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Get robot pose Button to ask WPI to send the current robot position
     self.GetPoseButton = qt.QPushButton("GET POSE")
     self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
-    self.GetPoseButton.enabled = True
+    self.GetPoseButton.enabled = False
     self.GetPoseButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.GetPoseButton)
     self.GetPoseButton.connect('clicked()', self.onGetPoseButtonClicked)
@@ -171,7 +171,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Get robot status Button to ask WPI to send the current status position
     self.GetStatusButton = qt.QPushButton("GET STATUS")
     self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
-    self.GetStatusButton.enabled = True
+    self.GetStatusButton.enabled = False
     self.GetStatusButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.GetStatusButton)
     self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
@@ -179,7 +179,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # STOP Button 
     self.StopButton = qt.QPushButton("STOP")
     self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
-    self.StopButton.enabled = True
+    self.StopButton.enabled = False
     self.StopButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.StopButton)
     self.StopButton.connect('clicked()', self.onStopButtonClicked)
@@ -187,7 +187,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # EMERGENCY Button 
     self.EmergencyButton = qt.QPushButton("EMERGENCY")
     self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
-    self.EmergencyButton.enabled = True
+    self.EmergencyButton.enabled = False
     self.EmergencyButton.setMaximumWidth(150)
     outboundFormLayout.addRow(self.EmergencyButton)
     self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
@@ -202,7 +202,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # statusButton Button
     self.statusButton = qt.QPushButton("STATUS")
-    self.statusButton.toolTip = "Send the Slicer Status command to the WPI robot."
+    self.statusButton.toolTip = "Send the Slicer Status to the WPI robot."
     self.statusButton.enabled = True
     self.statusButton.setMaximumWidth(150)
     outboundStatusFormLayout.addRow(self.statusButton)
@@ -396,6 +396,18 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     randomIDname = ''.join(randomID)
     print(randomIDname)
     return randomIDname
+
+  def activateButtons(self):
+    self.planningButton.enabled = True
+    self.EmergencyButton.enabled = True
+    self.StopButton.enabled = True
+    self.GetStatusButton.enabled = True
+    self.GetPoseButton.enabled = True
+    self.UnlockButton.enabled = True
+    self.LockButton.enabled = True
+    self.moveButton.enabled = True
+    self.targetingButton.enabled = True
+    self.calibrationButton.enabled = True
    
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
@@ -682,8 +694,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==1) and (loading_phase == nameonly)): #and (elapsed_time<= 10)
       print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s")
       statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);")
+      if(loading_phase =="START_UP"):
+        self.activateButtons()
       ack = 0
     else:
       print("Error in changing phase")
+    
     
     
