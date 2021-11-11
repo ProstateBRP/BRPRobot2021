@@ -123,7 +123,6 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
 
         // Call SendStringToSlicer function in Lisa's script
         SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-        std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
       }
       else
       {
@@ -207,7 +206,6 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
             char *deviceName = (char *)("StatusMessage");
 
             SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-            std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
 
           }
           else
@@ -232,7 +230,6 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
           char *deviceName = (char *)("StatusMessage");
 
           SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-          std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
 
         }
       }
@@ -350,7 +347,6 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
 
         // Send the contents of the transformMessage to script.cxx
         SendTransformToSlicer(deviceName, matrix, wpiDeviceName);
-        std::cout << "Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
       }
 
     }
@@ -526,7 +522,7 @@ int TestBase::ReceiveString(igtl::MessageHeader *header)
 
     // Call SendStringToSlicer function in Lisa's script
     SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-    std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
+    // std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
   }
 
   return 1;
@@ -559,7 +555,7 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header)
     char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
     // Print contents of the message 
-    std::cout << "\n---> Received statusMessage from WPI." << std::endl;
+    std::cout << "\n---> Received statusMessage from WPI: " << statusMsg->GetStatusString() << std::endl;
 
     char *wpiDeviceName = (char *)header->GetDeviceName();
     char *addedmsg = strcat(wpiDeviceName, ": ");
@@ -567,15 +563,8 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header)
     char *deviceName = (char *)("StatusMessage");
 
     SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-    std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
+    // std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
 
-    std::cerr << "========== STATUS ==========" << std::endl;
-    std::cerr << " Code      : " << argCode << std::endl;
-    std::cerr << " SubCode   : " << argSubcode << std::endl;
-    std::cerr << " Error Name: " << argErrorName << std::endl;
-    std::cerr << " Status    : " << argStatusStringMessage << std::endl;
-    std::cerr << "============================" << std::endl
-              << std::endl;
   }
 
   return 0;
@@ -583,7 +572,7 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header)
 
 int TestBase::ReceiveTransform(igtl::MessageHeader *header)
 {
-  // std::cerr << "MESSAGE: Receiving TRANSFORM data type." << std::endl;
+  // std::cerr << " " << std::endl;
 
   // Create a message buffer to receive transform data
   igtl::TransformMessage::Pointer transMsg;
@@ -613,7 +602,7 @@ int TestBase::ReceiveTransform(igtl::MessageHeader *header)
 
     // Send the contents of the transformMessage to script.cxx
     SendTransformToSlicer(deviceName, matrix, wpiDeviceName);
-    std::cout << "Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
+    // std::cout << "Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
 
     return 1;
   }

@@ -50,7 +50,7 @@ int NavigationTestBase::Exec()
     if (errorPoint == SUCCESS)
       {
       std::cerr << "MESSAGE: The test has been completed successfully." << std::endl;
-      
+      Global::testRunning = false;
       return 1;
       }
     else

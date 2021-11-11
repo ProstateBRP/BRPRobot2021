@@ -286,7 +286,7 @@ void SendStringToSlicer(char* argDeviceName, char* argMessage)
     stringMsg->SetString(argMessage);
     stringMsg->Pack();
     socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
-    std::cout << "Sending stringMessage from script.cxx to Slicer: " << argMessage << std::endl;
+    std::cout << "Sent stringMessage to Slicer with argMessage: " << argMessage << std::endl;
 
 }
 
@@ -322,15 +322,14 @@ void SendStateToSlicer(char *argDeviceName, unsigned short argCode, unsigned lon
         statusMsg->SetStatusString(argStatusStringMessage);
         statusMsg->Pack();
         socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
-        std::cout << "Sending statusMessage from script.cxx to Slicer: " << statusMsg << std::endl;
+        std::cout << "Sent statusMessage to Slicer: " << argStatusStringMessage << std::endl;
 
         std::cerr << "========== STATUS ==========" << std::endl;
         std::cerr << " Code      : " << argCode << std::endl;
         std::cerr << " SubCode   : " << argSubcode << std::endl;
         std::cerr << " Error Name: " << argErrorName << std::endl;
         std::cerr << " Status    : " << argStatusStringMessage << std::endl;
-        std::cerr << "============================" << std::endl
-                  << std::endl;
+        std::cerr << "============================" << std::endl;
         i = 1;
     }
 }
@@ -360,7 +359,7 @@ void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix, char * 
     transMsg = igtl::TransformMessage::New();
     transMsg->SetDeviceName(argDeviceName);
     
-    std::cout << "Sending transformMessage from script.cxx to Slicer:" << std::endl;
+    std::cout << "Sent transformMessage to Slicer." << std::endl;
 
     igtl::TimeStamp::Pointer ts;
     ts = igtl::TimeStamp::New();
@@ -566,9 +565,6 @@ void GetTransformFromSlicer(const char* hostname, int port)
 
 int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
-
-    std::cerr << "\n---> Receiving StringMessage in script.cxx from Slicer." << std::endl;
-
     // Create a message buffer to receive transform data
     igtl::StringMessage::Pointer stringMsg;
     stringMsg = igtl::StringMessage::New();
@@ -584,11 +580,13 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 
     int c = stringMsg->Unpack(1);
 
-    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
-    {
-        std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
-              << "String: " << stringMsg->GetString() << std::endl;
-    }
+    // if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    // {
+    //     std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
+    //           << "String: " << stringMsg->GetString() << std::endl;
+    // }
+
+    std::cerr << "\n---> Received stringMessage from Slicer: " << stringMsg->GetString() << std::endl;
     Global::globalString = stringMsg->GetString();
     Global::globalDeviceName = header->GetDeviceName();
 
@@ -616,7 +614,7 @@ int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 
     if (statusMsg->GetSubCode() != 2687068)
     {
-        std::cout << "\n---> Receiving StatusMessage in script.cxx from Slicer." << std::endl;
+        std::cout << "\n---> Received statusMessage from Slicer: " << statusMsg->GetStatusString() << std::endl;
 
         if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
         {
@@ -644,7 +642,7 @@ int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 
 int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
-    std::cout << "\n---> Receiving StatusMessage in script.cxx from Slicer." << std::endl;
+    std::cout << "\n---> Received transformMessage from Slicer." << std::endl;
 
     // Create a message buffer to receive transform datag
     igtl::TransformMessage::Pointer transMsg;
