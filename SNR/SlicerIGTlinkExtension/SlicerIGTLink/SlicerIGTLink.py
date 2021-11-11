@@ -728,7 +728,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s")
       statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);")
       if(loading_phase =="START_UP"):
-        self.activateButtons()
+        statusNode.activateButtons()
       ack = 0
     else:
       print("Error in changing phase")

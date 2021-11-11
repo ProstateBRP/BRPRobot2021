@@ -322,7 +322,15 @@ void SendStateToSlicer(char *argDeviceName, unsigned short argCode, unsigned lon
         statusMsg->SetStatusString(argStatusStringMessage);
         statusMsg->Pack();
         socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
-        std::cout << "Sending statusMessage from script.cxx to Slicer:\n" << statusMsg << std::endl;
+        std::cout << "Sending statusMessage from script.cxx to Slicer: " << statusMsg << std::endl;
+
+        std::cerr << "========== STATUS ==========" << std::endl;
+        std::cerr << " Code      : " << argCode << std::endl;
+        std::cerr << " SubCode   : " << argSubcode << std::endl;
+        std::cerr << " Error Name: " << argErrorName << std::endl;
+        std::cerr << " Status    : " << argStatusStringMessage << std::endl;
+        std::cerr << "============================" << std::endl
+                  << std::endl;
         i = 1;
     }
 }

@@ -39,7 +39,7 @@ NavigationDynamicCommunicationTest::~NavigationDynamicCommunicationTest()
 {
 }
 
-//void *NavigationDynamicCommunicationTest::ReceiveFromSlicer(void *ptr)
+// Threaded function to receive messages from Slicer via updated global variables and pass them along to WPI
 void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
 {
   std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from Slicer and send to WPI." << std::endl;
@@ -114,7 +114,7 @@ void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
   return NULL;
 }
 
-// void *NavigationDynamicCommunicationTest::SendToSlicer(void *ptr)
+// Threaded function to receive messages from WPI and send to Slicer via script.cxx
 void *NavigationDynamicCommunicationTest::SendToSlicer()
 {
   std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from WPI and send to Slicer." << std::endl;
@@ -129,9 +129,6 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
 
   while(1)
   {
-    // headerMsg->InitPack();
-    // int r = this->Socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), this->TimeoutFalse);
-    // headerMsg->Unpack();
 
     ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
     std::cout << "Incoming message from WPI with deviceType: " << headerMsg->GetDeviceType() << " and deviceName: " << headerMsg->GetDeviceName() << std::endl;
@@ -148,25 +145,6 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
     {
       // Receive statusMessage from WPI and send to Slicer
       ReceiveStatus(headerMsg);
-
-      // // igtl::StatusMessage::Pointer statusMsg;
-      // // statusMsg = igtl::StatusMessage::New();
-      // statusMsg->SetMessageHeader(headerMsg);
-      // statusMsg->AllocatePack();
-
-      // bool timeout(false);
-      // this->Socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
-      // int c = statusMsg->Unpack();
-
-      // // WHAT IS SUFFIX ARGUMENT?
-      // int suffix = 1;
-
-      // std::cout << "deviceName1: " << headerMsg->GetDeviceName() << std::endl;
-      // std::cout << "deviceName2: " << statusMsg->GetDeviceName() << std::endl;
-      // std::cout << "code: " << statusMsg->GetCode() << std::endl;
-      // std::cout << "device type: " << statusMsg->GetDeviceType() << std::endl;
-
-      // CheckAndReceiveStatusMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), statusMsg->GetCode(), suffix, statusMsg->GetErrorName());
     }
 
     // Incoming message is a transformMessage:
@@ -174,20 +152,6 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
     {
       // Receive transformMessage from WPI and send to Slicer
       ReceiveTransform(headerMsg);
-
-      // igtl::TransformMessage::Pointer transMsg;
-      // transMsg = igtl::TransformMessage::New();
-      // transMsg->SetMessageHeader(headerMsg);
-      // transMsg->AllocatePack();
-
-      // // Receive transform data from the socket
-      // bool timeout(false);
-      // this->Socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
-      // int c = transMsg->Unpack(1);
-      // igtl::Matrix4x4 matrix;
-      // transMsg->GetMatrix(matrix);
-
-      // CheckAndReceiveTransformMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), matrix);
     }
   }
   return NULL;
@@ -197,25 +161,9 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
 NavigationDynamicCommunicationTest::ErrorPointType NavigationDynamicCommunicationTest::Test()
 {
   int queryCounter = 0;
-  // igtl::MessageHeader::Pointer headerMsg;
-  // headerMsg = igtl::MessageHeader::New();
-  
-  // typedef void *(*THREADFUNCPTR)(void *);
-  // // Create a thread to receive from Slicer and send to WPI
-  // pthread_t threadReceive;
-  // pthread_create(&threadReceive, NULL, (THREADFUNCPTR) &NavigationDynamicCommunicationTest::ReceiveFromSlicer, this);
+  // Create a thread to receive from Slicer and send to WPI
 
-  // // Create a thread to receive from WPI and send to Slicer
-  // pthread_t threadSend;
-  // pthread_create(&threadSend, NULL, (THREADFUNCPTR) &NavigationDynamicCommunicationTest::SendToSlicer, this);
-  
-  // // pthread_join(threadReceive, NULL);
-  // // pthread_join(threadSend, NULL); 
-
-  // Using std::thread instead of pthread
-  // NavigationDynamicCommunicationTest * testPtr = new NavigationDynamicCommunicationTest();
   std::thread threadReceive(&NavigationDynamicCommunicationTest::ReceiveFromSlicer, this);
-  //threadReceive.detach();
   std::thread threadSend(&NavigationDynamicCommunicationTest::SendToSlicer, this);
 
   std::this_thread::sleep_for(std::chrono::seconds(60));

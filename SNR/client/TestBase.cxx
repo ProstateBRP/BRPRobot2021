@@ -569,13 +569,13 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header)
     SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
     std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
 
-    // std::cerr << "========== STATUS ==========" << std::endl;
-    // std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
-    // std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
-    // std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
-    // std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
-    // std::cerr << "============================" << std::endl
-    //           << std::endl;
+    std::cerr << "========== STATUS ==========" << std::endl;
+    std::cerr << " Code      : " << argCode << std::endl;
+    std::cerr << " SubCode   : " << argSubcode << std::endl;
+    std::cerr << " Error Name: " << argErrorName << std::endl;
+    std::cerr << " Status    : " << argStatusStringMessage << std::endl;
+    std::cerr << "============================" << std::endl
+              << std::endl;
   }
 
   return 0;

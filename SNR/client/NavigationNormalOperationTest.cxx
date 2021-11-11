@@ -39,69 +39,12 @@ NavigationNormalOperationTest::~NavigationNormalOperationTest()
 {
 }
 
-// Threaded function to receive messages from Slicer via updated global variables and pass them along to WPI
-//void *NavigationNormalOperationTest::ReceiveFromSlicer(void *ptr)
-void *NavigationNormalOperationTest::ReceiveFromSlicer()
-{
-  std::cerr << "---> Starting thread in NavigationNormalOperationTest to receive messages from Slicer and send to WPI." << std::endl;
-  // std::cout << "Current global stringMessage: " << Global::globalString << std::endl;
-  // std::cout << "Current global deviceName: " << Global::globalDeviceName << std::endl;
-
-  // String arguments:
-  std::string currentStringMessage = Global::globalString;
-  std::string currentDeviceName = Global::globalDeviceName;
-
-  // Status arguments:
-  // std::string currentStatusArgErrorName = Global::globalArgErrorName;
-  // std::string currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
-
-  // Transform arguments:
-  // TODO
-
-  while(1)
-  {
-    //std::cout << "Current globalString: " << Global::globalString << std::endl;
-    if (currentStringMessage.compare(Global::globalString) != 0 && Global::testRunning == true)
-    {
-      std::cout << "Sending stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
-      currentStringMessage = Global::globalString;
-      //std::cout << "Sending new deviceName from Slicer to WPI: Global::globalDeviceName: " << Global::globalDeviceName << std::endl;
-      SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
-    }
-
-    // if (currentStatusArgErrorName.compare(Global::globalArgErrorName) != 0)
-    // {
-    //   std::cout << "Sending statusMessage from Slicer to WPI: Global::globalArgStatusStringMessage: " << Global::globalArgStatusStringMessage << std::endl;
-    //   currentStatusArgErrorName = Global::globalArgErrorName;
-    //   currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
-    //   SendStatusMessage((char*)"statusMessage", Global::globalArgCode, Global::globalArgSubcode, (Global::globalArgErrorName).c_str(), (Global::globalArgStatusStringMessage).c_str());
-    // }
-
-    // if (currentTransformMessage.compare(Global::globalTransform) != 0)
-    // {
-    //   // TODO
-    // }
-  }
-  return NULL;
-}
-
-
 NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Test()
 {
   int queryCounter = 0;
   igtl::MessageHeader::Pointer headerMsg;
   headerMsg = igtl::MessageHeader::New();
-
-  // Create a thread to continuously check whether Global::myglobalstring == saved blank string message.
-  // typedef void *(*THREADFUNCPTR)(void *);
-  // pthread_t thread;
-  // pthread_create(&thread, NULL, (THREADFUNCPTR) &NavigationNormalOperationTest::ReceiveFromSlicer, this);
   
-  // Using std::thread instead of pthread
-  //NavigationNormalOperationTest * testPtr = new NavigationNormalOperationTest();
-  std::thread threadReceive(&NavigationNormalOperationTest::ReceiveFromSlicer, this);
-  //threadReceive.detach();
-
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
   ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
