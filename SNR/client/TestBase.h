@@ -65,11 +65,10 @@ public:
   int CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
                                       const char *name, igtl::Matrix4x4 &matrix,
                                       double err = 1.0e-10, int suffix = 0);
-
-  int ReceiveTransform(igtl::MessageHeader *header, igtl::Matrix4x4 &matrix);
-  int ReceiveString(igtl::MessageHeader *header, std::string &string);
-  int ReceiveStatus(igtl::MessageHeader *header, int &code, int &subcode,
-                    std::string &name, std::string &status);
+  
+  int ReceiveString(igtl::MessageHeader *header);
+  int ReceiveStatus(igtl::MessageHeader *header);
+  int ReceiveTransform(igtl::MessageHeader *header);
 
   void PrintMatrix(std::string prefix, igtl::Matrix4x4 &matrix);
   int ValidateMatrix(igtl::Matrix4x4 &matrix);

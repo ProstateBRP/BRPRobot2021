@@ -121,66 +121,73 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
   igtl::MessageHeader::Pointer headerMsg;
   headerMsg = igtl::MessageHeader::New();
 
+  igtl::StringMessage::Pointer stringMsg;
+  stringMsg = igtl::StringMessage::New();
+
+  igtl::StatusMessage::Pointer statusMsg;
+  statusMsg = igtl::StatusMessage::New();
+
   while(1)
   {
-    headerMsg->InitPack();
-    int r = this->Socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), this->TimeoutFalse);
-    headerMsg->Unpack();
+    // headerMsg->InitPack();
+    // int r = this->Socket->Receive(headerMsg->GetPackPointer(), headerMsg->GetPackSize(), this->TimeoutFalse);
+    // headerMsg->Unpack();
 
+    ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
     std::cout << "Incoming message from WPI with deviceType: " << headerMsg->GetDeviceType() << " and deviceName: " << headerMsg->GetDeviceName() << std::endl;
     
     // Incoming message is a stringMessage:
     if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
     {
       // Receive stringMessage from WPI and send to Slicer
-      igtl::StringMessage::Pointer stringMsg;
-      stringMsg = igtl::StringMessage::New();
-      stringMsg->SetMessageHeader(headerMsg);
-      stringMsg->AllocatePack();
-
-      bool timeout(false);
-      this->Socket->Receive(stringMsg->GetPackBodyPointer(), stringMsg->GetPackBodySize(), timeout);
-      int c = stringMsg->Unpack(1);
-
-      CheckAndReceiveStringMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), (char *)(stringMsg->GetString()));
+      ReceiveString(headerMsg);
     }
 
     // Incoming message is a statusMessage:
     if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
     {
       // Receive statusMessage from WPI and send to Slicer
-      igtl::StatusMessage::Pointer statusMsg;
-      statusMsg = igtl::StatusMessage::New();
-      statusMsg->SetMessageHeader(headerMsg);
-      statusMsg->AllocatePack();
+      ReceiveStatus(headerMsg);
 
-      bool timeout(false);
-      this->Socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
-      int c = statusMsg->Unpack(1);
+      // // igtl::StatusMessage::Pointer statusMsg;
+      // // statusMsg = igtl::StatusMessage::New();
+      // statusMsg->SetMessageHeader(headerMsg);
+      // statusMsg->AllocatePack();
 
-      // WHAT IS SUFFIX ARGUMENT?
-      int suffix = 1;
+      // bool timeout(false);
+      // this->Socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
+      // int c = statusMsg->Unpack();
 
-      CheckAndReceiveStatusMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), statusMsg->GetCode(), suffix, statusMsg->GetErrorName());
+      // // WHAT IS SUFFIX ARGUMENT?
+      // int suffix = 1;
+
+      // std::cout << "deviceName1: " << headerMsg->GetDeviceName() << std::endl;
+      // std::cout << "deviceName2: " << statusMsg->GetDeviceName() << std::endl;
+      // std::cout << "code: " << statusMsg->GetCode() << std::endl;
+      // std::cout << "device type: " << statusMsg->GetDeviceType() << std::endl;
+
+      // CheckAndReceiveStatusMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), statusMsg->GetCode(), suffix, statusMsg->GetErrorName());
     }
 
     // Incoming message is a transformMessage:
     if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
     {
       // Receive transformMessage from WPI and send to Slicer
-      igtl::TransformMessage::Pointer transMsg;
-      transMsg = igtl::TransformMessage::New();
-      transMsg->SetMessageHeader(headerMsg);
-      transMsg->AllocatePack();
+      ReceiveTransform(headerMsg);
 
-      // Receive transform data from the socket
-      bool timeout(false);
-      this->Socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
-      int c = transMsg->Unpack(1);
-      igtl::Matrix4x4 matrix;
-      transMsg->GetMatrix(matrix);
+      // igtl::TransformMessage::Pointer transMsg;
+      // transMsg = igtl::TransformMessage::New();
+      // transMsg->SetMessageHeader(headerMsg);
+      // transMsg->AllocatePack();
 
-      CheckAndReceiveTransformMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), matrix);
+      // // Receive transform data from the socket
+      // bool timeout(false);
+      // this->Socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
+      // int c = transMsg->Unpack(1);
+      // igtl::Matrix4x4 matrix;
+      // transMsg->GetMatrix(matrix);
+
+      // CheckAndReceiveTransformMessage(headerMsg, (char*)(headerMsg->GetDeviceName()), matrix);
     }
   }
   return NULL;

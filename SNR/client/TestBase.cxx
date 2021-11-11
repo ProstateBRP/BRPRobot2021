@@ -104,82 +104,46 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
 
     // Deserialize the transform data
     // If you want to skip CRC check, call Unpack() without argument.
-    // int c = stringMsg->Unpack(1);
+    int c = stringMsg->Unpack(1);
 
-    // Skip CRC check:
-    int c = stringMsg->Unpack();
+    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    {
+      if (stringMsg->GetEncoding() == 3 &&
+          strcmp(stringMsg->GetString(), string) == 0)
+      {
+        success = 1;
 
-    // if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
-    // {
-    // if (stringMsg->GetEncoding() == 3 &&
-    //     strcmp(stringMsg->GetString(), string) == 0)
-    // {
-    success = 1;
+        // Print contents of the message 
+        std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
 
-    // Print contents of the message 
-    std::cout << "\n---> Received StringMessage from WPI: " << stringMsg->GetString() << std::endl;
+        char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
+        char *message = strcat(wpiDeviceName, ": ");
+        message = strcat(message, stringMsg->GetString());
+        char *slicerDeviceName = (char *)("StringMessage");
 
-    char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
-    char *message = strcat(wpiDeviceName, ": ");
-    message = strcat(message, stringMsg->GetString());
-    char *slicerDeviceName = (char *)("StringMessage");
-
-    // Call SendStringToSlicer function in Lisa's script
-    SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-    std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
-    // }
-      // else
-      // {
-      //   std::cerr << "ERROR: Invalid string: Encoding=" << stringMsg->GetEncoding()
-      //             << ", String=" << string << std::endl;
-      //   success = 0;
-      // }
-    // }
-    // else
-    // {
-    //   std::cerr << "ERROR: Invalid CRC." << std::endl;
-    //   success = 0;
-    // }
-
-
-    // IF NOT SKIP CRC CHECK (Original function):
-
-    // if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
-    // {
-    //   if (stringMsg->GetEncoding() == 3 &&
-    //       strcmp(stringMsg->GetString(), string) == 0)
-    //   {
-    //     success = 1;
-
-    //     // Print contents of the message 
-    //     std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
-
-    //     char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
-    //     char *message = strcat(wpiDeviceName, ": ");
-    //     message = strcat(message, stringMsg->GetString());
-    //     char *slicerDeviceName = (char *)("StringMessage");
-
-    //     // Call SendStringToSlicer function in Lisa's script
-    //     SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-    //     std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
-    //   }
-    //   else
-    //   {
-    //     std::cerr << "ERROR: Invalid string: Encoding=" << stringMsg->GetEncoding()
-    //               << ", String=" << string << std::endl;
-    //     success = 0;
-    //   }
-    // }
-    // else
-    // {
-    //   std::cerr << "ERROR: Invalid CRC." << std::endl;
-    //   success = 0;
-    // }
+        // Call SendStringToSlicer function in Lisa's script
+        SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
+        std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
+      }
+      else
+      {
+        std::cerr << "ERROR: Invalid string: Encoding=" << stringMsg->GetEncoding()
+                  << ", String=" << string << std::endl;
+        success = 0;
+      }
+    }
+    else
+    {
+      std::cerr << "ERROR: Could not receive STRING( " << name << ", " << stringMsg->GetString() << " ) message." << std::endl;
+      std::cerr << "ERROR: Invalid CRC." << std::endl;
+      success = 0;
+    }
   }
 
   if (!success)
   {
     std::cerr << "ERROR: Could not receive STRING( " << name << ", " << string << " ) message." << std::endl;
+
     this->Socket->CloseSocket();
   }
 
@@ -531,39 +495,10 @@ void TestBase::GetRandomTestMatrix(igtl::Matrix4x4 &matrix)
   //PrintMatrix(matrix);
 }
 
-int TestBase::ReceiveTransform(igtl::MessageHeader *header, igtl::Matrix4x4 &matrix)
-{
-  std::cerr << "MESSAGE: Receiving TRANSFORM data type." << std::endl;
-
-  // Create a message buffer to receive transform data
-  igtl::TransformMessage::Pointer transMsg;
-  transMsg = igtl::TransformMessage::New();
-  transMsg->SetMessageHeader(header);
-  transMsg->AllocatePack();
-  bool timeout(false);
-  // Receive transform data from the this->Socket
-  this->Socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
-
-  // Deserialize the transform data
-  // If you want to skip CRC check, call Unpack() without argument.
-  int c = transMsg->Unpack(1);
-
-  if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
-  {
-    // Retrive the transform data
-    transMsg->GetMatrix(matrix);
-    //igtl::PrintMatrix(matrix);
-    std::cerr << std::endl;
-    return 1;
-  }
-
-  return 0;
-}
-
-int TestBase::ReceiveString(igtl::MessageHeader *header, std::string &string)
+int TestBase::ReceiveString(igtl::MessageHeader *header)
 {
 
-  std::cerr << "MESSAGE: Receiving STRING data type." << std::endl;
+  // std::cerr << "MESSAGE: Receiving STRING data type." << std::endl;
 
   // Create a message buffer to receive transform data
   igtl::StringMessage::Pointer stringMsg;
@@ -581,20 +516,25 @@ int TestBase::ReceiveString(igtl::MessageHeader *header, std::string &string)
 
   if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
   {
-    std::cerr << "Encoding: " << stringMsg->GetEncoding() << "; "
-              << "String: " << stringMsg->GetString() << std::endl
-              << std::endl;
-    string = stringMsg->GetString();
+    // Print contents of the message 
+    std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
+
+    char *wpiDeviceName = (char *)header->GetDeviceName();
+    char *message = strcat(wpiDeviceName, ": ");
+    message = strcat(message, stringMsg->GetString());
+    char *slicerDeviceName = (char *)("StringMessage");
+
+    // Call SendStringToSlicer function in Lisa's script
+    SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
+    std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
   }
 
   return 1;
 }
 
-int TestBase::ReceiveStatus(igtl::MessageHeader *header, int &code, int &subcode,
-                            std::string &name, std::string &status)
+int TestBase::ReceiveStatus(igtl::MessageHeader *header)
 {
-
-  std::cerr << "MESSAGE: Receiving STATUS data type." << std::endl;
+  // std::cerr << "MESSAGE: Receiving STATUS data type." << std::endl;
 
   // Create a message buffer to receive transform data
   igtl::StatusMessage::Pointer statusMsg;
@@ -611,18 +551,71 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header, int &code, int &subcode
 
   if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
   {
-    std::cerr << "========== STATUS ==========" << std::endl;
-    std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
-    std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
-    std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
-    std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
-    std::cerr << "============================" << std::endl
-              << std::endl;
 
-    code = statusMsg->GetCode();
-    subcode = statusMsg->GetSubCode();
-    name = statusMsg->GetErrorName();
-    status = statusMsg->GetStatusString();
+    // Send the contents of the statusMessage to script.cxx
+    unsigned short argCode = statusMsg->GetCode();
+    unsigned long long argSubcode = statusMsg->GetSubCode();
+    char *argErrorName = (char *)(statusMsg->GetErrorName());
+    char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
+
+    // Print contents of the message 
+    std::cout << "\n---> Received statusMessage from WPI." << std::endl;
+
+    char *wpiDeviceName = (char *)header->GetDeviceName();
+    char *addedmsg = strcat(wpiDeviceName, ": ");
+    argStatusStringMessage = strcat(addedmsg, argStatusStringMessage);
+    char *deviceName = (char *)("StatusMessage");
+
+    SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
+    std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
+
+    // std::cerr << "========== STATUS ==========" << std::endl;
+    // std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
+    // std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
+    // std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
+    // std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
+    // std::cerr << "============================" << std::endl
+    //           << std::endl;
+  }
+
+  return 0;
+}
+
+int TestBase::ReceiveTransform(igtl::MessageHeader *header)
+{
+  // std::cerr << "MESSAGE: Receiving TRANSFORM data type." << std::endl;
+
+  // Create a message buffer to receive transform data
+  igtl::TransformMessage::Pointer transMsg;
+  transMsg = igtl::TransformMessage::New();
+  transMsg->SetMessageHeader(header);
+  transMsg->AllocatePack();
+  bool timeout(false);
+  // Receive transform data from the this->Socket
+  this->Socket->Receive(transMsg->GetPackBodyPointer(), transMsg->GetPackBodySize(), timeout);
+
+  // Deserialize the transform data
+  // If you want to skip CRC check, call Unpack() without argument.
+  int c = transMsg->Unpack(1);
+
+  if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+  {
+    // Retrive the transform data
+    std::cout << "\n---> Received transformMessage from WPI." << std::endl;
+
+    // if CRC check is OK. Read transform data.
+    igtl::Matrix4x4 matrix;
+    transMsg->GetMatrix(matrix);
+    igtl::PrintMatrix(matrix);
+
+    char *deviceName = (char *)("TransformMessage");
+    char * wpiDeviceName = (char*)header->GetDeviceName();
+
+    // Send the contents of the transformMessage to script.cxx
+    SendTransformToSlicer(deviceName, matrix, wpiDeviceName);
+    std::cout << "Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
+
+    return 1;
   }
 
   return 0;

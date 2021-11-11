@@ -304,10 +304,12 @@ int TestBase::SendStringMessage(const char *name, const char *string)
   ts->GetTime();
 
   stringMsg->SetDeviceName(name);
+  stringMsg->SetDeviceType("STRING"); // NEW
   stringMsg->SetString(string);
   stringMsg->SetTimeStamp(ts);
   stringMsg->Pack();
   int r = this->Socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
+
   if (!r)
   {
     std::cerr << "ERROR: Sending STRING( " << name << ", " << string << " )" << std::endl;
@@ -323,6 +325,7 @@ int TestBase::SendTransformMessage(const char *name, igtl::Matrix4x4 &matrix)
   igtl::TransformMessage::Pointer transMsg;
   transMsg = igtl::TransformMessage::New();
   transMsg->SetDeviceName(name);
+  transMsg->SetDeviceType("TRANSFORM"); // NEW
 
   igtl::TimeStamp::Pointer ts;
   ts = igtl::TimeStamp::New();
@@ -353,6 +356,8 @@ int TestBase::SendStatusMessage(const char *name, int Code, int SubCode,
 
   statusMsg->SetCode(Code);
   statusMsg->SetSubCode(SubCode);
+  statusMsg->SetDeviceType("STATUS"); // NEW
+
   if (errorName)
   {
     statusMsg->SetErrorName(errorName);
