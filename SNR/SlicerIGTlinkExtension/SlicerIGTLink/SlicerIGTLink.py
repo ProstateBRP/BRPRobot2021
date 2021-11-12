@@ -95,118 +95,120 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(outboundCollapsibleButton)
 
     # Layout within the path collapsible button
-    outboundFormLayout = qt.QFormLayout(outboundCollapsibleButton)
+    outboundFormLayout = qt.QGridLayout(outboundCollapsibleButton)
 
     # TODO -- send messages
+
     self.phaseTextbox = qt.QLineEdit("")
     self.phaseTextbox.setReadOnly(True)
-    self.phaseTextbox.setFixedWidth(150)
-    self.phaseTextbox.toolTip = "Blue if in the phase, green if phase successfully achieved"
-    outboundFormLayout.addRow("Current phase:", self.phaseTextbox)
+    self.phaseTextbox.setFixedWidth(250)
+    self.phaseTextbox.toolTip = "Show current phase: in Blue if in the phase, green if phase successfully achieved"
+    outboundFormLayout.addWidget(self.phaseTextbox, 0, 0)
+    
 
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
     self.startupButton.toolTip = "Send the startup command to the WPI robot."
     self.startupButton.enabled = True
-    self.startupButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.startupButton)
+    self.startupButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.startupButton, 1, 0)
     self.startupButton.connect('clicked()', self.onStartupButtonClicked)
 
     # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
     self.planningButton = qt.QPushButton("PLANNING")
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
     self.planningButton.enabled = False
-    self.planningButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.planningButton)
+    self.planningButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.planningButton, 2, 0)
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
 
     # calibrationButton Button
     self.calibrationButton = qt.QPushButton("CALIBRATION")
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
     self.calibrationButton.enabled = False
-    self.calibrationButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.calibrationButton)
+    self.calibrationButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.calibrationButton, 2, 1)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
 
     # targetingButton Button
     self.targetingButton = qt.QPushButton("TARGETING")
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
     self.targetingButton.enabled = False
-    self.targetingButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.targetingButton)
+    self.targetingButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.targetingButton, 3 , 0)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
 
     # moveButton Button
     self.moveButton = qt.QPushButton("MOVE")
     self.moveButton.toolTip = "Send the move to target command to the WPI robot."
     self.moveButton.enabled = False
-    self.moveButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.moveButton)
+    self.moveButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.moveButton, 3, 1)
     self.moveButton.connect('clicked()', self.onMoveButtonClicked)
 
     # Lock Button to ask WPI to lock robot
     self.LockButton = qt.QPushButton("LOCK")
     self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
     self.LockButton.enabled = False
-    self.LockButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.LockButton)
+    self.LockButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.LockButton, 4, 0)
     self.LockButton.connect('clicked()', self.onLockButtonClicked)
 
     # Unlock Button to ask WPI to unlock robot
     self.UnlockButton = qt.QPushButton("UNLOCK")
     self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
     self.UnlockButton.enabled = False
-    self.UnlockButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.UnlockButton)
+    self.UnlockButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.UnlockButton, 4, 1)
     self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
 
     # Get robot pose Button to ask WPI to send the current robot position
     self.GetPoseButton = qt.QPushButton("GET POSE")
     self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
     self.GetPoseButton.enabled = False
-    self.GetPoseButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.GetPoseButton)
+    self.GetPoseButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.GetPoseButton, 5, 0)
     self.GetPoseButton.connect('clicked()', self.onGetPoseButtonClicked)
 
     # Get robot status Button to ask WPI to send the current status position
     self.GetStatusButton = qt.QPushButton("GET STATUS")
     self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
     self.GetStatusButton.enabled = False
-    self.GetStatusButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.GetStatusButton)
+    self.GetStatusButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.GetStatusButton, 5, 1)
     self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
 
     # STOP Button 
     self.StopButton = qt.QPushButton("STOP")
     self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
     self.StopButton.enabled = False
-    self.StopButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.StopButton)
+    self.StopButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.StopButton, 6, 0)
     self.StopButton.connect('clicked()', self.onStopButtonClicked)
 
     # EMERGENCY Button 
     self.EmergencyButton = qt.QPushButton("EMERGENCY")
     self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
     self.EmergencyButton.enabled = False
-    self.EmergencyButton.setMaximumWidth(150)
-    outboundFormLayout.addRow(self.EmergencyButton)
+    self.EmergencyButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.EmergencyButton, 6, 1)
     self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
 
     # Outbound Status message collapsible button
-    outboundStatusCollapsibleButton = ctk.ctkCollapsibleButton()
-    outboundStatusCollapsibleButton.text = "Outbound status messages (Slicer -> WPI)"
-    self.layout.addWidget(outboundStatusCollapsibleButton)
+    #outboundStatusCollapsibleButton = ctk.ctkCollapsibleButton()
+    #outboundStatusCollapsibleButton.text = "Outbound status messages (Slicer -> WPI)"
+    #self.layout.addWidget(outboundStatusCollapsibleButton)
 
     # Layout within the path collapsible button
-    outboundStatusFormLayout = qt.QFormLayout(outboundStatusCollapsibleButton)
+    #outboundStatusFormLayout = qt.QFormLayout(outboundStatusCollapsibleButton)
 
     # statusButton Button
-    self.statusButton = qt.QPushButton("STATUS")
-    self.statusButton.toolTip = "Send the Slicer Status to the WPI robot."
-    self.statusButton.enabled = True
-    self.statusButton.setMaximumWidth(150)
-    outboundStatusFormLayout.addRow(self.statusButton)
-    self.statusButton.connect('clicked()', self.onStatusButtonClicked)
+    #self.statusButton = qt.QPushButton("STATUS")
+    #self.statusButton.toolTip = "Send the Slicer Status to the WPI robot."
+    #self.statusButton.enabled = True
+    #self.statusButton.setMaximumWidth(150)
+    #outboundStatusFormLayout.addRow(self.statusButton)
+    #self.statusButton.connect('clicked()', self.onStatusButtonClicked)
 
     # Outbound tranform collapsible button
     outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
@@ -639,14 +641,14 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     last_string_sent = startupNode.GetText()
 
 
-  def onStatusButtonClicked(self):
+  #def onStatusButtonClicked(self):
     #Send Status message
-    print("Sending Status")
-    statusNode = slicer.vtkMRMLIGTLStatusNode()
-    statusNode.SetStatusString("STATUS_OK")
-    slicer.mrmlScene.AddNode(statusNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(statusNode)
-    self.openIGTNode.PushNode(statusNode)
+    #print("Sending Status")
+    #statusNode = slicer.vtkMRMLIGTLStatusNode()
+    #statusNode.SetStatusString("STATUS_OK")
+    #slicer.mrmlScene.AddNode(statusNode)
+    #self.openIGTNode.RegisterOutgoingMRMLNode(statusNode)
+    #self.openIGTNode.PushNode(statusNode)
 
  
   def onTransformButtonClicked(self):
