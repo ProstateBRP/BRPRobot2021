@@ -227,7 +227,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.transformButton = qt.QPushButton("TRANSFORM")
     self.transformButton.toolTip = "Send transform to the WPI robot."
     self.transformButton.enabled = False
-    self.transformButton.setMaximumWidth(150)
+    self.transformButton.setMaximumWidth(205)
     outboundTransformsFormLayout.addRow(self.transformButton)
     self.transformButton.connect('clicked()', self.onTransformButtonClicked)
 
@@ -254,12 +254,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.statusTextbox = qt.QLineEdit("No status received")
     self.statusTextbox.setReadOnly(True)
     self.statusTextbox.setFixedWidth(200)
-    inboundFormLayout.addRow("Status received\n(Code:Subcode:ErrorName:Message):", self.statusTextbox)
+    # inboundFormLayout.addRow("Status received\n(Code:Subcode:ErrorName:Message):", self.statusTextbox)
+    inboundFormLayout.addRow("Status received:", self.statusTextbox)
 
     self.statusCodeTextbox = qt.QLineEdit("No status Code received")
     self.statusCodeTextbox.setReadOnly(True)
     self.statusCodeTextbox.setFixedWidth(200)
-    inboundFormLayout.addRow("Status Code meaning: ", self.statusCodeTextbox)
+    inboundFormLayout.addRow("Status code meaning: ", self.statusCodeTextbox)
 
     #self.newItem = qt.QTableWidgetItem()
     row = 4
@@ -787,7 +788,3 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
         print("Acknowledgment received for transform:", last_string_sent)
     else:
       print("Received something different than expected, received: ", info)
-
-    
-    
-    

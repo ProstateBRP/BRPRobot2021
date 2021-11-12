@@ -44,7 +44,7 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   int queryCounter = 0;
   igtl::MessageHeader::Pointer headerMsg;
   headerMsg = igtl::MessageHeader::New();
-  
+
   std::cerr << "MESSAGE: ===== Step 1: START_UP =====" << std::endl;
   SendStringMessage("CMD_0001", "START_UP");
   ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
@@ -174,6 +174,6 @@ NavigationNormalOperationTest::ErrorPointType NavigationNormalOperationTest::Tes
   // ReceiveMessageHeader(headerMsg, this->TimeoutLong); // TODO: timeout is not valid
   // if (!CheckAndReceiveStatusMessage(headerMsg, "EMERGENCY", 1)) return Error(10,3);
   
-  std::this_thread::sleep_for(std::chrono::seconds(15));
+  std::this_thread::sleep_for(std::chrono::seconds(5));
   return SUCCESS;
 }
