@@ -417,6 +417,19 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.targetingButton.enabled = True
     self.calibrationButton.enabled = True
     self.transformButton.enabled = True
+
+  def deactivateButtons(self):
+    self.planningButton.enabled = False
+    self.EmergencyButton.enabled = False
+    self.StopButton.enabled = False
+    self.GetStatusButton.enabled = False
+    self.GetPoseButton.enabled = False
+    self.UnlockButton.enabled = False
+    self.LockButton.enabled = False
+    self.moveButton.enabled = False
+    self.targetingButton.enabled = False
+    self.calibrationButton.enabled = False
+    self.transformButton.enabled = False
    
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
@@ -599,6 +612,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = stopNode.GetText()
+    self.deactivateButtons()
 
   def onEmergencyButtonClicked(self):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
