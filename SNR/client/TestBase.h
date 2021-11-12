@@ -29,11 +29,10 @@
 class TestBase
 {
 public:
-  enum
-  {
-    ERROR = 0,
-    SUCCESS = 1,
-  };
+	enum
+	{
+		SUCCESS = 1
+	};
 
 public:
   TestBase();
