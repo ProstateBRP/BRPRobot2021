@@ -47,7 +47,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.layout.addWidget(serverCollapsibleButton)
 
     # Layout within the path collapsible button
-    serverFormLayout = qt.QFormLayout(serverCollapsibleButton)
+    serverFormLayout = qt.QGridLayout(serverCollapsibleButton)
+    nameLabel1 = qt.QLabel('SNR server port:');
+    nameLabel2 = qt.QLabel('SNR hostname: ');
+    serverFormLayout.addWidget(nameLabel1, 0, 0)
+    serverFormLayout.addWidget(nameLabel2, 1, 0)
 
     # self.wpiPortTextbox = qt.QLineEdit("18944")
     # self.wpiPortTextbox.setReadOnly(False)
@@ -62,12 +66,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.snrPortTextbox = qt.QLineEdit("18944")
     self.snrPortTextbox.setReadOnly(False)
     self.snrPortTextbox.setFixedWidth(75)
-    serverFormLayout.addRow("SNR server port:", self.snrPortTextbox)
+    serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
 
     self.snrHostnameTextbox = qt.QLineEdit("localhost")
     self.snrHostnameTextbox.setReadOnly(False)
     self.snrHostnameTextbox.setFixedWidth(75)
-    serverFormLayout.addRow("SNR hostname:", self.snrHostnameTextbox)
+    serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
     # self.testNumberTextbox = qt.QLineEdit("1")
     # self.testNumberTextbox.setReadOnly(False)
@@ -78,15 +82,15 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.connectToClientButton = qt.QPushButton("Connect to client")
     self.connectToClientButton.toolTip = "Create the IGTLink server connection with shell."
     self.connectToClientButton.enabled = True
-    self.connectToClientButton.setMaximumWidth(150)
-    serverFormLayout.addRow(self.connectToClientButton)
+    self.connectToClientButton.setMaximumWidth(250)
+    serverFormLayout.addWidget(self.connectToClientButton, 2, 0, 1, 2)
     self.connectToClientButton.connect('clicked()', self.onConnectToClientButtonClicked)
 
     self.disconnectFromSocketButton = qt.QPushButton("Disconnect from socket")
     self.disconnectFromSocketButton.toolTip = "Disconnect from the socket when you finish using audio"
     self.disconnectFromSocketButton.enabled = True
-    self.disconnectFromSocketButton.setMaximumWidth(150)
-    serverFormLayout.addRow(self.disconnectFromSocketButton)
+    self.disconnectFromSocketButton.setMaximumWidth(250)
+    serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 2, 1, 2)
     self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
 
     # Outbound messages collapsible button
@@ -98,13 +102,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout = qt.QGridLayout(outboundCollapsibleButton)
 
     # TODO -- send messages
-
+    nameLabelphase = qt.QLabel('Current phase:');
     self.phaseTextbox = qt.QLineEdit("")
     self.phaseTextbox.setReadOnly(True)
     self.phaseTextbox.setFixedWidth(250)
     self.phaseTextbox.toolTip = "Show current phase: in Blue if in the phase, green if phase successfully achieved"
-    outboundFormLayout.addWidget(self.phaseTextbox, 0, 0)
-    
+    outboundFormLayout.addWidget(nameLabelphase, 0, 0)
+    outboundFormLayout.addWidget(self.phaseTextbox, 0, 1)
 
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
