@@ -125,6 +125,9 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
   igtl::StatusMessage::Pointer statusMsg;
   statusMsg = igtl::StatusMessage::New();
 
+  igtl::TransformMessage::Pointer transMsg;
+  transMsg = igtl::TransformMessage::New();
+
   while(1)
   {
     ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
@@ -162,6 +165,6 @@ NavigationDynamicCommunicationTest::ErrorPointType NavigationDynamicCommunicatio
   std::thread threadSend(&NavigationDynamicCommunicationTest::SendToSlicer, this);
   threadSend.detach();
 
-  std::this_thread::sleep_for(std::chrono::seconds(60));
+  std::this_thread::sleep_for(std::chrono::seconds(120));
   return SUCCESS;
 }
