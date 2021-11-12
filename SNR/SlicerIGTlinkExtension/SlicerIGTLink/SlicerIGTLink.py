@@ -222,7 +222,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # transformButton Button
     self.transformButton = qt.QPushButton("TRANSFORM")
     self.transformButton.toolTip = "Send transform to the WPI robot."
-    self.transformButton.enabled = True
+    self.transformButton.enabled = False
     self.transformButton.setMaximumWidth(150)
     outboundTransformsFormLayout.addRow(self.transformButton)
     self.transformButton.connect('clicked()', self.onTransformButtonClicked)
@@ -416,6 +416,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.moveButton.enabled = True
     self.targetingButton.enabled = True
     self.calibrationButton.enabled = True
+    self.transformButton.enabled = True
    
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
