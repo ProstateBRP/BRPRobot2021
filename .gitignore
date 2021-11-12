@@ -1,6 +1,7 @@
 CommunicationTest/
 ##### Windows
 # Windows thumbnail cache files
+.vscode/
 Thumbs.db
 Thumbs.db:encryptable
 ehthumbs.db
