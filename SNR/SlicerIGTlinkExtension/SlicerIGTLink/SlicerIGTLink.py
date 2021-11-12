@@ -765,6 +765,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     for i in range(nbRows):
       for j in range(nbColumns):
         val = transformMatrix.GetElement(i,j)
+        val = round(val,3)
         transformNode.tableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
 
   def onTransformInfoNodeModified(self):
