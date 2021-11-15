@@ -19,9 +19,9 @@
 #define __NavigationHardwareErrorDuringOperationTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationHardwareErrorDuringOperationTest : public NavigationTestBase
+class NavigationHardwareErrorDuringOperationTest : public NavigationIGTControlBase
 {
 public:
   NavigationHardwareErrorDuringOperationTest();

@@ -19,9 +19,9 @@
 #define __NavigationCalibrationErrorTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationCalibrationErrorTest : public NavigationTestBase
+class NavigationCalibrationErrorTest : public NavigationIGTControlBase
 {
 public:
   NavigationCalibrationErrorTest();

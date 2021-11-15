@@ -19,9 +19,9 @@
 #define __NavigationTargetingWithoutCalibrationTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationTargetingWithoutCalibrationTest : public NavigationTestBase
+class NavigationTargetingWithoutCalibrationTest : public NavigationIGTControlBase
 {
 public:
   NavigationTargetingWithoutCalibrationTest();

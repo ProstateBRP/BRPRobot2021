@@ -1,6 +1,6 @@
-// LisaScript.h
-#ifndef _LISA_SCRIPT
-#define _LISA_SCRIPT
+// NavigationSlicerScript.h
+#ifndef _NAVIGATION_SLICER_SCRIPT
+#define _NAVIGATION_SLICER_SCRIPT
 
 // Prototype function declarations
 

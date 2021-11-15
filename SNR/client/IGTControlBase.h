@@ -15,18 +15,16 @@
 
 =========================================================================*/
 
-#ifndef __TestBase_h
-#define __TestBase_h
+#ifndef __IGTControlBase_h
+#define __IGTControlBase_h
 
 #include "igtlSocket.h"
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
 
-#include "script.hxx"
+#include "NavigationSlicerScript.hxx"
 
-//void* ReceiveFromSlicer(void *ptr);
-
-class TestBase
+class IGTControlBase
 {
 public:
 	enum
@@ -35,14 +33,12 @@ public:
 	};
 
 public:
-  TestBase();
-  ~TestBase();
+  IGTControlBase();
+  ~IGTControlBase();
 
   virtual const char *Name() = 0;
 
   void SetSocket(igtl::Socket *socket);
-  //void CreateThreadToReceiveFromSlicer();
-  //void* ReceiveFromSlicer(void *ptr);
   int ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout);
   int SkipMesage(igtl::MessageHeader *headerMsg);
   void GetRandomTestMatrix(igtl::Matrix4x4 &matrix);
@@ -80,4 +76,4 @@ protected:
   igtl::Socket::Pointer Socket;
 };
 
-#endif //__TestBase_h
+#endif //__IGTControlBase_h

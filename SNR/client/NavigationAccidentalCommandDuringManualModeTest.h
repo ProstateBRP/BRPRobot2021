@@ -19,9 +19,9 @@
 #define __NavigationAccidentalCommandDuringManualModeTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationAccidentalCommandDuringManualModeTest : public NavigationTestBase
+class NavigationAccidentalCommandDuringManualModeTest : public NavigationIGTControlBase
 {
 public:
   NavigationAccidentalCommandDuringManualModeTest();

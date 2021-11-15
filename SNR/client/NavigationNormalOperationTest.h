@@ -19,10 +19,10 @@
 #define __NavigationNormalOperationTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
-#include "script.hxx"
+#include "NavigationIGTControlBase.h"
+#include "NavigationSlicerScript.hxx"
 
-class NavigationNormalOperationTest : public NavigationTestBase
+class NavigationNormalOperationTest : public NavigationIGTControlBase
 {
 public:
   NavigationNormalOperationTest();

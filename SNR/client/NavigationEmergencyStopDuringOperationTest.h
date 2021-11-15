@@ -19,9 +19,9 @@
 #define __NavigationEmergencyStopDuringOperationTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationEmergencyStopDuringOperationTest : public NavigationTestBase
+class NavigationEmergencyStopDuringOperationTest : public NavigationIGTControlBase
 {
 public:
   NavigationEmergencyStopDuringOperationTest();

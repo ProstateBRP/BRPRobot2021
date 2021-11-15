@@ -19,9 +19,9 @@
 #define __NavigationMoveToWithoutTargetTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationMoveToWithoutTargetTest : public NavigationTestBase
+class NavigationMoveToWithoutTargetTest : public NavigationIGTControlBase
 {
 public:
   NavigationMoveToWithoutTargetTest();

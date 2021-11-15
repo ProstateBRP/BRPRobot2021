@@ -15,20 +15,20 @@
 
 =========================================================================*/
 
-#ifndef __NavigationTestBase_h
-#define __NavigationTestBase_h
+#ifndef __NavigationIGTControlBase_h
+#define __NavigationIGTControlBase_h
 
 #include "igtlSocket.h"
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
-#include "TestBase.h"
+#include "IGTControlBase.h"
 
 #define DEFULT_TIMEOUT_SHORT  500
 #define DEFULT_TIMEOUT_MEDIUM 1000
 #define DEFULT_TIMEOUT_LONG   5000
 #define DEFAULT_TIMEOUT_FALSE false
 
-class NavigationTestBase : public TestBase
+class NavigationIGTControlBase : public IGTControlBase
 {
 public:
 
@@ -51,8 +51,8 @@ public:
   bool TimeoutFalse;
 
 public:
-  NavigationTestBase();
-  ~NavigationTestBase();
+  NavigationIGTControlBase();
+  ~NavigationIGTControlBase();
 
   virtual const char* Name()=0;
 
@@ -98,4 +98,4 @@ protected:
 
 };
 
-#endif //__NavigationTestBase_h
+#endif //__NavigationIGTControlBase_h

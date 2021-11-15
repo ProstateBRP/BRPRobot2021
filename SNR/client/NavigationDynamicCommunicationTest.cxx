@@ -25,7 +25,7 @@
 #include "igtlTransformMessage.h"
 
 #include "NavigationDynamicCommunicationTest.h"
-#include "script.hxx"
+#include "NavigationSlicerScript.hxx"
 #include "chrono"
 #include "thread"
 
@@ -111,7 +111,7 @@ void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
   return NULL;
 }
 
-// Threaded function to receive messages from WPI and send to Slicer via script.cxx
+// Threaded function to receive messages from WPI and send to Slicer via NavigationSlicerScript.cxx
 void *NavigationDynamicCommunicationTest::SendToSlicer()
 {
   std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from WPI and send to Slicer." << std::endl;

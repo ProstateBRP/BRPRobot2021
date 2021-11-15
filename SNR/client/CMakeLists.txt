@@ -9,9 +9,12 @@ find_package(OpenIGTLink REQUIRED)
 
 include(${OpenIGTLink_USE_FILE})
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(NAVIGATION_SIM_SOURCE
-  TestBase.cxx
-  NavigationTestBase.cxx
+  IGTControlBase.cxx
+  NavigationIGTControlBase.cxx
   NavigationTestSimulator.cxx
   NavigationDynamicCommunicationTest.cxx
   NavigationNormalOperationTest.cxx
@@ -26,12 +29,12 @@ set(NAVIGATION_SIM_SOURCE
   NavigationHardwareErrorDuringOperationTest.cxx
 )
 
-OPTION(SCRIPT_AS_MAIN "Compiling script.cxx as main" OFF)
+OPTION(SCRIPT_AS_MAIN "Compiling NavigationSlicerScript.cxx as main" OFF)
 IF(SCRIPT_AS_MAIN)
     ADD_DEFINITIONS(-DMAIN)
-    ADD_EXECUTABLE(script ./script.cxx)
-    TARGET_LINK_LIBRARIES(script OpenIGTLink)
+    ADD_EXECUTABLE(NavigationSlicerScript ./NavigationSlicerScript.cxx)
+    TARGET_LINK_LIBRARIES(NavigationSlicerScript OpenIGTLink)
 ELSE()
-    ADD_EXECUTABLE(NavigationTestSimulator ${NAVIGATION_SIM_SOURCE} ./script.cxx)
+    ADD_EXECUTABLE(NavigationTestSimulator ${NAVIGATION_SIM_SOURCE} ./NavigationSlicerScript.cxx)
     TARGET_LINK_LIBRARIES(NavigationTestSimulator OpenIGTLink)
 ENDIF()

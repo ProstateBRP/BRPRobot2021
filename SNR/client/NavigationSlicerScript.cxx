@@ -9,7 +9,7 @@
 #include "igtlTransformMessage.h"
 #include "igtlClientSocket.h"
 
-#include "script.hxx"
+#include "NavigationSlicerScript.hxx"
 #include "thread"
 #include "igtlMath.h"
 
@@ -181,7 +181,7 @@ void setSocketVars(char* snrHostname, int snrPort)
 
 void *startThread()
 {
-    std::cout << "\n---> Starting thread in script.cxx to receive messages from Slicer." << std::endl;
+    std::cout << "\n---> Starting thread in NavigationSlicerScript.cxx to receive messages from Slicer." << std::endl;
     // Create thread for the receiving function
 	std::thread thr(&receivingFunction);
 	thr.detach();
@@ -439,8 +439,8 @@ void GetStringFromSlicer(const char* hostname, int port)
 
         ReceiveString(socket, headerMsg);
         StringReceived = 1;
-        std::cout << "StringMessage received in script.cxx from Slicer : " << Global::globalString << std::endl; 
-        //std::cout << "StringEncoding received in script.cxx from Slicer : " << Global::globalEncoding << std::endl; 
+        std::cout << "StringMessage received in NavigationSlicerScript.cxx from Slicer : " << Global::globalString << std::endl; 
+        //std::cout << "StringEncoding received in NavigationSlicerScript.cxx from Slicer : " << Global::globalEncoding << std::endl; 
         std::cout << "Current deviceName : " << Global::globalDeviceName << std::endl;
       //}
     }     

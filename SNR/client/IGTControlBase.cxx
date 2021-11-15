@@ -15,7 +15,7 @@
 
 =========================================================================*/
 
-#include "TestBase.h"
+#include "IGTControlBase.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -26,22 +26,22 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-#include "script.hxx"
+#include "NavigationSlicerScript.hxx"
 
-TestBase::TestBase()
+IGTControlBase::IGTControlBase()
 {
 }
 
-TestBase::~TestBase()
+IGTControlBase::~IGTControlBase()
 {
 }
 
-void TestBase::SetSocket(igtl::Socket *socket)
+void IGTControlBase::SetSocket(igtl::Socket *socket)
 {
   this->Socket = socket;
 }
 
-int TestBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
+int IGTControlBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
 {
 
   this->Socket->SetTimeout(timeout);
@@ -74,7 +74,7 @@ int TestBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
   return 1;
 }
 
-int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
+int IGTControlBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
                                            const char *name, const char *string, int suffix)
 {
 
@@ -121,7 +121,7 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
         message = strcat(message, stringMsg->GetString());
         char *slicerDeviceName = (char *)("StringMessage");
 
-        // Call SendStringToSlicer function in Lisa's script
+        // Call SendStringToSlicer function in NavigationSlicerScript
         SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
       }
       else
@@ -149,7 +149,7 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
   return success;
 }
 
-int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
+int IGTControlBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
                                            const char *name, int code, int suffix,
                                            const char *errorName)
 {
@@ -191,7 +191,7 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
           {
             success = 1;
 
-            // Send the contents of the statusMessage to script.cxx
+            // Send the contents of the statusMessage to NavigationSlicerScript.cxx
             unsigned short argCode = statusMsg->GetCode();
             unsigned long long argSubcode = statusMsg->GetSubCode();
             char *argErrorName = (char *)(statusMsg->GetErrorName());
@@ -218,7 +218,7 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
         {
           success = 1;
 
-          // Send the contents of the statusMessage to script.cxx
+          // Send the contents of the statusMessage to NavigationSlicerScript.cxx
           unsigned short argCode = statusMsg->GetCode();
           unsigned long long argSubcode = statusMsg->GetSubCode();
           char *argErrorName = (char *)(statusMsg->GetErrorName());
@@ -226,11 +226,8 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
 
           // Print contents of the message 
           std::cout << "\n---> Received statusMessage from WPI." << std::endl;
-
           char *deviceName = (char *)("StatusMessage");
-
           SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-
         }
       }
       else
@@ -244,23 +241,6 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
       std::cerr << "ERROR: Invalid CRC." << std::endl;
       success = 0;
     }
-
-    // if (success == 0)
-    // {
-    //   // Send the contents of the statusMessage to script.cxx
-    //   unsigned short argCode = statusMsg->GetCode();
-    //   unsigned long long argSubcode = statusMsg->GetSubCode();
-    //   char *argErrorName = (char *)(statusMsg->GetErrorName());
-    //   char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
-
-    //   // Print contents of the message 
-    //   std::cout << "Received status message from WPI." << std::endl;
-
-    //   char *deviceName = (char *)("StatusMessage");
-
-    //   SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-    //   std::cout << "---> Called SendStateToSlicer function in script.cxx.\n" << std::endl;
-    // }
   }
 
   if (!success)
@@ -273,7 +253,7 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
 }
 
 // if err < 0, not check the matrix
-int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
+int IGTControlBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
                                               const char *name, igtl::Matrix4x4 &matrix, double err,
                                               int suffix)
 {
@@ -345,7 +325,7 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
         char *deviceName = (char *)("TransformMessage");
         char * wpiDeviceName = (char*)headerMsg->GetDeviceName();
 
-        // Send the contents of the transformMessage to script.cxx
+        // Send the contents of the transformMessage to NavigationSlicerScript.cxx
         SendTransformToSlicer(deviceName, matrix, wpiDeviceName);
       }
 
@@ -366,14 +346,14 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
   return success;
 }
 
-int TestBase::SkipMesage(igtl::MessageHeader *headerMsg)
+int IGTControlBase::SkipMesage(igtl::MessageHeader *headerMsg)
 {
   this->Socket->Skip(headerMsg->GetBodySizeToRead(), 0);
   this->Socket->CloseSocket();
   return 1;
 }
 
-int TestBase::SendStringMessage(const char *name, const char *string)
+int IGTControlBase::SendStringMessage(const char *name, const char *string)
 {
 
   std::cerr << "MESSAGE: Sending STRING( " << name << ", " << string << " )" << std::endl;
@@ -397,7 +377,7 @@ int TestBase::SendStringMessage(const char *name, const char *string)
   return 1;
 }
 
-int TestBase::SendTransformMessage(const char *name, igtl::Matrix4x4 &matrix)
+int IGTControlBase::SendTransformMessage(const char *name, igtl::Matrix4x4 &matrix)
 {
   std::cerr << "MESSAGE: Sending TRANSFORM( " << name << " )" << std::endl;
 
@@ -423,7 +403,7 @@ int TestBase::SendTransformMessage(const char *name, igtl::Matrix4x4 &matrix)
   return 1;
 }
 
-int TestBase::SendStatusMessage(const char *name, int Code, int SubCode,
+int IGTControlBase::SendStatusMessage(const char *name, int Code, int SubCode,
                                 const char *errorName, const char *statusString)
 {
   std::cerr << "MESSAGE: Sending STATUS( " << name << " )" << std::endl;
@@ -457,11 +437,10 @@ int TestBase::SendStatusMessage(const char *name, int Code, int SubCode,
     std::cerr << "ERROR: Sending STATUS( " << name << " )" << std::endl;
     exit(0);
   }
-
   return 1;
 }
 
-void TestBase::GetRandomTestMatrix(igtl::Matrix4x4 &matrix)
+void IGTControlBase::GetRandomTestMatrix(igtl::Matrix4x4 &matrix)
 {
   float position[3];
   float orientation[4];
@@ -481,21 +460,14 @@ void TestBase::GetRandomTestMatrix(igtl::Matrix4x4 &matrix)
   orientation[3] = 0.6666666666 * sin(theta);
   theta = theta + 0.1;
 
-  //igtl::Matrix4x4 matrix;
   igtl::QuaternionToMatrix(orientation, matrix);
-
   matrix[0][3] = position[0];
   matrix[1][3] = position[1];
   matrix[2][3] = position[2];
-
-  //PrintMatrix(matrix);
 }
 
-int TestBase::ReceiveString(igtl::MessageHeader *header)
+int IGTControlBase::ReceiveString(igtl::MessageHeader *header)
 {
-
-  // std::cerr << "MESSAGE: Receiving STRING data type." << std::endl;
-
   // Create a message buffer to receive transform data
   igtl::StringMessage::Pointer stringMsg;
   stringMsg = igtl::StringMessage::New();
@@ -520,18 +492,15 @@ int TestBase::ReceiveString(igtl::MessageHeader *header)
     message = strcat(message, stringMsg->GetString());
     char *slicerDeviceName = (char *)("StringMessage");
 
-    // Call SendStringToSlicer function in Lisa's script
-    SendStringToSlicer(slicerDeviceName, message); // TODO -- SLICERHOSTNAME AND PORT
-    // std::cout << "Called SendStringToSlicer function in script.cxx with argMessage = " << stringMsg->GetString() << "." << std::endl;
+    // Call SendStringToSlicer function in NavigationSlicerScript
+    SendStringToSlicer(slicerDeviceName, message);
   }
 
   return 1;
 }
 
-int TestBase::ReceiveStatus(igtl::MessageHeader *header)
+int IGTControlBase::ReceiveStatus(igtl::MessageHeader *header)
 {
-  // std::cerr << "MESSAGE: Receiving STATUS data type." << std::endl;
-
   // Create a message buffer to receive transform data
   igtl::StatusMessage::Pointer statusMsg;
   statusMsg = igtl::StatusMessage::New();
@@ -547,8 +516,7 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header)
 
   if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
   {
-
-    // Send the contents of the statusMessage to script.cxx
+    // Send the contents of the statusMessage to NavigationSlicerScript.cxx
     unsigned short argCode = statusMsg->GetCode();
     unsigned long long argSubcode = statusMsg->GetSubCode();
     char *argErrorName = (char *)(statusMsg->GetErrorName());
@@ -563,17 +531,13 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header)
     char *deviceName = (char *)("StatusMessage");
 
     SendStateToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
-    // std::cout << "Called SendStateToSlicer function in script.cxx.\n" << std::endl;
-
   }
 
   return 0;
 }
 
-int TestBase::ReceiveTransform(igtl::MessageHeader *header)
+int IGTControlBase::ReceiveTransform(igtl::MessageHeader *header)
 {
-  // std::cerr << " " << std::endl;
-
   // Create a message buffer to receive transform data
   igtl::TransformMessage::Pointer transMsg;
   transMsg = igtl::TransformMessage::New();
@@ -600,17 +564,14 @@ int TestBase::ReceiveTransform(igtl::MessageHeader *header)
     char *deviceName = (char *)("TransformMessage");
     char * wpiDeviceName = (char*)header->GetDeviceName();
 
-    // Send the contents of the transformMessage to script.cxx
+    // Send the contents of the transformMessage to NavigationSlicerScript.cxx
     SendTransformToSlicer(deviceName, matrix, wpiDeviceName);
-    // std::cout << "Called SendTransformToSlicer function in script.cxx.\n" << std::endl;
-
     return 1;
   }
-
   return 0;
 }
 
-void TestBase::PrintMatrix(std::string prefix, igtl::Matrix4x4 &matrix)
+void IGTControlBase::PrintMatrix(std::string prefix, igtl::Matrix4x4 &matrix)
 {
   std::cout << prefix << " [" << matrix[0][0] << ", " << matrix[0][1] << ", " << matrix[0][2] << ", " << matrix[0][3] << "]" << std::endl;
   std::cout << prefix << " [" << matrix[1][0] << ", " << matrix[1][1] << ", " << matrix[1][2] << ", " << matrix[1][3] << "]" << std::endl;
@@ -618,7 +579,7 @@ void TestBase::PrintMatrix(std::string prefix, igtl::Matrix4x4 &matrix)
   std::cout << prefix << " [" << matrix[3][0] << ", " << matrix[3][1] << ", " << matrix[3][2] << ", " << matrix[3][3] << "]" << std::endl;
 }
 
-int TestBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
+int IGTControlBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
 {
   // Check if each column is normal:
   for (int i = 0; i < 3; i++)
@@ -640,13 +601,11 @@ int TestBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
   {
     return 0;
   }
-
   return 1;
 }
 
-int TestBase::CompareMatrices(igtl::Matrix4x4 &matrix1, igtl::Matrix4x4 &matrix2, double tol)
+int IGTControlBase::CompareMatrices(igtl::Matrix4x4 &matrix1, igtl::Matrix4x4 &matrix2, double tol)
 {
-
   // Check if each column is normal:
   for (int i = 0; i < 3; i++)
   {

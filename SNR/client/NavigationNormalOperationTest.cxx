@@ -25,7 +25,7 @@
 #include "igtlTransformMessage.h"
 
 #include "NavigationNormalOperationTest.h"
-#include "script.hxx"
+#include "NavigationSlicerScript.hxx"
 #include "chrono"
 #include "thread"
 

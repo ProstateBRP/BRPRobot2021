@@ -31,10 +31,9 @@
 #include "NavigationAccidentalCommandDuringManualModeTest.h"
 #include "NavigationHardwareErrorDuringOperationTest.h"
 #include "NavigationDynamicCommunicationTest.h"
+#include "NavigationSlicerScript.hxx"
 
-#include "script.hxx"
 #include "thread"
-//void *startTests(void *socketPtr);
 
 int main(int argc, char* argv[])
 {
@@ -78,16 +77,16 @@ int main(int argc, char* argv[])
     exit(0);
   }
 
-  // Call function in script.cxx to establish connection and start the thread that receives messages from Slicer
+  // Call function in NavigationSlicerScript.cxx to establish connection and start the thread that receives messages from Slicer
   setSocketVars(snrHostname, snrPort);
 
-  // Call startThread function in script.cxx in a thread s.t. the rest of main() continues to run simultaneously
+  // Call startThread function in NavigationSlicerScript.cxx in a thread s.t. the rest of main() continues to run simultaneously
   std::thread thr(&startThread);
   thr.detach();
 
   //------------------------------------------------------------
   // Call Test
-  NavigationTestBase* navTest = NULL;
+  NavigationIGTControlBase* navTest = NULL;
 
   switch (test)
   {

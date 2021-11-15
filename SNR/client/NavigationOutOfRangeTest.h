@@ -19,9 +19,9 @@
 #define __NavigationOutOfRangeTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationOutOfRangeTest : public NavigationTestBase
+class NavigationOutOfRangeTest : public NavigationIGTControlBase
 {
 public:
   NavigationOutOfRangeTest();

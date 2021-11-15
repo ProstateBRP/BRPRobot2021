@@ -15,7 +15,7 @@
 
 =========================================================================*/
 
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -26,9 +26,9 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-#include "script.hxx"
+#include "NavigationSlicerScript.hxx"
 
-NavigationTestBase::NavigationTestBase()
+NavigationIGTControlBase::NavigationIGTControlBase()
 {
   this->TimeoutShort  = DEFULT_TIMEOUT_SHORT;
   this->TimeoutMedium = DEFULT_TIMEOUT_MEDIUM;
@@ -37,12 +37,12 @@ NavigationTestBase::NavigationTestBase()
 }
 
 
-NavigationTestBase::~NavigationTestBase()
+NavigationIGTControlBase::~NavigationIGTControlBase()
 {
 }
 
 
-int NavigationTestBase::Exec()
+int NavigationIGTControlBase::Exec()
 {
   if (this->Socket.IsNotNull())
     {

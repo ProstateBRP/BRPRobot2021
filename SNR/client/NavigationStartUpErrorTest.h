@@ -19,9 +19,9 @@
 #define __NavigationStartUpErrorTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationStartUpErrorTest : public NavigationTestBase
+class NavigationStartUpErrorTest : public NavigationIGTControlBase
 {
 public:
   NavigationStartUpErrorTest();

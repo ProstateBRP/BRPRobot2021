@@ -19,10 +19,10 @@
 #define __NavigationDynamicCommunicationTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
-#include "script.hxx"
+#include "NavigationIGTControlBase.h"
+#include "NavigationSlicerScript.hxx"
 
-class NavigationDynamicCommunicationTest : public NavigationTestBase
+class NavigationDynamicCommunicationTest : public NavigationIGTControlBase
 {
 public:
   NavigationDynamicCommunicationTest();

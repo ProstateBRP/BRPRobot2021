@@ -19,9 +19,9 @@
 #define __NavigationStopDuringOperationTest_h
 
 #include "igtlSocket.h"
-#include "NavigationTestBase.h"
+#include "NavigationIGTControlBase.h"
 
-class NavigationStopDuringOperationTest : public NavigationTestBase
+class NavigationStopDuringOperationTest : public NavigationIGTControlBase
 {
 public:
   NavigationStopDuringOperationTest();
