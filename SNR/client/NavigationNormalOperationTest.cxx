@@ -26,7 +26,6 @@
 
 #include "NavigationNormalOperationTest.h"
 #include "script.hxx"
-#include "pthread.h"
 #include "chrono"
 #include "thread"
 

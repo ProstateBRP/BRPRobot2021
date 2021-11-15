@@ -33,7 +33,7 @@
 #include "NavigationDynamicCommunicationTest.h"
 
 #include "script.hxx"
-#include "pthread.h"
+#include "thread"
 //void *startTests(void *socketPtr);
 
 int main(int argc, char* argv[])
@@ -82,10 +82,8 @@ int main(int argc, char* argv[])
   setSocketVars(snrHostname, snrPort);
 
   // Call startThread function in script.cxx in a thread s.t. the rest of main() continues to run simultaneously
-  pthread_t thread;
-  pthread_create(&thread, NULL, startThread, NULL);
-  //pthread_exit(NULL);
-
+  std::thread thr(&startThread);
+  thr.detach();
 
   //------------------------------------------------------------
   // Call Test

@@ -10,6 +10,7 @@
 #include "igtlClientSocket.h"
 
 #include "script.hxx"
+#include "thread"
 #include "igtlMath.h"
 
 #define FPS 200
@@ -178,19 +179,18 @@ void setSocketVars(char* snrHostname, int snrPort)
     Global::port = snrPort;
 }
 
-void *startThread(void *ptr)
+void *startThread()
 {
     std::cout << "\n---> Starting thread in script.cxx to receive messages from Slicer." << std::endl;
     // Create thread for the receiving function
-    pthread_t thread;
-    pthread_create(&thread, NULL, receivingFunction, NULL);
+	std::thread thr(&receivingFunction);
+	thr.detach();
 
-    //pthread_exit(NULL);
     return NULL;
 }
 
 // another function here that is continuously run by the thread
-void *receivingFunction(void *ptr)
+void *receivingFunction()
 {
     //------------------------------------------------------------
     // Establish Connection

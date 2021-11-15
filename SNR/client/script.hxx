@@ -5,8 +5,8 @@
 // Prototype function declarations
 
 void setSocketVars(char* hostname, int port);
-void *startThread(void *ptr);
-void *receivingFunction(void *);
+void *startThread();
+void *receivingFunction();
 
 void SendStringToSlicer(char* argDeviceName,char* argMessage);
 void SendStateToSlicer(char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);

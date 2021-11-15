@@ -26,7 +26,6 @@
 
 #include "NavigationDynamicCommunicationTest.h"
 #include "script.hxx"
-#include "pthread.h"
 #include "chrono"
 #include "thread"
 
@@ -116,9 +115,7 @@ void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
 void *NavigationDynamicCommunicationTest::SendToSlicer()
 {
   std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from WPI and send to Slicer." << std::endl;
-  igtl::MessageHeader::Pointer headerMsg;
-  headerMsg = igtl::MessageHeader::New();
-
+  /*
   igtl::StringMessage::Pointer stringMsg;
   stringMsg = igtl::StringMessage::New();
 
@@ -127,9 +124,12 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
 
   igtl::TransformMessage::Pointer transMsg;
   transMsg = igtl::TransformMessage::New();
-
+  */
   while(1)
   {
+	std::this_thread::sleep_for(std::chrono::seconds(1));
+	igtl::MessageHeader::Pointer headerMsg;
+	headerMsg = igtl::MessageHeader::New();
     ReceiveMessageHeader(headerMsg, this->TimeoutFalse);
     // std::cout << "Incoming message from WPI with deviceType: " << headerMsg->GetDeviceType() << " and deviceName: " << headerMsg->GetDeviceName() << std::endl;
     
