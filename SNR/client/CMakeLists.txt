@@ -9,6 +9,9 @@ find_package(OpenIGTLink REQUIRED)
 
 include(${OpenIGTLink_USE_FILE})
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(NAVIGATION_SIM_SOURCE
   TestBase.cxx
   NavigationTestBase.cxx
