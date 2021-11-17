@@ -662,7 +662,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
     print("Sending Start up command")
-    self.activateButtons()
     startupNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
@@ -819,11 +818,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     if ((To_compare == 1) and (same_transforms == 0)):
       print("Received a transform different from transform sent") # TODO Do different cases in case Slicer sent a transform or not
       infoMsg =  "TRANSFORM received from WPI doesn't match transform sent"
-      InfoNode.infoTextbox.setText(infoMsg)
+      transformNode.infoTextbox.setText(infoMsg)
     elif((To_compare == 1) and (same_transforms == 1)):
       print("TRANSFORM received from WPI is the same than transform sent") # TODO Do different cases in case Slicer sent a transform or not
       infoMsg =  "TRANSFORM received from WPI is the same than transform sent"
-      InfoNode.infoTextbox.setText(infoMsg)
+      transformNode.infoTextbox.setText(infoMsg)
 
   def onTransformInfoNodeModified(InfoNode, unusedArg2=None, unusedArg3=None):
     print("New transform info was received")
