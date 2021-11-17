@@ -337,7 +337,7 @@ void SendStateToSlicer(char *argDeviceName, unsigned short argCode, unsigned lon
 void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix, char * wpiDeviceName)
 {
     // Send TransformInfo to Slicer
-    char *deviceName4 = (char *)("TransformMessage");
+    char *deviceName4 = (char *)("TransformInfo");
     SendStringToSlicer(deviceName4, wpiDeviceName);
     // //------------------------------------------------------------
     // // Establish Connection
