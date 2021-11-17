@@ -15,24 +15,29 @@
 
 =========================================================================*/
 
-#ifndef __NavigationHardwareErrorDuringOperationTest_h
-#define __NavigationHardwareErrorDuringOperationTest_h
+#ifndef __NavigationBridge_h
+#define __NavigationBridge_h
 
 #include "igtlSocket.h"
 #include "NavigationIGTControlBase.h"
+#include "NavigationSlicerScript.hxx"
 
-class NavigationHardwareErrorDuringOperationTest : public NavigationIGTControlBase
+class NavigationBridge : public NavigationIGTControlBase
 {
 public:
-  NavigationHardwareErrorDuringOperationTest();
-  ~NavigationHardwareErrorDuringOperationTest();
+  NavigationBridge();
+  ~NavigationBridge();
 
-  virtual const char* Name() { return "Normal Operation Test"; };
+  virtual const char* Name() { return "Dynamic Communication Test"; };
+
+  //void* ReceiveFromSlicer(void *ptr);
+  //void* SendToSlicer(void *ptr);
+  void* ReceiveFromSlicer();
+  void* SendToSlicer();
 
   virtual ErrorPointType Test();
-
 };
 
-#endif //__NavigationHardwareErrorDuringOperationTest_h
+#endif //__NavigationBridge_h
 
 

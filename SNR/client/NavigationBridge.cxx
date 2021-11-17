@@ -24,22 +24,22 @@
 #include "igtlStatusMessage.h"
 #include "igtlTransformMessage.h"
 
-#include "NavigationDynamicCommunicationTest.h"
+#include "NavigationBridge.h"
 #include "NavigationSlicerScript.hxx"
 #include "chrono"
 #include "thread"
 
 
-NavigationDynamicCommunicationTest::NavigationDynamicCommunicationTest()
+NavigationBridge::NavigationBridge()
 {
 }
 
-NavigationDynamicCommunicationTest::~NavigationDynamicCommunicationTest()
+NavigationBridge::~NavigationBridge()
 {
 }
 
 // Threaded function to receive messages from Slicer via updated global variables and pass them along to WPI
-void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
+void *NavigationBridge::ReceiveFromSlicer()
 {
   std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from Slicer and send to WPI." << std::endl;
 
@@ -112,7 +112,7 @@ void *NavigationDynamicCommunicationTest::ReceiveFromSlicer()
 }
 
 // Threaded function to receive messages from WPI and send to Slicer via NavigationSlicerScript.cxx
-void *NavigationDynamicCommunicationTest::SendToSlicer()
+void *NavigationBridge::SendToSlicer()
 {
   std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from WPI and send to Slicer." << std::endl;
   /*
@@ -155,14 +155,14 @@ void *NavigationDynamicCommunicationTest::SendToSlicer()
 }
 
 
-NavigationDynamicCommunicationTest::ErrorPointType NavigationDynamicCommunicationTest::Test()
+NavigationBridge::ErrorPointType NavigationBridge::Test()
 {
   int queryCounter = 0;
   // Create a thread to receive from Slicer and send to WPI
 
-  std::thread threadReceive(&NavigationDynamicCommunicationTest::ReceiveFromSlicer, this);
+  std::thread threadReceive(&NavigationBridge::ReceiveFromSlicer, this);
   threadReceive.detach();
-  std::thread threadSend(&NavigationDynamicCommunicationTest::SendToSlicer, this);
+  std::thread threadSend(&NavigationBridge::SendToSlicer, this);
   threadSend.detach();
 
   std::this_thread::sleep_for(std::chrono::seconds(120));

@@ -1,6 +1,6 @@
 PROJECT(BRPProstateRobotTest)
-
 cmake_minimum_required(VERSION 2.4)
+
 if(COMMAND cmake_policy)
   cmake_policy(SET CMP0003 NEW)
 endif(COMMAND cmake_policy)
@@ -12,29 +12,44 @@ include(${OpenIGTLink_USE_FILE})
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(NAVIGATION_SIM_SOURCE
+set(NAVIGATION_TEST_SOURCE
   IGTControlBase.cxx
   NavigationIGTControlBase.cxx
-  NavigationTestSimulator.cxx
-  NavigationDynamicCommunicationTest.cxx
-  NavigationNormalOperationTest.cxx
-  NavigationStartUpErrorTest.cxx
-  NavigationCalibrationErrorTest.cxx
-  NavigationTargetingWithoutCalibrationTest.cxx
-  NavigationOutOfRangeTest.cxx
-  NavigationStopDuringOperationTest.cxx
-  NavigationEmergencyStopDuringOperationTest.cxx
-  NavigationMoveToWithoutTargetTest.cxx
-  NavigationAccidentalCommandDuringManualModeTest.cxx
-  NavigationHardwareErrorDuringOperationTest.cxx
+  Testing/NavigationBridgeSimulator.cxx
+  Testing/NavigationNormalOperationTest.cxx
+  Testing/NavigationStartUpErrorTest.cxx
+  Testing/NavigationCalibrationErrorTest.cxx
+  Testing/NavigationTargetingWithoutCalibrationTest.cxx
+  Testing/NavigationOutOfRangeTest.cxx
+  Testing/NavigationStopDuringOperationTest.cxx
+  Testing/NavigationEmergencyStopDuringOperationTest.cxx
+  Testing/NavigationMoveToWithoutTargetTest.cxx
+  Testing/NavigationAccidentalCommandDuringManualModeTest.cxx
+  Testing/NavigationHardwareErrorDuringOperationTest.cxx
+)
+
+set(NAVIGATION_RELEASE_SOURCE
+  IGTControlBase.cxx
+  NavigationIGTControlBase.cxx
+  NavigationBridgeController.cxx
+  NavigationBridge.cxx
+)
+
+ADD_CUSTOM_TARGET(test
+  set(CMAKE_BUILD_TYPE DEBUG)
 )
 
 OPTION(SCRIPT_AS_MAIN "Compiling NavigationSlicerScript.cxx as main" OFF)
 IF(SCRIPT_AS_MAIN)
-    ADD_DEFINITIONS(-DMAIN)
-    ADD_EXECUTABLE(NavigationSlicerScript ./NavigationSlicerScript.cxx)
-    TARGET_LINK_LIBRARIES(NavigationSlicerScript OpenIGTLink)
+  ADD_DEFINITIONS(-DMAIN)
+  ADD_EXECUTABLE(NavigationSlicerScript ./NavigationSlicerScript.cxx)
+  TARGET_LINK_LIBRARIES(NavigationSlicerScript OpenIGTLink)
+ELSEIF(CMAKE_BUILD_TYPE EQUAL "DEBUG")
+  message("target is test")
+  ADD_EXECUTABLE(NavigationBridgeController ${NAVIGATION_TEST_SOURCE} ./NavigationSlicerScript.cxx)
+  TARGET_LINK_LIBRARIES(NavigationBridgeController OpenIGTLink)
 ELSE()
-    ADD_EXECUTABLE(NavigationTestSimulator ${NAVIGATION_SIM_SOURCE} ./NavigationSlicerScript.cxx)
-    TARGET_LINK_LIBRARIES(NavigationTestSimulator OpenIGTLink)
+  message("target is release")
+  ADD_EXECUTABLE(NavigationBridgeController ${NAVIGATION_RELEASE_SOURCE} ./NavigationSlicerScript.cxx)
+  TARGET_LINK_LIBRARIES(NavigationBridgeController OpenIGTLink)
 ENDIF()
