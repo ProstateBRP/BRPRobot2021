@@ -363,6 +363,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     last_prefix_sent = ""
     global last_name_sent
     last_name_sent = ""
+    global To_compare
+    To_compare = 0
+    global last_randomIDname_transform
+    last_randomIDname_transform = "SendTransform"
+
     # wpiPort = self.wpiPortTextbox.text
     # wpiHostname = self.wpiHostnameTextbox.text
     # testNumber = self.testNumberTextbox.text    
@@ -696,12 +701,17 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
     SendTransformNode.GetMatrixTransformToParent(transformMatrix)
     randomIDname = self.generateRandomNameID(last_prefix_sent)
+    global last_randomIDname_transform
+    last_randomIDname_transform = randomIDname
     global last_name_sent
     last_name_sent = randomIDname
-    SendTransformNode.SetName(randomIDname)
+    SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+    SendTransformNodeTemp.SetName(randomIDname)
+    SendTransformNodeTemp.GetMatrixTransformToParent(transformMatrix)
+    slicer.mrmlScene.AddNode(SendTransformNodeTemp)
     print(transformMatrix)
-    self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNode)
-    self.openIGTNode.PushNode(SendTransformNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+    self.openIGTNode.PushNode(SendTransformNodeTemp)
     infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
@@ -787,23 +797,33 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
-    refMatrix = vtk.vtkMatrix4x4()
-    #SendTransformNode.GetMatrixTransformToParent(refMatrix)
     print(transformMatrix)
+    refMatrix = vtk.vtkMatrix4x4()
+    LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(last_randomIDname_transform)
+    LastTransformNode.GetMatrixTransformToParent(refMatrix)
+    print(refMatrix)
     nbRows = transformNode.tableWidget.rowCount
     nbColumns = transformNode.tableWidget.columnCount
-    same_transforms = True
+    same_transforms = 1
+    global To_compare
     for i in range(nbRows):
       for j in range(nbColumns):
         val = transformMatrix.GetElement(i,j)
         val = round(val,2)
         ref = refMatrix.GetElement(i,j)
         ref = round(val,2)
-    #    if(val != ref):
-     #     same_transforms = False
+        if(To_compare == 1):
+          if(val != ref):
+            same_transforms = 0
         transformNode.tableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
-    #if (same_transforms == False):
-     # print("Received a transform different from transform sent") # TODO Do different cases in case Slicer sent a transform or not 
+    if ((To_compare == 1) and (same_transforms == 0)):
+      print("Received a transform different from transform sent") # TODO Do different cases in case Slicer sent a transform or not
+      infoMsg =  "TRANSFORM received from WPI doesn't match transform sent"
+      InfoNode.infoTextbox.setText(infoMsg)
+    elif((To_compare == 1) and (same_transforms == 1)):
+      print("TRANSFORM received from WPI is the same than transform sent") # TODO Do different cases in case Slicer sent a transform or not
+      infoMsg =  "TRANSFORM received from WPI is the same than transform sent"
+      InfoNode.infoTextbox.setText(infoMsg)
 
   def onTransformInfoNodeModified(InfoNode, unusedArg2=None, unusedArg3=None):
     print("New transform info was received")
@@ -817,15 +837,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       infoID = info[info.index(delimit) + 1: len(info)]
       print(infoType)
       print(infoID)
-      global last_string_sent
-      ##last_string_sentType = last_string_sent[0: last_string_sent.index(delimit2)]
-      #last_string_sentID = last_string_sent[last_string_sent.index(delimit2) + 1: len(last_string_sent)]
-      #print(last_string_sentID)
-      infoMsg =  "Received TRANSFORM from WPI: ( " + info + " )"
-      re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-      InfoNode.infoTextbox.setText(infoMsg)
-      print(infoMsg)
-      #if((last_string_sentID == infoID) and (infoType == 'ACK')):
-       # print("Acknowledgment received for transform:", last_string_sent)
+      global last_name_sent
+      if(last_name_sent.find(delimit)!=-1):
+       #last_name_sentType = last_name_sent[0: last_name_sent.index(delimit)]
+        last_name_sentID = last_name_sent[last_name_sent.index(delimit) + 1: len(last_name_sent)]
+        print(last_name_sentID)
+        infoMsg =  "Received TRANSFORM from WPI: ( " + info + " )"
+        re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+        InfoNode.infoTextbox.setText(infoMsg)
+        print(infoMsg)
+      
+        if((last_name_sentID == infoID) and (infoType == 'ACK')):
+          print("Acknowledgment received for transform:", last_name_sent)
+          global To_compare
+        To_compare = 1
+    ReceivedTransformInfo.SetText("None")
       # else:
       #print("Received something different than expected, received: ", info)
