@@ -711,6 +711,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
       self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
       self.AddPointerModel()
+      TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+      locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+      locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID());
     # if it is unchecked
     else:
       eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
@@ -800,8 +803,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
-
-    #vtkMRMLModelNode.AddLocatorModel(slicer.mrmlScene, "PointerNeedle", 0, 0, 255);
 
     print(transformMatrix)
     refMatrix = vtk.vtkMatrix4x4()
