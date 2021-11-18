@@ -31,10 +31,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
 
-  # Status codes -- see igtl_status.h
-  #status_codes = {'STATUS_INVALID': 0, 'STATUS_OK':1, 'STATUS_UNKNOWN_ERROR': 2, 'STATUS_PANICK_MODE': 3, 'STATUS_NOT_FOUND': 4, 'STATUS_ACCESS_DENIED': 5, 'STATUS_BUSY':6, 'STATUS_TIME_OUT':7, 'STATUS_OVERFLOW':8,'STATUS_CHECKSUM_ERROR':9,'STATUS_CONFIG_ERROR':10,'STATUS_RESOURCE_ERROR':11,'STATUS_UNKNOWN_INSTRUCTION':12,'STATUS_NOT_READY':13,'STATUS_MANUAL_MODE':14,'STATUS_DISABLED':15,'STATUS_NOT_PRESENT':16,'STATUS_UNKNOWN_VERSION':17,'STATUS_HARDWARE_FAILURE':18,'STATUS_SHUT_DOWN':19,'STATUS_NUM_TYPES':20}
-  status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
- 
   def __init__(self, parent=None):
     ScriptedLoadableModuleWidget.__init__(self, parent)
 
@@ -100,8 +96,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the path collapsible button
     outboundFormLayout = qt.QGridLayout(outboundCollapsibleButton)
-
-    # TODO -- send messages
+    
     nameLabelphase = qt.QLabel('Current phase:');
     self.phaseTextbox = qt.QLineEdit("")
     self.phaseTextbox.setReadOnly(True)
@@ -219,7 +214,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundTransformCollapsibleButton.text = "Outbound transforms (Slicer -> WPI)"
     self.layout.addWidget(outboundTransformCollapsibleButton)
 
-
     # Layout within the path collapsible button
     outboundTransformsFormLayout = qt.QFormLayout(outboundTransformCollapsibleButton)
 
@@ -236,15 +230,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     inboundCollapsibleButton.text = "Inbound messages (WPI -> Slicer)"
     self.layout.addWidget(inboundCollapsibleButton)
 
-
     # Layout within the path collapsible button
     inboundFormLayout = qt.QFormLayout(inboundCollapsibleButton)
-
-    # TODO -- receive messages
-  
-    # potentially insert a table here that will auto-update as messages
-    # are received via IGTLink so that the incoming messages can be
-    # seen on the GUI without switching to another module
 
     self.messageTextbox = qt.QLineEdit("No message received")
     self.messageTextbox.setReadOnly(True)
@@ -254,7 +241,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.statusTextbox = qt.QLineEdit("No status received")
     self.statusTextbox.setReadOnly(True)
     self.statusTextbox.setFixedWidth(200)
-    # inboundFormLayout.addRow("Status received\n(Code:Subcode:ErrorName:Message):", self.statusTextbox)
     inboundFormLayout.addRow("Status received:", self.statusTextbox)
 
     self.statusCodeTextbox = qt.QLineEdit("No status Code received")
@@ -262,7 +248,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.statusCodeTextbox.setFixedWidth(200)
     inboundFormLayout.addRow("Status code meaning: ", self.statusCodeTextbox)
 
-    #self.newItem = qt.QTableWidgetItem()
     row = 4
     column = 4
     self.tableWidget = qt.QTableWidget(row, column)
@@ -304,27 +289,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.infoTextbox.setFixedWidth(500)
     infoFormLayout.addRow("", self.infoTextbox)
 
-
-    #self.Visible_icon = qt.QPushButton
-    #self.Visible_icon.setIcon(":/Icons/Small/SlicerVisible.png");
-    #self.infoFormLayout.addRow("", self.Visible_icon)
-
-    #self.eye_item = qt.QStandardItem()
-    #self.eye_item.setData(qt.QPixmap(":/Icons/Small/SlicerVisible.png"));
-    #infoFormLayout.addRow("", self.eye_item)
     #const char* attr3 = inode->GetAttribute("IGTLVisible");
-    #    if (attr3 && strcmp(attr3, "true") == 0)
-    #    {
-    #      item3->setData(QPixmap(":/Icons/Small/SlicerVisible.png"), Qt::DecorationRole);
-    #    }
-
-    #slicer.vtkMRMLTableNode()
-
-    # choosing phase collapsible button
-    #phaseCollapsibleButton = ctk.ctkCollapsibleButton()
-    #phaseCollapsibleButton.text = "Choosing phase to enter"
-    #self.layout.addWidget(phaseCollapsibleButton)
-
   
     # Add vertical spacer
     self.layout.addStretch(1)
@@ -362,13 +327,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     ReceivedTransformInfo = slicer.vtkMRMLTextNode()
     ReceivedTransformInfo.SetName("TransformInfo")
     slicer.mrmlScene.AddNode(ReceivedTransformInfo)
-
-    #PointerNeedleNode = AddLocatorModel(slicer.mrmlScene, "PointerNeedle", 0, 0, 255);
-
-    #vtkSmartPointer<vtkMRMLModelNode>
-    locatorModelNode = slicer.vtkMRMLModelNode()
-    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode","PointerNeedle")
-    #locatorModelNode->CreateDefaultDisplayNodes();
 
     # Add observers on the 4 message type nodes
     ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
@@ -752,11 +710,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     if (self.VisibleButton.isChecked()):
       eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
       self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
-      
+      self.AddPointerModel()
     # if it is unchecked
     else:
       eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
       self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+      slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
 
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string was received")
@@ -812,6 +772,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     s = s1 + sep + s2 + sep + s3 + sep + msgonly
     statusNode.statusTextbox.setText(s)
     global status_codes
+    # Status codes -- see igtl_status.h
     status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
     statusNode.statusCodeTextbox.setText(status_codes[ReceivedStatusMsg.GetCode()])
     end = time.time()
@@ -877,7 +838,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     delimit = "_"
     if((info == "CURRENT_POSITION") or (info == "TARGET")):
       print("Transform received")
-    elif(info.find(delimit)!=-1): # found Delimiter is in the string: # TODO Add condition if "_" is in the string 
+    elif(info.find(delimit)!=-1): # Check for delimiter
       infoType = info[0: info.index(delimit)]
       infoID = info[info.index(delimit) + 1: len(info)]
       print(infoType)
@@ -899,3 +860,45 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     #ReceivedTransformInfo.SetText("None")
       # else:
       #print("Received something different than expected, received: ", info)
+
+  def AddPointerModel(self):   
+
+    self.cyl = vtk.vtkCylinderSource()
+    self.cyl.SetRadius(1.5)
+    self.cyl.SetResolution(50)
+    self.cyl.SetHeight(100)
+
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(self.cyl.GetOutputPort())
+
+    actor = vtk.vtkActor()
+    actor.SetOrientation(0,0,90)
+    actor.SetMapper(mapper)
+
+    node = self.cyl.GetOutput()
+    locatorModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "PointerNode")
+    locatorModelNode.SetAndObservePolyData(node)
+    locatorModelNode.CreateDefaultDisplayNodes()
+    locatorModelNode.SetDisplayVisibility(True)
+    self.cyl.Update()
+
+    #Rotate cylinder
+    transformFilter = vtk.vtkTransformPolyDataFilter()
+    transform = vtk.vtkTransform()
+    transform.RotateX(90.0);
+    transform.Translate(0.0, -50.0, 0.0);
+    transform.Update();
+    transformFilter.SetInputConnection(self.cyl.GetOutputPort());
+    transformFilter.SetTransform(transform);
+
+    self.sphere = vtk.vtkSphereSource()
+    self.sphere.SetRadius(3.0);
+    self.sphere.SetCenter(0, 0, 0);
+
+    self.append = vtk.vtkAppendPolyData()
+    self.append.AddInputConnection(self.sphere.GetOutputPort());
+    self.append.AddInputConnection(transformFilter.GetOutputPort());
+    self.append.Update();
+
+    locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
+
