@@ -8,7 +8,6 @@ import time
 import random
 import string
 import re
-  
 
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
@@ -283,6 +282,15 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
     inboundFormLayout.addRow("Transform received: ", self.tableWidget)
 
+    # Visibility icon
+    self.VisibleButton = qt.QPushButton()
+    eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png");
+    self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+    self.VisibleButton.setFixedWidth(25)
+    self.VisibleButton.setCheckable(True)
+    inboundFormLayout.addRow("", self.VisibleButton)
+    self.VisibleButton.connect('clicked()', self.onVisibleButtonClicked)
+        
     # Info messages collapsible button
     infoCollapsibleButton = ctk.ctkCollapsibleButton()
     infoCollapsibleButton.text = "Info messages"
@@ -295,6 +303,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.infoTextbox.setReadOnly(True)
     self.infoTextbox.setFixedWidth(500)
     infoFormLayout.addRow("", self.infoTextbox)
+
+
+    #self.Visible_icon = qt.QPushButton
+    #self.Visible_icon.setIcon(":/Icons/Small/SlicerVisible.png");
+    #self.infoFormLayout.addRow("", self.Visible_icon)
+
+    #self.eye_item = qt.QStandardItem()
+    #self.eye_item.setData(qt.QPixmap(":/Icons/Small/SlicerVisible.png"));
+    #infoFormLayout.addRow("", self.eye_item)
+    #const char* attr3 = inode->GetAttribute("IGTLVisible");
+    #    if (attr3 && strcmp(attr3, "true") == 0)
+    #    {
+    #      item3->setData(QPixmap(":/Icons/Small/SlicerVisible.png"), Qt::DecorationRole);
+    #    }
 
     #slicer.vtkMRMLTableNode()
 
@@ -340,6 +362,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     ReceivedTransformInfo = slicer.vtkMRMLTextNode()
     ReceivedTransformInfo.SetName("TransformInfo")
     slicer.mrmlScene.AddNode(ReceivedTransformInfo)
+
+    #PointerNeedleNode = AddLocatorModel(slicer.mrmlScene, "PointerNeedle", 0, 0, 255);
+
+    #vtkSmartPointer<vtkMRMLModelNode>
+    locatorModelNode = slicer.vtkMRMLModelNode()
+    slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode","PointerNeedle")
+    #locatorModelNode->CreateDefaultDisplayNodes();
 
     # Add observers on the 4 message type nodes
     ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
@@ -662,6 +691,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
     print("Sending Start up command")
+    self.activateButtons()
     startupNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
@@ -681,6 +711,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     infoMsg =  "Sending STRING( " + randomIDname + ",  START_UP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+
 
 
   #def onStatusButtonClicked(self):
@@ -714,8 +745,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
+    print("attribute is:", attr) 
     
-  
+  def onVisibleButtonClicked(self):
+    # if button is checked
+    if (self.VisibleButton.isChecked()):
+      eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
+      self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
+      
+    # if it is unchecked
+    else:
+      eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
+      self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string was received")
     ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
@@ -723,7 +766,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     elapsed_time = (end - start)*100
     concatenateMsg = ReceivedStringMsg.GetText()
     delimit = ":"
-
+    isVis = ReceivedStringMsg.GetAttribute("IGTLVisible")
+    print("isVis =", isVis)
     if(concatenateMsg.find(delimit)!=-1): # found Delimiter is in the string
       nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
       msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
@@ -796,6 +840,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
+
+    #vtkMRMLModelNode.AddLocatorModel(slicer.mrmlScene, "PointerNeedle", 0, 0, 255);
+
     print(transformMatrix)
     refMatrix = vtk.vtkMatrix4x4()
     LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(last_randomIDname_transform)
@@ -850,6 +897,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
           print("Acknowledgment received for transform:", last_name_sent)
           global To_compare
         To_compare = 1
-    ReceivedTransformInfo.SetText("None")
+    #ReceivedTransformInfo.SetText("None")
       # else:
       #print("Received something different than expected, received: ", info)
