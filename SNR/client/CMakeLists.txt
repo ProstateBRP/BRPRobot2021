@@ -39,12 +39,8 @@ ADD_CUSTOM_TARGET(test
   set(CMAKE_BUILD_TYPE DEBUG)
 )
 
-OPTION(SCRIPT_AS_MAIN "Compiling NavigationSlicerScript.cxx as main" OFF)
-IF(SCRIPT_AS_MAIN)
-  ADD_DEFINITIONS(-DMAIN)
-  ADD_EXECUTABLE(NavigationSlicerScript ./NavigationSlicerScript.cxx)
-  TARGET_LINK_LIBRARIES(NavigationSlicerScript OpenIGTLink)
-ELSEIF(CMAKE_BUILD_TYPE EQUAL "DEBUG")
+
+IF(CMAKE_BUILD_TYPE EQUAL "DEBUG")
   message("target is test")
   ADD_EXECUTABLE(NavigationBridgeController ${NAVIGATION_TEST_SOURCE} ./NavigationSlicerScript.cxx)
   TARGET_LINK_LIBRARIES(NavigationBridgeController OpenIGTLink)

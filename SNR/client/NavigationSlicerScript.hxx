@@ -9,16 +9,11 @@ void *startThread();
 void *receivingFunction();
 
 void SendStringToSlicer(char* argDeviceName,char* argMessage);
-void SendStateToSlicer(char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);
+void SendStatusToSlicer(char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);
 void SendTransformToSlicer(char* argDeviceName, igtl::Matrix4x4& matrix, char *wpiDeviceName);
 
-
-int getTransform();
-int getStatus();
-
-
 void GetStringFromSlicer(const char* hostname, int port);
-void GetStateFromSlicer(const char* hostname, int port);
+void GetStatusFromSlicer(const char* hostname, int port);
 void GetTransformFromSlicer(const char* hostname, int port);
 
 int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
