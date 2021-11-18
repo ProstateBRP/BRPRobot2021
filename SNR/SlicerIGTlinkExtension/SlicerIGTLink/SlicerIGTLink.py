@@ -691,7 +691,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
     print("Sending Start up command")
-    self.activateButtons()
     startupNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
