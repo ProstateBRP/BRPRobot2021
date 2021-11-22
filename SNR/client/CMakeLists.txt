@@ -35,21 +35,15 @@ set(NAVIGATION_RELEASE_SOURCE
   NavigationBridge.cxx
 )
 
-ADD_CUSTOM_TARGET(test
-  set(CMAKE_BUILD_TYPE DEBUG)
-)
+ADD_EXECUTABLE(test ${NAVIGATION_TEST_SOURCE} ./NavigationSlicerScript.cxx)
+TARGET_LINK_LIBRARIES(test OpenIGTLink)
+
+ADD_EXECUTABLE(release ${NAVIGATION_RELEASE_SOURCE} ./NavigationSlicerScript.cxx)
+TARGET_LINK_LIBRARIES(release OpenIGTLink)
 
 OPTION(SCRIPT_AS_MAIN "Compiling NavigationSlicerScript.cxx as main" OFF)
 IF(SCRIPT_AS_MAIN)
   ADD_DEFINITIONS(-DMAIN)
   ADD_EXECUTABLE(NavigationSlicerScript ./NavigationSlicerScript.cxx)
   TARGET_LINK_LIBRARIES(NavigationSlicerScript OpenIGTLink)
-ELSEIF(CMAKE_BUILD_TYPE EQUAL "DEBUG")
-  message("target is test")
-  ADD_EXECUTABLE(NavigationBridgeController ${NAVIGATION_TEST_SOURCE} ./NavigationSlicerScript.cxx)
-  TARGET_LINK_LIBRARIES(NavigationBridgeController OpenIGTLink)
-ELSE()
-  message("target is release")
-  ADD_EXECUTABLE(NavigationBridgeController ${NAVIGATION_RELEASE_SOURCE} ./NavigationSlicerScript.cxx)
-  TARGET_LINK_LIBRARIES(NavigationBridgeController OpenIGTLink)
 ENDIF()
