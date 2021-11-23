@@ -115,7 +115,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # Layout within the path collapsible button
     outboundFormLayout = qt.QGridLayout(outboundCollapsibleButton)
     
-    nameLabelphase = qt.QLabel('Current phase:');
+    nameLabelphase = qt.QLabel('Current phase:')
     self.phaseTextbox = qt.QLineEdit("")
     self.phaseTextbox.setReadOnly(True)
     self.phaseTextbox.setFixedWidth(250)
@@ -123,12 +123,28 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout.addWidget(nameLabelphase, 0, 0)
     outboundFormLayout.addWidget(self.phaseTextbox, 0, 1)
 
+    # Input volume selector for zFrame calibration
+    self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
+    self.zFrameVolumeSelector.objectName = 'zFrameVolumeSelector'
+    self.zFrameVolumeSelector.toolTip = "Select the ZFrame image."
+    self.zFrameVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
+    self.zFrameVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
+    self.zFrameVolumeSelector.noneEnabled = False
+    self.zFrameVolumeSelector.addEnabled = False
+    self.zFrameVolumeSelector.removeEnabled = False
+    self.zFrameVolumeSelector.setFixedWidth(250)
+    zFrameLabel = qt.QLabel('ZFrame image:')
+    outboundFormLayout.addWidget(zFrameLabel, 1, 0)
+    outboundFormLayout.addWidget(self.zFrameVolumeSelector, 1, 1)
+    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
+                        self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
+
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
     self.startupButton.toolTip = "Send the startup command to the WPI robot."
     self.startupButton.enabled = True
     self.startupButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.startupButton, 1, 0)
+    outboundFormLayout.addWidget(self.startupButton, 2, 0)
     self.startupButton.connect('clicked()', self.onStartupButtonClicked)
 
     # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
@@ -136,7 +152,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
     self.planningButton.enabled = False
     self.planningButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.planningButton, 2, 0)
+    outboundFormLayout.addWidget(self.planningButton, 3, 0)
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
 
     # calibrationButton Button
@@ -144,7 +160,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
     self.calibrationButton.enabled = False
     self.calibrationButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.calibrationButton, 2, 1)
+    outboundFormLayout.addWidget(self.calibrationButton, 3, 1)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
 
     # targetingButton Button
@@ -152,7 +168,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
     self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.targetingButton, 3 , 0)
+    outboundFormLayout.addWidget(self.targetingButton, 4 , 0)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
 
     # moveButton Button
@@ -160,7 +176,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.moveButton.toolTip = "Send the move to target command to the WPI robot."
     self.moveButton.enabled = False
     self.moveButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.moveButton, 3, 1)
+    outboundFormLayout.addWidget(self.moveButton, 4, 1)
     self.moveButton.connect('clicked()', self.onMoveButtonClicked)
 
     # Lock Button to ask WPI to lock robot
@@ -168,7 +184,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
     self.LockButton.enabled = False
     self.LockButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.LockButton, 4, 0)
+    outboundFormLayout.addWidget(self.LockButton, 5, 0)
     self.LockButton.connect('clicked()', self.onLockButtonClicked)
 
     # Unlock Button to ask WPI to unlock robot
@@ -176,7 +192,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
     self.UnlockButton.enabled = False
     self.UnlockButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.UnlockButton, 4, 1)
+    outboundFormLayout.addWidget(self.UnlockButton, 5, 1)
     self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
 
     # Get robot pose Button to ask WPI to send the current robot position
@@ -184,7 +200,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
     self.GetPoseButton.enabled = False
     self.GetPoseButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.GetPoseButton, 5, 0)
+    outboundFormLayout.addWidget(self.GetPoseButton, 6, 0)
     self.GetPoseButton.connect('clicked()', self.onGetPoseButtonClicked)
 
     # Get robot status Button to ask WPI to send the current status position
@@ -192,7 +208,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
     self.GetStatusButton.enabled = False
     self.GetStatusButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.GetStatusButton, 5, 1)
+    outboundFormLayout.addWidget(self.GetStatusButton, 6, 1)
     self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
 
     # STOP Button 
@@ -200,7 +216,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
     self.StopButton.enabled = False
     self.StopButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.StopButton, 6, 0)
+    outboundFormLayout.addWidget(self.StopButton, 7, 0)
     self.StopButton.connect('clicked()', self.onStopButtonClicked)
 
     # EMERGENCY Button 
@@ -208,7 +224,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
     self.EmergencyButton.enabled = False
     self.EmergencyButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.EmergencyButton, 6, 1)
+    outboundFormLayout.addWidget(self.EmergencyButton, 7, 1)
     self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
 
     # Outbound Status message collapsible button
