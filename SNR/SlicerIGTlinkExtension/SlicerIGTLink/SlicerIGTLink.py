@@ -1,3 +1,21 @@
+##=========================================================================
+
+#  Program:   BRP Prostate Robot 2021 - Slicer Module
+#  Language:  Python
+
+#  Copyright (c) Brigham and Women's Hospital. All rights reserved.
+
+#  This software is distributed WITHOUT ANY WARRANTY; without even
+#  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+#  PURPOSE.  See the above copyright notices for more information.
+
+#  Please see
+#    https://github.com/ProstateBRP/BRPRobot2021/wiki
+#  for the detail of the protocol.
+
+#=========================================================================
+
+
 import os
 import unittest
 import vtk, qt, ctk, slicer

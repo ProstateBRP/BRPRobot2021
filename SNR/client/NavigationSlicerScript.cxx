@@ -1,3 +1,19 @@
+/*=========================================================================
+
+  Program:   BRP Prostate Robot 2021
+  Language:  C++
+
+  Copyright (c) Brigham and Women's Hospital. All rights reserved.
+
+  This software is distributed WITHOUT ANY WARRANTY; without even
+  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+  PURPOSE.  See the above copyright notices for more information.
+
+  Please see
+    https://github.com/ProstateBRP/BRPRobot2021/wiki
+  for the detail of the protocol.
+
+=========================================================================*/
 
 #include <iostream>
 #include <math.h>
