@@ -357,7 +357,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     SendTransformNode.SetName("SendTransform")
     slicer.mrmlScene.AddNode(SendTransformNode)
 
-    # Initialize las_string_sent 
+    # Initialize global variables 
     global last_string_sent 
     last_string_sent = "nostring"
     global start
@@ -402,10 +402,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     randomID = [last_prefix_sent,"_"]
     for i in range(4):
       randomLetter = random.choice(string.ascii_letters)
-      print(randomLetter)
       randomID.append(str(ord(randomLetter)))
     randomIDname = ''.join(randomID)
-    print(randomIDname)
     return randomIDname
 
   def activateButtons(self):
