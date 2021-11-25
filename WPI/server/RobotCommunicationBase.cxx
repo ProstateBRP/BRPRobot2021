@@ -15,7 +15,7 @@
 
 =========================================================================*/
 
-#include "TestBase.h"
+#include "RobotCommunicationBase.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -26,20 +26,20 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-TestBase::TestBase()
+RobotCommunicationBase::RobotCommunicationBase()
 {
 }
 
-TestBase::~TestBase()
+RobotCommunicationBase::~RobotCommunicationBase()
 {
 }
 
-void TestBase::SetSocket(igtl::Socket *socket)
+void RobotCommunicationBase::SetSocket(igtl::Socket *socket)
 {
   this->Socket = socket;
 }
 
-int TestBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
+int RobotCommunicationBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
 {
 
   this->Socket->SetTimeout(timeout);
@@ -52,27 +52,30 @@ int TestBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool timeout)
     {
       std::cerr << "ERROR: Timeout." << std::endl;
       this->Socket->CloseSocket();
-      exit(EXIT_FAILURE);
+      // exit(EXIT_FAILURE);
+      return 0;
     }
     else if (r == 0)
     {
       std::cerr << "MESSAGE: Socket closed." << std::endl;
       this->Socket->CloseSocket();
-      exit(EXIT_SUCCESS);
+      // exit(EXIT_SUCCESS);
+      return 0;
     }
     else
     {
       std::cerr << "ERROR: Receiving message." << std::endl;
       this->Socket->CloseSocket();
-      exit(EXIT_FAILURE);
+      // exit(EXIT_FAILURE);
+      return 0;
     }
   }
   headerMsg->Unpack();
   return 1;
 }
 
-int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
-                                           const char *name, const char *string, int suffix)
+int RobotCommunicationBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
+                                                         const char *name, const char *string, int suffix)
 {
 
   int success = 0;
@@ -133,9 +136,9 @@ int TestBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
   return success;
 }
 
-int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
-                                           const char *name, int code, int suffix,
-                                           const char *errorName)
+int RobotCommunicationBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
+                                                         const char *name, int code, int suffix,
+                                                         const char *errorName)
 {
 
   int success = 0;
@@ -209,9 +212,9 @@ int TestBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
 }
 
 // if err < 0, not check the matrix
-int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
-                                              const char *name, igtl::Matrix4x4 &matrix, double err,
-                                              int suffix)
+int RobotCommunicationBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
+                                                            const char *name, igtl::Matrix4x4 &matrix, double err,
+                                                            int suffix)
 {
   int success = 0;
 
@@ -285,14 +288,14 @@ int TestBase::CheckAndReceiveTransformMessage(igtl::MessageHeader *headerMsg,
   return success;
 }
 
-int TestBase::SkipMesage(igtl::MessageHeader *headerMsg)
+int RobotCommunicationBase::SkipMesage(igtl::MessageHeader *headerMsg)
 {
   this->Socket->Skip(headerMsg->GetBodySizeToRead(), 0);
   this->Socket->CloseSocket();
   return 1;
 }
 
-int TestBase::SendStringMessage(const char *name, const char *string)
+int RobotCommunicationBase::SendStringMessage(const char *name, const char *string)
 {
 
   std::cerr << "MESSAGE: Sending STRING( " << name << ", " << string << " )" << std::endl;
@@ -313,12 +316,12 @@ int TestBase::SendStringMessage(const char *name, const char *string)
   if (!r)
   {
     std::cerr << "ERROR: Sending STRING( " << name << ", " << string << " )" << std::endl;
-    exit(0);
+    exit(0); // Maybe change to return 0;
   }
   return 1;
 }
 
-int TestBase::SendTransformMessage(const char *name, igtl::Matrix4x4 &matrix)
+int RobotCommunicationBase::SendTransformMessage(const char *name, igtl::Matrix4x4 &matrix)
 {
   std::cerr << "MESSAGE: Sending TRANSFORM( " << name << " )" << std::endl;
 
@@ -339,14 +342,14 @@ int TestBase::SendTransformMessage(const char *name, igtl::Matrix4x4 &matrix)
   if (!r)
   {
     std::cerr << "ERROR: Sending TRANSFORM( " << name << " )" << std::endl;
-    exit(0);
+    exit(0); // Maybe change to return 0;
   }
 
   return 1;
 }
 
-int TestBase::SendStatusMessage(const char *name, int Code, int SubCode,
-                                const char *errorName, const char *statusString)
+int RobotCommunicationBase::SendStatusMessage(const char *name, int Code, int SubCode,
+                                              const char *errorName, const char *statusString)
 {
   std::cerr << "MESSAGE: Sending STATUS( " << name << " )" << std::endl;
 
@@ -379,13 +382,13 @@ int TestBase::SendStatusMessage(const char *name, int Code, int SubCode,
   if (!r)
   {
     std::cerr << "ERROR: Sending STATUS( " << name << " )" << std::endl;
-    exit(0);
+    exit(0); // Maybe Change to return 0; since this will result in program exit!
   }
 
   return 1;
 }
 
-void TestBase::GetRandomTestMatrix(igtl::Matrix4x4 &matrix)
+void RobotCommunicationBase::GetRandomTestMatrix(igtl::Matrix4x4 &matrix)
 {
   float position[3];
   float orientation[4];
@@ -415,7 +418,7 @@ void TestBase::GetRandomTestMatrix(igtl::Matrix4x4 &matrix)
   //PrintMatrix(matrix);
 }
 
-int TestBase::ReceiveTransform(igtl::MessageHeader *header, igtl::Matrix4x4 &matrix)
+int RobotCommunicationBase::ReceiveTransform(igtl::MessageHeader *header, igtl::Matrix4x4 &matrix)
 {
   std::cerr << "MESSAGE: Receiving TRANSFORM data type." << std::endl;
 
@@ -444,7 +447,7 @@ int TestBase::ReceiveTransform(igtl::MessageHeader *header, igtl::Matrix4x4 &mat
   return 0;
 }
 
-int TestBase::ReceiveString(igtl::MessageHeader *header, std::string &string)
+int RobotCommunicationBase::ReceiveString(igtl::MessageHeader *header, std::string &string)
 {
 
   std::cerr << "MESSAGE: Receiving STRING data type." << std::endl;
@@ -474,8 +477,8 @@ int TestBase::ReceiveString(igtl::MessageHeader *header, std::string &string)
   return 1;
 }
 
-int TestBase::ReceiveStatus(igtl::MessageHeader *header, int &code, int &subcode,
-                            std::string &name, std::string &status)
+int RobotCommunicationBase::ReceiveStatus(igtl::MessageHeader *header, int &code, int &subcode,
+                                          std::string &name, std::string &status)
 {
 
   std::cerr << "MESSAGE: Receiving STATUS data type." << std::endl;
@@ -512,7 +515,7 @@ int TestBase::ReceiveStatus(igtl::MessageHeader *header, int &code, int &subcode
   return 0;
 }
 
-void TestBase::PrintMatrix(std::string prefix, igtl::Matrix4x4 &matrix)
+void RobotCommunicationBase::PrintMatrix(std::string prefix, igtl::Matrix4x4 &matrix)
 {
   std::cout << prefix << " [" << matrix[0][0] << ", " << matrix[0][1] << ", " << matrix[0][2] << ", " << matrix[0][3] << "]" << std::endl;
   std::cout << prefix << " [" << matrix[1][0] << ", " << matrix[1][1] << ", " << matrix[1][2] << ", " << matrix[1][3] << "]" << std::endl;
@@ -520,7 +523,7 @@ void TestBase::PrintMatrix(std::string prefix, igtl::Matrix4x4 &matrix)
   std::cout << prefix << " [" << matrix[3][0] << ", " << matrix[3][1] << ", " << matrix[3][2] << ", " << matrix[3][3] << "]" << std::endl;
 }
 
-int TestBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
+int RobotCommunicationBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
 {
   // Check if each column is normal:
   for (int i = 0; i < 3; i++)
@@ -546,7 +549,7 @@ int TestBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
   return 1;
 }
 
-int TestBase::CompareMatrices(igtl::Matrix4x4 &matrix1, igtl::Matrix4x4 &matrix2, double tol)
+int RobotCommunicationBase::CompareMatrices(igtl::Matrix4x4 &matrix1, igtl::Matrix4x4 &matrix2, double tol)
 {
 
   // Check if each column is normal:

@@ -26,11 +26,9 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotSimulatorManualPhase::RobotSimulatorManualPhase() :
-  RobotSimulatorPhaseBase()
+RobotSimulatorManualPhase::RobotSimulatorManualPhase() : RobotSimulatorPhaseBase()
 {
 }
-
 
 RobotSimulatorManualPhase::~RobotSimulatorManualPhase()
 {
@@ -46,15 +44,14 @@ int RobotSimulatorManualPhase::Initialize()
   return 1;
 }
 
-
-int RobotSimulatorManualPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+// What does this function do exactly? It seems that it is always returning zero.
+int RobotSimulatorManualPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
 
   if (RobotSimulatorPhaseBase::MessageHandler(headerMsg))
-    {
+  {
     return 1;
-    }
+  }
 
   return 0;
 }
-

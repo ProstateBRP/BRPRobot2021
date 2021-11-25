@@ -24,23 +24,23 @@
 #include "igtlSocket.h"
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
-#include "TestBase.h"
+#include "RobotCommunicationBase.h"
 
 class RobotStatus
 {
 public:
   RobotStatus();
   ~RobotStatus();
-  
-  void SetCalibrationMatrix(igtl::Matrix4x4& matrix);
+
+  void SetCalibrationMatrix(igtl::Matrix4x4 &matrix);
 
   // Return 0 if a calibration matrix has not been set.
-  int GetCalibrationMatrix(igtl::Matrix4x4& matrix);
+  int GetCalibrationMatrix(igtl::Matrix4x4 &matrix);
 
-  void SetTargetMatrix(igtl::Matrix4x4& matrix);
+  void SetTargetMatrix(igtl::Matrix4x4 &matrix);
 
   // Return 0 if a target matrix has not been set.
-  int GetTargetMatrix(igtl::Matrix4x4& matrix);
+  int GetTargetMatrix(igtl::Matrix4x4 &matrix);
 
 protected:
   int FlagCalibration;
@@ -48,7 +48,5 @@ protected:
   igtl::Matrix4x4 CalibrationMatrix;
   igtl::Matrix4x4 TargetMatrix;
 };
-
-
 
 #endif //__RobotStatus_h

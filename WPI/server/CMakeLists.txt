@@ -21,8 +21,7 @@ set(ROBOT_SIM_SOURCE
   RobotSimulatorManualPhase.cxx
   RobotSimulatorStopPhase.cxx
   RobotSimulatorEmergencyPhase.cxx
-  # RobotTestSimulator.cxx
-  TestBase.cxx
+  RobotCommunicationBase.cxx
   RobotStatus.cxx
 )
 

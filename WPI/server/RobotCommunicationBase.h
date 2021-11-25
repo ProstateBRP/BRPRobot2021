@@ -15,23 +15,24 @@
 
 =========================================================================*/
 
-#ifndef __TestBase_h
-#define __TestBase_h
+#ifndef __RobotCommunicationBase_h
+#define __RobotCommunicationBase_h
 
 #include "igtlSocket.h"
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
 
-class TestBase
+class RobotCommunicationBase
 {
 public:
-	enum
-	{
-		SUCCESS = 1
-	};
+  enum
+  {
+    SUCCESS = 1
+  };
+
 public:
-  TestBase();
-  ~TestBase();
+  RobotCommunicationBase();
+  virtual ~RobotCommunicationBase(); // changed the destructor to virtual
 
   virtual const char *Name() = 0;
 
@@ -74,4 +75,4 @@ protected:
   igtl::Socket::Pointer Socket;
 };
 
-#endif //__TestBase_h
+#endif //__RobotCommunicationBase_h
