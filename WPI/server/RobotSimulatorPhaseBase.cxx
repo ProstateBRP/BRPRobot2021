@@ -99,15 +99,13 @@ int RobotSimulatorPhaseBase::CheckWorkphaseChange(igtl::MessageHeader *headerMsg
     {
       std::cerr << "ERROR: Timeout." << std::endl;
       this->Socket->CloseSocket();
-      // exit(EXIT_FAILURE);
-      return 0;
+      exit(EXIT_FAILURE);
     }
     else if (r == 0)
     {
       std::cerr << "ERROR: Socket closed while reading a message." << std::endl;
       this->Socket->CloseSocket();
-      // exit(EXIT_FAILURE);
-      return 0;
+      exit(EXIT_FAILURE);
     }
 
     // Deserialize the string message

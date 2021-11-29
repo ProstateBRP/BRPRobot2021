@@ -26,13 +26,9 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotSimulatorStartUpPhase::RobotSimulatorStartUpPhase() :
-  RobotSimulatorPhaseBase()
+RobotSimulatorStartUpPhase::RobotSimulatorStartUpPhase() : RobotSimulatorPhaseBase()
 {
-  // Register Device-not-ready defect
-  this->RegisterDefectType("DNR", "Device-not-ready in START_UP phase.");
 }
-
 
 RobotSimulatorStartUpPhase::~RobotSimulatorStartUpPhase()
 {
@@ -44,29 +40,19 @@ int RobotSimulatorStartUpPhase::Initialize()
   // Send Status after waiting for 2 seconds (mimicking initialization process)
   igtl::Sleep(2000); // wait for 2000 msec
 
-  if (this->GetDefectStatus("DNR"))
-    {
-    // Device-not-ready defect is active
-    this->SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_NOT_READY, 0);
-    }
-  else
-    {
-    // Normal
-    this->SendStatusMessage(this->Name(), 1, 0);
-    }
+  // Normal
+  this->SendStatusMessage(this->Name(), 1, 0);
 
   return 1;
 }
 
-
-int RobotSimulatorStartUpPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+int RobotSimulatorStartUpPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
 
   if (RobotSimulatorPhaseBase::MessageHandler(headerMsg))
-    {
+  {
     return 1;
-    }
+  }
 
   return 0;
 }
-

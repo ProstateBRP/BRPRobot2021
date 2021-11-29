@@ -70,6 +70,7 @@ public:
   // Compare two matrices. If there is any corresponding elements with error larger than 'tol', return 0.
   // Otherwise, it returns 1.
   int CompareMatrices(igtl::Matrix4x4 &matrix1, igtl::Matrix4x4 &matrix2, double tol);
+  int connect{0}; // Shows the status of socket connection
 
 protected:
   igtl::Socket::Pointer Socket;

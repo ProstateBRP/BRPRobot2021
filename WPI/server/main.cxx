@@ -189,11 +189,11 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
     // Set undefined phase as the current phase;
     std::vector<RobotSimulatorPhaseBase *>::iterator currentPhase = wlist.begin();
 
-    int connect = 1;
+    (*currentPhase)->connect = 1;
 
     //------------------------------------------------------------
     // loop
-    while (connect)
+    while ((*currentPhase)->connect)
     {
         if ((*currentPhase)->Process())
         {
