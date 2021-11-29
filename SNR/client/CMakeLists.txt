@@ -15,17 +15,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(NAVIGATION_TEST_SOURCE
   IGTControlBase.cxx
   NavigationIGTControlBase.cxx
-  Testing1/NavigationBridgeSimulator.cxx
-  Testing1/NavigationNormalOperationTest.cxx
-  Testing1/NavigationStartUpErrorTest.cxx
-  Testing1/NavigationCalibrationErrorTest.cxx
-  Testing1/NavigationTargetingWithoutCalibrationTest.cxx
-  Testing1/NavigationOutOfRangeTest.cxx
-  Testing1/NavigationStopDuringOperationTest.cxx
-  Testing1/NavigationEmergencyStopDuringOperationTest.cxx
-  Testing1/NavigationMoveToWithoutTargetTest.cxx
-  Testing1/NavigationAccidentalCommandDuringManualModeTest.cxx
-  Testing1/NavigationHardwareErrorDuringOperationTest.cxx
+  Testing/NavigationBridgeSimulator.cxx
+  Testing/NavigationNormalOperationTest.cxx
+  Testing/NavigationStartUpErrorTest.cxx
+  Testing/NavigationCalibrationErrorTest.cxx
+  Testing/NavigationTargetingWithoutCalibrationTest.cxx
+  Testing/NavigationOutOfRangeTest.cxx
+  Testing/NavigationStopDuringOperationTest.cxx
+  Testing/NavigationEmergencyStopDuringOperationTest.cxx
+  Testing/NavigationMoveToWithoutTargetTest.cxx
+  Testing/NavigationAccidentalCommandDuringManualModeTest.cxx
+  Testing/NavigationHardwareErrorDuringOperationTest.cxx
 )
 
 set(NAVIGATION_RELEASE_SOURCE
