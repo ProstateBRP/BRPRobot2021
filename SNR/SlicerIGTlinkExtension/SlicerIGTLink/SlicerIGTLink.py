@@ -62,54 +62,55 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the path collapsible button
     serverFormLayout = qt.QGridLayout(serverCollapsibleButton)
-    nameLabel1 = qt.QLabel('SNR server port:');
-    nameLabel2 = qt.QLabel('SNR hostname: ');
-    serverFormLayout.addWidget(nameLabel1, 0, 0)
-    serverFormLayout.addWidget(nameLabel2, 1, 0)
+    # nameLabel1 = qt.QLabel('SNR server port:');
+    # nameLabel2 = qt.QLabel('SNR hostname: ');
+    # serverFormLayout.addWidget(nameLabel1, 0, 0)
+    # serverFormLayout.addWidget(nameLabel2, 1, 0)
 
-    # self.wpiPortTextbox = qt.QLineEdit("18944")
-    # self.wpiPortTextbox.setReadOnly(False)
-    # self.wpiPortTextbox.setFixedWidth(75)
-    # serverFormLayout.addRow("WPI server port:", self.wpiPortTextbox)
+    # self.snrPortTextbox = qt.QLineEdit("18944")
+    # self.snrPortTextbox.setReadOnly(False)
+    # self.snrPortTextbox.setFixedWidth(75)
+    # serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
 
-    # self.wpiHostnameTextbox = qt.QLineEdit("localhost")
-    # self.wpiHostnameTextbox.setReadOnly(False)
-    # self.wpiHostnameTextbox.setFixedWidth(75)
-    # serverFormLayout.addRow("WPI hostname:", self.wpiHostnameTextbox)
+    # self.snrHostnameTextbox = qt.QLineEdit("localhost")
+    # self.snrHostnameTextbox.setReadOnly(False)
+    # self.snrHostnameTextbox.setFixedWidth(75)
+    # serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
+    snrPortTextboxLabel = qt.QLabel('SNR server port:')
     self.snrPortTextbox = qt.QLineEdit("18944")
     self.snrPortTextbox.setReadOnly(False)
-    self.snrPortTextbox.setFixedWidth(75)
+    self.snrPortTextbox.setMaximumWidth(250)
+    serverFormLayout.addWidget(snrPortTextboxLabel, 0, 0)
     serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
 
+    snrHostnameTextboxLabel = qt.QLabel('SNR hostname:')
     self.snrHostnameTextbox = qt.QLineEdit("localhost")
     self.snrHostnameTextbox.setReadOnly(False)
-    self.snrHostnameTextbox.setFixedWidth(75)
+    self.snrHostnameTextbox.setMaximumWidth(250)
+    serverFormLayout.addWidget(snrHostnameTextboxLabel, 1, 0)
     serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
-    # self.testNumberTextbox = qt.QLineEdit("1")
-    # self.testNumberTextbox.setReadOnly(False)
-    # self.testNumberTextbox.setFixedWidth(75)
-    # serverFormLayout.addRow("Test number:", self.testNumberTextbox)
-
     # Connect to client button
-    self.connectToClientButton = qt.QPushButton("Connect to client")
+    self.connectToClientButton = qt.QPushButton("Create server")
     self.connectToClientButton.toolTip = "Create the IGTLink server connection with shell."
     self.connectToClientButton.enabled = True
     self.connectToClientButton.setMaximumWidth(250)
-    serverFormLayout.addWidget(self.connectToClientButton, 2, 0, 1, 2)
+    # serverFormLayout.addWidget(self.connectToClientButton, 2, 0, 1, 2)
+    serverFormLayout.addWidget(self.connectToClientButton, 2, 0)
     self.connectToClientButton.connect('clicked()', self.onConnectToClientButtonClicked)
 
     self.disconnectFromSocketButton = qt.QPushButton("Disconnect from socket")
     self.disconnectFromSocketButton.toolTip = "Disconnect from the socket when you finish using audio"
     self.disconnectFromSocketButton.enabled = True
     self.disconnectFromSocketButton.setMaximumWidth(250)
-    serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 2, 1, 2)
+    # serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 2, 1, 2)
+    serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 1)
     self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
 
     # Outbound messages collapsible button
     outboundCollapsibleButton = ctk.ctkCollapsibleButton()
-    outboundCollapsibleButton.text = "Outbound string messages (Slicer -> WPI)"
+    outboundCollapsibleButton.text = "Outbound Commands"
     self.layout.addWidget(outboundCollapsibleButton)
 
     # Layout within the path collapsible button
@@ -123,21 +124,21 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout.addWidget(nameLabelphase, 0, 0)
     outboundFormLayout.addWidget(self.phaseTextbox, 0, 1)
 
-    # Input volume selector for zFrame calibration
-    self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
-    self.zFrameVolumeSelector.objectName = 'zFrameVolumeSelector'
-    self.zFrameVolumeSelector.toolTip = "Select the ZFrame image."
-    self.zFrameVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
-    self.zFrameVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
-    self.zFrameVolumeSelector.noneEnabled = False
-    self.zFrameVolumeSelector.addEnabled = False
-    self.zFrameVolumeSelector.removeEnabled = False
-    self.zFrameVolumeSelector.setFixedWidth(250)
-    zFrameLabel = qt.QLabel('ZFrame image:')
-    outboundFormLayout.addWidget(zFrameLabel, 1, 0)
-    outboundFormLayout.addWidget(self.zFrameVolumeSelector, 1, 1)
-    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-                        self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
+    # # Input volume selector for zFrame calibration
+    # self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
+    # self.zFrameVolumeSelector.objectName = 'zFrameVolumeSelector'
+    # self.zFrameVolumeSelector.toolTip = "Select the ZFrame image."
+    # self.zFrameVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
+    # self.zFrameVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
+    # self.zFrameVolumeSelector.noneEnabled = False
+    # self.zFrameVolumeSelector.addEnabled = False
+    # self.zFrameVolumeSelector.removeEnabled = False
+    # self.zFrameVolumeSelector.setFixedWidth(250)
+    # zFrameLabel = qt.QLabel('ZFrame image:')
+    # outboundFormLayout.addWidget(zFrameLabel, 1, 0)
+    # outboundFormLayout.addWidget(self.zFrameVolumeSelector, 1, 1)
+    # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
+    #                     self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
 
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
@@ -245,23 +246,67 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Outbound tranform collapsible button
     outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
-    outboundTransformCollapsibleButton.text = "Outbound transforms (Slicer -> WPI)"
+    outboundTransformCollapsibleButton.text = "Calibration Matrix"
     self.layout.addWidget(outboundTransformCollapsibleButton)
 
     # Layout within the path collapsible button
     outboundTransformsFormLayout = qt.QFormLayout(outboundTransformCollapsibleButton)
 
     # transformButton Button
-    self.transformButton = qt.QPushButton("TRANSFORM")
-    self.transformButton.toolTip = "Send transform to the WPI robot."
-    self.transformButton.enabled = False
-    self.transformButton.setMaximumWidth(205)
-    outboundTransformsFormLayout.addRow(self.transformButton)
-    self.transformButton.connect('clicked()', self.onTransformButtonClicked)
+    # self.transformButton = qt.QPushButton("TRANSFORM")
+    # self.transformButton.toolTip = "Send transform to the WPI robot."
+    # self.transformButton.enabled = False
+    # self.transformButton.setMaximumWidth(250)
+    # outboundTransformsFormLayout.addWidget(self.transformButton)
+    # self.transformButton.connect('clicked()', self.onTransformButtonClicked)
+
+    # Input volume selector for zFrame calibration
+    self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
+    self.zFrameVolumeSelector.objectName = 'zFrameVolumeSelector'
+    self.zFrameVolumeSelector.toolTip = "Select the ZFrame image."
+    self.zFrameVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
+    self.zFrameVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
+    self.zFrameVolumeSelector.noneEnabled = False
+    self.zFrameVolumeSelector.addEnabled = False
+    self.zFrameVolumeSelector.removeEnabled = False
+    self.zFrameVolumeSelector.setFixedWidth(250)
+    # zFrameLabel = qt.QLabel('ZFrame image:')
+    # outboundTransformsFormLayout.addWidget(zFrameLabel, 1, 0)
+    # outboundTransformsFormLayout.addWidget(self.zFrameVolumeSelector, 1, 1)
+    outboundTransformsFormLayout.addRow('ZFrame image: ', self.zFrameVolumeSelector)
+    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
+                        self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
+
+    # Calibration matrix display
+    row = 4
+    column = 4
+    self.calibrationTableWidget = qt.QTableWidget(row, column)
+    self.calibrationTableWidget.verticalHeader().hide() # Remove line numbers
+    self.calibrationTableWidget.horizontalHeader().hide() # Remove column numbers
+    self.calibrationTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.calibrationTableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+
+    verticalheader = self.calibrationTableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    outboundTransformsFormLayout.addRow("Calibration matrix:       ", self.calibrationTableWidget)
+
+    # Create and send new calibration matrix button
+    self.createCalibrationMatrixButton = qt.QPushButton("Create and send new calibration matrix")
+    self.createCalibrationMatrixButton.enabled = True
+    # self.createCalibrationMatrixButton.setMaximumWidth(250)
+    outboundTransformsFormLayout.addRow(self.createCalibrationMatrixButton)
+    self.createCalibrationMatrixButton.connect('clicked()', self.initiateZFrameCalibration())
 
     # Inbound messages collapsible button
     inboundCollapsibleButton = ctk.ctkCollapsibleButton()
-    inboundCollapsibleButton.text = "Inbound messages (WPI -> Slicer)"
+    inboundCollapsibleButton.text = "Inbound Messages"
     self.layout.addWidget(inboundCollapsibleButton)
 
     # Layout within the path collapsible button
@@ -277,7 +322,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.statusTextbox.setFixedWidth(200)
     inboundFormLayout.addRow("Status received:", self.statusTextbox)
 
-    self.statusCodeTextbox = qt.QLineEdit("No status Code received")
+    self.statusCodeTextbox = qt.QLineEdit("No status code received")
     self.statusCodeTextbox.setReadOnly(True)
     self.statusCodeTextbox.setFixedWidth(200)
     inboundFormLayout.addRow("Status code meaning: ", self.statusCodeTextbox)
@@ -312,7 +357,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
         
     # Info messages collapsible button
     infoCollapsibleButton = ctk.ctkCollapsibleButton()
-    infoCollapsibleButton.text = "Info messages"
+    infoCollapsibleButton.text = "Info Messages"
     self.layout.addWidget(infoCollapsibleButton)
 
     # Layout within the path collapsible button
@@ -789,7 +834,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       textNode.messageTextbox.setText(concatenateMsg)
       print("Received something different than expected, received: ", ReceivedStringMsg.GetText())      
       
-  def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
+  def onStatusNodeModified(self, statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
     ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
     s1 = str(ReceivedStatusMsg.GetCode())
@@ -825,9 +870,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     elif((status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (ack ==1) and (loading_phase == nameonly)): #and (elapsed_time<= 10)
       print("Robot sucessfully achieved : ", loading_phase, "after", elapsed_time, "s")
       statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);")
-      if(loading_phase =="START_UP"):
+      if(loading_phase == "START_UP"):
         statusNode.activateButtons()
       ack = 0
+      # Initiate calibration matrix calculation when robot reaches CALIBRATION phase
+      if(loading_phase == "CALIBRATION"):
+        print ("Robot is awaiting calibration matrix.")
+        self.initiateZFrameCalibration()
     else:
       print("Error in changing phase")
 
@@ -935,3 +984,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
 
+
+  def initiateZFrameCalibration(self):
+
+    zFrameNode = self.zFrameVolumeSelector.currentNode()
+    if (zFrameNode is not None):
+      print ("Initating calculation of calibration matrix...")
+      # TODO
+      # USE HARMONUS ZFRAME INSTEAD OF SLICETRACKER
+
+
+      # Update calibration matrix table with the calculated matrix (currently just dummy code)
+      for i in range(4):
+        for j in range(4):
+          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(5)))
+
+    else:
+      print("No zFrame image found. Cannot calculate the calibration matrix.")
