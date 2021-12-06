@@ -848,7 +848,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       textNode.messageTextbox.setText(concatenateMsg)
       print("Received something different than expected, received: ", ReceivedStringMsg.GetText())      
       
-  def onStatusNodeModified(self, statusNode, unusedArg2=None, unusedArg3=None):
+  def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
     print("New Status was received")
     ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
     s1 = str(ReceivedStatusMsg.GetCode())
@@ -1030,21 +1030,24 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onSendCalibrationMatrixButtonClicked(self):
     # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
     zFrameNode = self.zFrameVolumeSelector.currentNode()
-    calibrationMatrix = self.calibrationMatrixSelector.currentNode()
-    print ("calibration matrix: ", calibrationMatrix)
+    calibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
+    print ("calibration matrix: ", calibrationMatrixNode)
 
-    if calibrationMatrix is not None:
+    if calibrationMatrixNode is not None:
       # Send the pre-determined calibration matrix to WPI as the CLB matrix
       # Convert the vtkLinearTransformNode (calibrationMatrix) to a vtkMatrix4x4 (transformMatrix)
-      transformMatrix = calibrationMatrix.GetMatrix()
       # transformMatrix = vtk.vtkMatrix4x4()
       # for i in range(4):
       #   for j in range(4):
       #     transformMatrix.SetElement(i,j, calibrationMatrix.GetElement(i,j))
-      print ("transform matrix: ", transformMatrix)
+    
+      calibrationMatrix = vtk.vtkMatrix4x4()
+      calibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
 
-      SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
-      SendTransformNode.GetMatrixTransformToParent(transformMatrix)
+
+
+
+
       randomIDname = self.generateRandomNameID(last_prefix_sent)
       global last_randomIDname_transform
       last_randomIDname_transform = randomIDname
@@ -1052,9 +1055,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       last_name_sent = randomIDname
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
       SendTransformNodeTemp.SetName(randomIDname)
-      SendTransformNodeTemp.GetMatrixTransformToParent(transformMatrix)
+      SendTransformNodeTemp.GetMatrixTransformToParent(calibrationMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
-      print(transformMatrix)
+      print(calibrationMatrix)
       self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
       self.openIGTNode.PushNode(SendTransformNodeTemp)
       infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
