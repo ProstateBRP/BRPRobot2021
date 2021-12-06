@@ -124,22 +124,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout.addWidget(nameLabelphase, 0, 0)
     outboundFormLayout.addWidget(self.phaseTextbox, 0, 1)
 
-    # # Input volume selector for zFrame calibration
-    # self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
-    # self.zFrameVolumeSelector.objectName = 'zFrameVolumeSelector'
-    # self.zFrameVolumeSelector.toolTip = "Select the ZFrame image."
-    # self.zFrameVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
-    # self.zFrameVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
-    # self.zFrameVolumeSelector.noneEnabled = False
-    # self.zFrameVolumeSelector.addEnabled = False
-    # self.zFrameVolumeSelector.removeEnabled = False
-    # self.zFrameVolumeSelector.setFixedWidth(250)
-    # zFrameLabel = qt.QLabel('ZFrame image:')
-    # outboundFormLayout.addWidget(zFrameLabel, 1, 0)
-    # outboundFormLayout.addWidget(self.zFrameVolumeSelector, 1, 1)
-    # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-    #                     self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
-
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
     self.startupButton.toolTip = "Send the startup command to the WPI robot."
@@ -277,6 +261,16 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
 
+    # Start and end slices for calibration step
+    self.startSliceSliderWidget = qt.QSpinBox()
+    self.endSliceSliderWidget = qt.QSpinBox()
+    self.startSliceSliderWidget.setValue(5)
+    self.endSliceSliderWidget.setValue(16)
+    self.startSliceSliderWidget.setMaximumWidth(40)
+    self.endSliceSliderWidget.setMaximumWidth(40)
+    outboundTransformsFormLayout.addRow('Minimum slice: ', self.startSliceSliderWidget)
+    outboundTransformsFormLayout.addRow('Maximum slice: ', self.endSliceSliderWidget)
+
     # Calibration matrix display
     row = 4
     column = 4
@@ -301,8 +295,31 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.createCalibrationMatrixButton = qt.QPushButton("Create and send new calibration matrix")
     self.createCalibrationMatrixButton.enabled = True
     # self.createCalibrationMatrixButton.setMaximumWidth(250)
-    outboundTransformsFormLayout.addRow(self.createCalibrationMatrixButton)
-    self.createCalibrationMatrixButton.connect('clicked()', self.initiateZFrameCalibration())
+    outboundTransformsFormLayout.addWidget(self.createCalibrationMatrixButton)
+    self.createCalibrationMatrixButton.connect('clicked()', self.initiateZFrameCalibration)
+
+    # TO SELECT AN EXISTING CALIBRATION MATRIX CALUCLATED BY HARMONUS (outside of the module):
+    # Delete once Calibration step is testing and working
+    self.calibrationMatrixSelector = slicer.qMRMLNodeComboBox()
+    self.calibrationMatrixSelector.nodeTypes = ( ("vtkMRMLLinearTransformNode"), "" )
+    self.calibrationMatrixSelector.selectNodeUponCreation = True
+    self.calibrationMatrixSelector.addEnabled = False
+    self.calibrationMatrixSelector.removeEnabled = False
+    self.calibrationMatrixSelector.noneEnabled = False
+    self.calibrationMatrixSelector.showHidden = False
+    self.calibrationMatrixSelector.showChildNodeTypes = False
+    self.calibrationMatrixSelector.setMRMLScene( slicer.mrmlScene )
+    self.calibrationMatrixSelector.setToolTip( "Select the calibration matrix." )
+    outboundTransformsFormLayout.addRow("Calibration matrix: ", self.calibrationMatrixSelector)
+    # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
+    #                 self.calibrationMatrixSelector, 'setMRMLScene(vtkMRMLScene*)')
+
+    # Send pre-calculated calibration matrix button
+    self.sendCalibrationMatrixButton = qt.QPushButton("Send pre-existing calibration matrix")
+    self.sendCalibrationMatrixButton.enabled = True
+    # self.createCalibrationMatrixButton.setMaximumWidth(250)
+    outboundTransformsFormLayout.addWidget(self.sendCalibrationMatrixButton)
+    self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
 
     # Inbound messages collapsible button
     inboundCollapsibleButton = ctk.ctkCollapsibleButton()
@@ -745,45 +762,42 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     infoMsg =  "Sending STRING( " + randomIDname + ",  START_UP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    
+  # def onStatusButtonClicked(self):
+  #   # Send Status message
+  #   print("Sending Status")
+  #   statusNode = slicer.vtkMRMLIGTLStatusNode()
+  #   statusNode.SetStatusString("STATUS_OK")
+  #   slicer.mrmlScene.AddNode(statusNode)
+  #   self.openIGTNode.RegisterOutgoingMRMLNode(statusNode)
+  #   self.openIGTNode.PushNode(statusNode)
 
-
-
-  #def onStatusButtonClicked(self):
-    #Send Status message
-    #print("Sending Status")
-    #statusNode = slicer.vtkMRMLIGTLStatusNode()
-    #statusNode.SetStatusString("STATUS_OK")
-    #slicer.mrmlScene.AddNode(statusNode)
-    #self.openIGTNode.RegisterOutgoingMRMLNode(statusNode)
-    #self.openIGTNode.PushNode(statusNode)
-
- 
-  def onTransformButtonClicked(self):
-    #Send Transform message
-    print("Sending Transform")
-    transformMatrix = vtk.vtkMatrix4x4()
-    SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
-    SendTransformNode.GetMatrixTransformToParent(transformMatrix)
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
-    global last_randomIDname_transform
-    last_randomIDname_transform = randomIDname
-    global last_name_sent
-    last_name_sent = randomIDname
-    SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-    SendTransformNodeTemp.SetName(randomIDname)
-    SendTransformNodeTemp.GetMatrixTransformToParent(transformMatrix)
-    slicer.mrmlScene.AddNode(SendTransformNodeTemp)
-    print(transformMatrix)
-    self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
-    self.openIGTNode.PushNode(SendTransformNodeTemp)
-    infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
-    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.infoTextbox.setText(infoMsg)
-    attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
-    print("attribute is:", attr) 
+  # def onTransformButtonClicked(self):
+  #   # Send Transform message
+  #   print("Sending Transform")
+  #   transformMatrix = vtk.vtkMatrix4x4()
+  #   SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
+  #   SendTransformNode.GetMatrixTransformToParent(transformMatrix)
+  #   randomIDname = self.generateRandomNameID(last_prefix_sent)
+  #   global last_randomIDname_transform
+  #   last_randomIDname_transform = randomIDname
+  #   global last_name_sent
+  #   last_name_sent = randomIDname
+  #   SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+  #   SendTransformNodeTemp.SetName(randomIDname)
+  #   SendTransformNodeTemp.GetMatrixTransformToParent(transformMatrix)
+  #   slicer.mrmlScene.AddNode(SendTransformNodeTemp)
+  #   print(transformMatrix)
+  #   self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+  #   self.openIGTNode.PushNode(SendTransformNodeTemp)
+  #   infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
+  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+  #   self.infoTextbox.setText(infoMsg)
+  #   attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
+  #   print("attribute is:", attr) 
     
   def onVisibleButtonClicked(self):
-    # if button is checked
+    # If button is checked
     if (self.VisibleButton.isChecked()):
       eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
       self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
@@ -791,7 +805,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
       locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
       locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID());
-    # if it is unchecked
+    # If it is unchecked
     else:
       eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
       self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
@@ -986,18 +1000,71 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
 
   def initiateZFrameCalibration(self):
-
+    # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
     zFrameNode = self.zFrameVolumeSelector.currentNode()
-    if (zFrameNode is not None):
-      print ("Initating calculation of calibration matrix...")
-      # TODO
-      # USE HARMONUS ZFRAME INSTEAD OF SLICETRACKER
+    calibrationMatrix = self.calibrationMatrixSelector.currentNode()
 
+    if zFrameNode is not None:
+      print ("TODO -- calibration step with zFrame volume image")
+      
+      startSlice = int(self.startSliceSliderWidget.value)
+      # Make sure end slice is within the volume
+      endSlice = int(self.endSliceSliderWidget.value)
+      maxSlice = self.zFrameVolumeSelector.currentNode().GetImageData().GetDimensions()[2]
+      if endSlice == 0 or endSlice > maxSlice:
+          # Use the image end slice
+          endSlice = maxSlice
+          self.endSliceSliderWidget.value = float(endSlice)
 
-      # Update calibration matrix table with the calculated matrix (currently just dummy code)
+      # Update the calibration matrix table with the calculated matrix (currently just dummy code)
       for i in range(4):
         for j in range(4):
           self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(5)))
 
+    elif calibrationMatrix is not None:
+      self.onSendCalibrationMatrixButtonClicked()
+
     else:
-      print("No zFrame image found. Cannot calculate the calibration matrix.")
+      print("No zFrame image or pre-defined calibration matrix found. Cannot calculate the calibration matrix.")
+      
+  def onSendCalibrationMatrixButtonClicked(self):
+    # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
+    zFrameNode = self.zFrameVolumeSelector.currentNode()
+    calibrationMatrix = self.calibrationMatrixSelector.currentNode()
+    print ("calibration matrix: ", calibrationMatrix)
+
+    if calibrationMatrix is not None:
+      # Send the pre-determined calibration matrix to WPI as the CLB matrix
+      # Convert the vtkLinearTransformNode (calibrationMatrix) to a vtkMatrix4x4 (transformMatrix)
+      transformMatrix = calibrationMatrix.GetMatrix()
+      # transformMatrix = vtk.vtkMatrix4x4()
+      # for i in range(4):
+      #   for j in range(4):
+      #     transformMatrix.SetElement(i,j, calibrationMatrix.GetElement(i,j))
+      print ("transform matrix: ", transformMatrix)
+
+      SendTransformNode = slicer.mrmlScene.GetFirstNodeByName("SendTransform")
+      SendTransformNode.GetMatrixTransformToParent(transformMatrix)
+      randomIDname = self.generateRandomNameID(last_prefix_sent)
+      global last_randomIDname_transform
+      last_randomIDname_transform = randomIDname
+      global last_name_sent
+      last_name_sent = randomIDname
+      SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+      SendTransformNodeTemp.SetName(randomIDname)
+      SendTransformNodeTemp.GetMatrixTransformToParent(transformMatrix)
+      slicer.mrmlScene.AddNode(SendTransformNodeTemp)
+      print(transformMatrix)
+      self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+      self.openIGTNode.PushNode(SendTransformNodeTemp)
+      infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
+      re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+      self.infoTextbox.setText(infoMsg)
+      attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
+      print("attribute is:", attr) 
+    
+    elif zFrameNode is not None:
+      self.initiateZFrameCalibration()
+
+    else:
+      print("No zFrame image or pre-defined calibration matrix found. Cannot calculate the calibration matrix.")
