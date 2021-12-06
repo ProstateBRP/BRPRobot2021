@@ -26,6 +26,7 @@ import time
 import random
 import string
 import re
+import workflowFunctions as workflowFunctions
 
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
@@ -1001,53 +1002,119 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
   def initiateZFrameCalibration(self):
     # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
-    zFrameNode = self.zFrameVolumeSelector.currentNode()
+    self.zFrameNode = self.zFrameVolumeSelector.currentNode()
     calibrationMatrix = self.calibrationMatrixSelector.currentNode()
 
-    if zFrameNode is not None:
-      print ("TODO -- calibration step with zFrame volume image")
+    self.ngw = slicer.modules.HMS_NeedleGuideWidget
+
+    if self.zFrameNode is not None:
+      print ("Initating calibration matrix calculation with zFrame image.")
       
       startSlice = int(self.startSliceSliderWidget.value)
       # Make sure end slice is within the volume
       endSlice = int(self.endSliceSliderWidget.value)
-      maxSlice = self.zFrameVolumeSelector.currentNode().GetImageData().GetDimensions()[2]
+      maxSlice = self.zFrameNode.GetImageData().GetDimensions()[2]
       if endSlice == 0 or endSlice > maxSlice:
-          # Use the image end slice
-          endSlice = maxSlice
-          self.endSliceSliderWidget.value = float(endSlice)
+        # Use the image end slice
+        endSlice = maxSlice
+        self.endSliceSliderWidget.value = float(endSlice)
+
+      self.zTransNode = None
+      self.zTransNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
+      self.zTransNode.UnRegister(None)
+      self.zTransNode.SetName('CalibrationTransform')
+      slicer.mrmlScene.AddNode(self.zTransNode)
+      workflowFunctions.setParameter('CalibrationTransformNodeID', self.zTransNode.GetID())
+      
+      # The transform between the centers of calibration configuration markers and the guide sheet
+      # It will be applied to the guide sheet as well as the zTransNode
+      self.guideSheetTransformNode = None
+      self.guideSheetTransformNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
+      self.guideSheetTransformNode.UnRegister(None)
+      self.guideSheetTransformNode.SetName('GuideSheetTransform')
+      slicer.mrmlScene.AddNode(self.guideSheetTransformNode)
+      workflowFunctions.setParameter('GuideSheetTransformID', self.guideSheetTransformNode.GetID())
+
+      # To scale and shift the guide sheet holes model
+      self.guideSheetHolesTransformNode = slicer.vtkMRMLLinearTransformNode()
+      self.guideSheetHolesTransformNode.SetName('GuideSheetHolesTransform')
+      slicer.mrmlScene.AddNode(self.guideSheetHolesTransformNode)
+      workflowFunctions.setParameter('GuideSheetHolesTransformID', self.guideSheetHolesTransformNode.GetID())
+
+      # The translation between the center of the guide sheet and it's origin, for use
+      # when calculating target zone and grid coordinates
+      self.guideSheetCenterTransformNode = slicer.vtkMRMLLinearTransformNode()
+      self.guideSheetCenterTransformNode.SetName('GuideSheetCenterTransform')
+      slicer.mrmlScene.AddNode(self.guideSheetCenterTransformNode)
+      workflowFunctions.setParameter('GuideSheetCenterTransformID', self.guideSheetCenterTransformNode.GetID())
+
+      self.regSuccess = None
+      self.regSuccess = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
+      self.regSuccess.UnRegister(None)
+      self.regSuccess.SetName('regSuccess')
+      slicer.mrmlScene.AddNode(self.regSuccess)
+      workflowFunctions.setParameter('RegSuccessNodeID', self.regSuccess.GetID())
+      self.regSuccess = slicer.util.getNode('regSuccess')
+      self.goodRegistration = False
+      self.registrationUserVerified = False
+
+      self.guideSheetCenter = np.zeros(3)
+      self.markersCenter = np.zeros(3)
+      # Translation between calibration markers and guide sheet corners centers
+      self.markersToSheetTranslation = np.zeros(3)
+
+      parameters = {}
+      # from nodes:
+      parameters['inputVolume'] = self.zFrameNode.GetID()
+      parameters['startSlice'] = startSlice
+      parameters['endSlice'] = endSlice
+      parameters['markerConfigFile'] = self.calibrationMarkerPath
+      parameters['outputVolume'] = self.calibrationOutLabelMapNode.GetID()
+      parameters['markerTransform'] = self.zTransNode.GetID()
+      parameters['regSuccess'] = self.regSuccess.GetID()
+      # from settings:
+      # ZFrame registration algorithm settings
+      self.ngw.settings.beginGroup('zframe')
+      calibrationKeys = self.ngw.settings.allKeys()
+      self.ngw.settings.endGroup()
+      for key in calibrationKeys:
+          parameters[key] = self.getSetting(self.optionsGroup + key)
+
+      # Unset the variables that hold post registration flags
+      self.goodRegistration = False
+      self.registrationUserVerified = False
+
+      linereg = slicer.modules.hms_marker_detection
+      self.cliNode = slicer.cli.run(linereg, None, parameters, waitForCompletion=True, deleteTemporaryFiles=False)
+      self.progressBar.setCommandLineModuleNode(self.cliNode)
+      workflowFunctions.appendToStatusBox("Calibration Started...")
+      slicer.util.showStatusMessage( "Calibration Started...", 2000 )
+
+      workflowFunctions.setStatusLabel("Calibration running...")
+      self.cliObserver = self.cliNode.AddObserver('ModifiedEvent',self.observeCalibration)
+
+      # TODO
 
       # Update the calibration matrix table with the calculated matrix (currently just dummy code)
       for i in range(4):
         for j in range(4):
-          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(5)))
+          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(1)))
 
-    elif calibrationMatrix is not None:
-      self.onSendCalibrationMatrixButtonClicked()
+      # Send the calculated calibration matrix to WPI as the CLB matrix
+      # TODO
 
     else:
-      print("No zFrame image or pre-defined calibration matrix found. Cannot calculate the calibration matrix.")
+      print("No zFrame image found. Cannot calculate the calibration matrix.")
       
   def onSendCalibrationMatrixButtonClicked(self):
     # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
     zFrameNode = self.zFrameVolumeSelector.currentNode()
     calibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
-    print ("calibration matrix: ", calibrationMatrixNode)
 
     if calibrationMatrixNode is not None:
       # Send the pre-determined calibration matrix to WPI as the CLB matrix
-      # Convert the vtkLinearTransformNode (calibrationMatrix) to a vtkMatrix4x4 (transformMatrix)
-      # transformMatrix = vtk.vtkMatrix4x4()
-      # for i in range(4):
-      #   for j in range(4):
-      #     transformMatrix.SetElement(i,j, calibrationMatrix.GetElement(i,j))
-    
       calibrationMatrix = vtk.vtkMatrix4x4()
       calibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
-
-
-
-
-
       randomIDname = self.generateRandomNameID(last_prefix_sent)
       global last_randomIDname_transform
       last_randomIDname_transform = randomIDname
@@ -1057,7 +1124,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       SendTransformNodeTemp.SetName(randomIDname)
       SendTransformNodeTemp.GetMatrixTransformToParent(calibrationMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
-      print(calibrationMatrix)
       self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
       self.openIGTNode.PushNode(SendTransformNodeTemp)
       infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
@@ -1066,6 +1132,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
       print("attribute is:", attr) 
     
+      # Update the calibration matrix table with the calculated matrix (currently just dummy code)
+      for i in range(4):
+        for j in range(4):
+          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(calibrationMatrix.GetElement(i, j))))
+
     elif zFrameNode is not None:
       self.initiateZFrameCalibration()
 
