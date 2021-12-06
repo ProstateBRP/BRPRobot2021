@@ -1062,6 +1062,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       self.markersCenter = np.zeros(3)
       # Translation between calibration markers and guide sheet corners centers
       self.markersToSheetTranslation = np.zeros(3)
+      self.calibrationOutLabelMapNode = None
+      self.calibrationMarkerPath = None
 
       parameters = {}
       # from nodes:
