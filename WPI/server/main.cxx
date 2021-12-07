@@ -183,14 +183,12 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
         //std::cerr << "MESSAGE: Setting up " << (*iter)->Name() << " phase." << std::endl;
         (*iter)->SetSocket(socket);
         (*iter)->SetRobotStatus(rs);
+        (*iter)->connect = 1;
     }
 
     //------------------------------------------------------------
     // Set undefined phase as the current phase;
     std::vector<RobotSimulatorPhaseBase *>::iterator currentPhase = wlist.begin();
-
-    (*currentPhase)->connect = 1;
-
     //------------------------------------------------------------
     // loop
     while ((*currentPhase)->connect)
@@ -213,6 +211,7 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
                 }
             }
         }
+        
     }
 
     return 1;
