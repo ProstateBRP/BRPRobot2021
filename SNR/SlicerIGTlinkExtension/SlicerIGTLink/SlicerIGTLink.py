@@ -26,7 +26,7 @@ import time
 import random
 import string
 import re
-#import SNR.SlicerIGTlinkExtension.SlicerIGTLink.Workflow.workflowFunctions as workflowFunctions
+# import SNR.SlicerIGTlinkExtension.SlicerIGTLink.Workflow.workflowFunctions as workflowFunctions
 
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
@@ -103,19 +103,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     self.disconnectFromSocketButton = qt.QPushButton("Disconnect from socket")
     self.disconnectFromSocketButton.toolTip = "Disconnect from the socket when you finish using audio"
-    self.disconnectFromSocketButton.enabled = True
+    self.disconnectFromSocketButton.enabled = False
     self.disconnectFromSocketButton.setMaximumWidth(250)
     # serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 2, 1, 2)
     serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 1)
     self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
 
     # Outbound messages collapsible button
-    outboundCollapsibleButton = ctk.ctkCollapsibleButton()
-    outboundCollapsibleButton.text = "Outbound Commands"
-    self.layout.addWidget(outboundCollapsibleButton)
+    self.outboundCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.outboundCollapsibleButton.text = "Outbound Commands"
+    self.outboundCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.outboundCollapsibleButton)
 
     # Layout within the path collapsible button
-    outboundFormLayout = qt.QGridLayout(outboundCollapsibleButton)
+    outboundFormLayout = qt.QGridLayout(self.outboundCollapsibleButton)
     
     nameLabelphase = qt.QLabel('Current phase:')
     self.phaseTextbox = qt.QLineEdit("")
@@ -230,12 +231,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     #self.statusButton.connect('clicked()', self.onStatusButtonClicked)
 
     # Outbound tranform collapsible button
-    outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
-    outboundTransformCollapsibleButton.text = "Calibration Matrix"
-    self.layout.addWidget(outboundTransformCollapsibleButton)
+    self.outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.outboundTransformCollapsibleButton.text = "Calibration Matrix"
+    self.outboundTransformCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.outboundTransformCollapsibleButton)
 
     # Layout within the path collapsible button
-    outboundTransformsFormLayout = qt.QFormLayout(outboundTransformCollapsibleButton)
+    outboundTransformsFormLayout = qt.QFormLayout(self.outboundTransformCollapsibleButton)
 
     # transformButton Button
     # self.transformButton = qt.QPushButton("TRANSFORM")
@@ -255,10 +257,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.zFrameVolumeSelector.addEnabled = False
     self.zFrameVolumeSelector.removeEnabled = False
     self.zFrameVolumeSelector.setFixedWidth(250)
-    # zFrameLabel = qt.QLabel('ZFrame image:')
-    # outboundTransformsFormLayout.addWidget(zFrameLabel, 1, 0)
-    # outboundTransformsFormLayout.addWidget(self.zFrameVolumeSelector, 1, 1)
-    outboundTransformsFormLayout.addRow('ZFrame image: ', self.zFrameVolumeSelector)
+    outboundTransformsFormLayout.addRow('ZFrame image:', self.zFrameVolumeSelector)
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
 
@@ -269,8 +268,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.endSliceSliderWidget.setValue(16)
     self.startSliceSliderWidget.setMaximumWidth(40)
     self.endSliceSliderWidget.setMaximumWidth(40)
-    outboundTransformsFormLayout.addRow('Minimum slice: ', self.startSliceSliderWidget)
-    outboundTransformsFormLayout.addRow('Maximum slice: ', self.endSliceSliderWidget)
+    outboundTransformsFormLayout.addRow('Minimum slice:', self.startSliceSliderWidget)
+    outboundTransformsFormLayout.addRow('Maximum slice:', self.endSliceSliderWidget)
 
     # Calibration matrix display
     row = 4
@@ -290,7 +289,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    outboundTransformsFormLayout.addRow("Calibration matrix:       ", self.calibrationTableWidget)
+    outboundTransformsFormLayout.addRow("Calibration matrix:  ", self.calibrationTableWidget)
 
     # Create and send new calibration matrix button
     self.createCalibrationMatrixButton = qt.QPushButton("Create and send new calibration matrix")
@@ -311,7 +310,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.calibrationMatrixSelector.showChildNodeTypes = False
     self.calibrationMatrixSelector.setMRMLScene( slicer.mrmlScene )
     self.calibrationMatrixSelector.setToolTip( "Select the calibration matrix." )
-    outboundTransformsFormLayout.addRow("Calibration matrix: ", self.calibrationMatrixSelector)
+    outboundTransformsFormLayout.addRow("Calibration matrix:  ", self.calibrationMatrixSelector)
     # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
     #                 self.calibrationMatrixSelector, 'setMRMLScene(vtkMRMLScene*)')
 
@@ -322,13 +321,58 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundTransformsFormLayout.addWidget(self.sendCalibrationMatrixButton)
     self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
 
-    # Inbound messages collapsible button
-    inboundCollapsibleButton = ctk.ctkCollapsibleButton()
-    inboundCollapsibleButton.text = "Inbound Messages"
-    self.layout.addWidget(inboundCollapsibleButton)
+    # Outbound target fiducial collapsible button
+    self.outboundTargetCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.outboundTargetCollapsibleButton.text = "Target Point"
+    self.outboundTargetCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.outboundTargetCollapsibleButton)
 
     # Layout within the path collapsible button
-    inboundFormLayout = qt.QFormLayout(inboundCollapsibleButton)
+    outboundTargetFormLayout = qt.QGridLayout(self.outboundTargetCollapsibleButton)
+   
+    # Fiducial selector for target point
+    self.targetPointNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
+    self.targetPointNodeSelector.objectName = 'targetPointNodeSelector'
+    self.targetPointNodeSelector.toolTip = "Select a fiducial to use as the needle insertion target point."
+    self.targetPointNodeSelector.setNodeBaseName("TARGET_POINT")
+    self.targetPointNodeSelector.defaultNodeColor = qt.QColor(170,0,0)
+    self.targetPointNodeSelector.tableWidget().hide()
+    self.targetPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
+    self.targetPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    targetPointSelectorLabel = qt.QLabel("Target point: ")
+    outboundTargetFormLayout.addWidget(targetPointSelectorLabel, 0, 0)
+    outboundTargetFormLayout.addWidget(self.targetPointNodeSelector, 0, 1, 1, 3)
+    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
+                        self.targetPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
+
+    # Display for RAS coordinates of the selected fidudcial target point
+    targetPointLabel = qt.QLabel("RAS coordinates:     ")
+    self.targetPointTextbox_R = qt.QLineEdit()
+    self.targetPointTextbox_A = qt.QLineEdit()
+    self.targetPointTextbox_S = qt.QLineEdit()
+    self.targetPointTextbox_R.setReadOnly(True)
+    self.targetPointTextbox_A.setReadOnly(True)
+    self.targetPointTextbox_S.setReadOnly(True)
+    outboundTargetFormLayout.addWidget(targetPointLabel, 1, 0)
+    outboundTargetFormLayout.addWidget(self.targetPointTextbox_R, 1, 1)
+    outboundTargetFormLayout.addWidget(self.targetPointTextbox_A, 1, 2)
+    outboundTargetFormLayout.addWidget(self.targetPointTextbox_S, 1, 3)
+
+    # Button to send fiducial target point
+    self.sendTargetPointButton = qt.QPushButton("Send selected target point")
+    self.sendTargetPointButton.enabled = True
+    # self.sendTargetPointButton.setMaximumWidth(250)
+    outboundTargetFormLayout.addWidget(self.sendTargetPointButton, 2, 1, 1, 3)
+    self.sendTargetPointButton.connect('clicked()', self.onSendTargetPointButtonClicked)
+
+    # Inbound messages collapsible button
+    self.inboundCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.inboundCollapsibleButton.text = "Inbound Messages"
+    self.inboundCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.inboundCollapsibleButton)
+
+    # Layout within the path collapsible button
+    inboundFormLayout = qt.QFormLayout(self.inboundCollapsibleButton)
 
     self.messageTextbox = qt.QLineEdit("No message received")
     self.messageTextbox.setReadOnly(True)
@@ -343,7 +387,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.statusCodeTextbox = qt.QLineEdit("No status code received")
     self.statusCodeTextbox.setReadOnly(True)
     self.statusCodeTextbox.setFixedWidth(200)
-    inboundFormLayout.addRow("Status code meaning: ", self.statusCodeTextbox)
+    inboundFormLayout.addRow("Status meaning:", self.statusCodeTextbox)
 
     row = 4
     column = 4
@@ -362,7 +406,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    inboundFormLayout.addRow("Transform received: ", self.tableWidget)
+    inboundFormLayout.addRow("Transform received:", self.tableWidget)
 
     # Visibility icon
     self.VisibleButton = qt.QPushButton()
@@ -374,16 +418,17 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.VisibleButton.connect('clicked()', self.onVisibleButtonClicked)
         
     # Info messages collapsible button
-    infoCollapsibleButton = ctk.ctkCollapsibleButton()
-    infoCollapsibleButton.text = "Info Messages"
-    self.layout.addWidget(infoCollapsibleButton)
+    self.infoCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.infoCollapsibleButton.text = "Info Messages"
+    self.infoCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.infoCollapsibleButton)
 
     # Layout within the path collapsible button
-    infoFormLayout = qt.QFormLayout(infoCollapsibleButton)
+    infoFormLayout = qt.QFormLayout(self.infoCollapsibleButton)
 
     self.infoTextbox = qt.QLineEdit("")
     self.infoTextbox.setReadOnly(True)
-    self.infoTextbox.setFixedWidth(500)
+    #self.infoTextbox.setFixedWidth(500)
     infoFormLayout.addRow("", self.infoTextbox)
 
     #const char* attr3 = inode->GetAttribute("IGTLVisible");
@@ -396,6 +441,17 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(self.textNode)
 
   def onConnectToClientButtonClicked(self):
+    # GUI changes to enable/disable button functionality
+    self.connectToClientButton.enabled = False
+    self.disconnectFromSocketButton.enabled = True
+    self.snrPortTextbox.setReadOnly(True)
+    self.snrHostnameTextbox.setReadOnly(True)
+    self.snrPortTextbox.setStyleSheet("color: grey")
+    self.snrHostnameTextbox.setStyleSheet("color: grey")
+    self.outboundCollapsibleButton.collapsed = False
+    self.inboundCollapsibleButton.collapsed = False
+    self.infoCollapsibleButton.collapsed = False
+
     snrPort = self.snrPortTextbox.text
     snrHostname = self.snrHostnameTextbox.text
     print("Slicer-side port number: ", snrPort)
@@ -474,6 +530,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     #   subprocess.Popen(args=['%s %s %s %s %s %s %s' % (bat_command, wpiHostname, wpiPort, snrHostname, snrPort, testNumber, moduleDirectory)], env=slicer.util.startupEnvironment(), shell=True)
 
   def onDisconnectFromSocketButtonClicked(self):
+    # GUI changes to enable/disable button functionality
+    self.disconnectFromSocketButton.enabled = False
+    self.connectToClientButton.enabled = True
+    self.snrPortTextbox.setReadOnly(False)
+    self.snrHostnameTextbox.setReadOnly(False)
+    self.snrPortTextbox.setStyleSheet("color: black")
+    self.snrHostnameTextbox.setStyleSheet("color: black")
+    self.outboundCollapsibleButton.collapsed = True
+    self.inboundCollapsibleButton.collapsed = True
+    self.infoCollapsibleButton.collapsed = True
+    self.outboundTransformCollapsibleButton.collapsed = True
+    self.outboundTargetCollapsibleButton.collapsed = True
+
+    # Close socket
     self.openIGTNode.Stop()
 
   def generateRandomNameID(self,last_prefix_sent):
@@ -575,6 +645,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
 
+    # Show Target point GUI in the module
+    self.outboundTargetCollapsibleButton.collapsed = False
+
   def onMoveButtonClicked(self):
     # Send stringMessage containing the command "MOVE" to the script via IGTLink
     print("Send command to ask robot to move to target")
@@ -597,7 +670,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     infoMsg =  "Sending STRING( " + randomIDname + ",  MOVE_TO_TARGET )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
-
   
   def onCalibrationButtonClicked(self):
     # Send stringMessage containing the command "CALIBRATION" to the script via IGTLink
@@ -622,6 +694,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     infoMsg =  "Sending STRING( " + randomIDname + ",  CALIBRATION )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg) 
+
+    # Show Calibration matrix GUI in the module
+    self.outboundTransformCollapsibleButton.collapsed = False
 
   def onPlanningButtonClicked(self):
     # Send stringMessage containing the command "PLANNING" to the script via IGTLink
@@ -999,7 +1074,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
 
-
   def initiateZFrameCalibration(self):
     # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
     self.zFrameNode = self.zFrameVolumeSelector.currentNode()
@@ -1117,18 +1191,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       # Send the pre-determined calibration matrix to WPI as the CLB matrix
       calibrationMatrix = vtk.vtkMatrix4x4()
       calibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
-      randomIDname = self.generateRandomNameID(last_prefix_sent)
-      global last_randomIDname_transform
-      last_randomIDname_transform = randomIDname
-      global last_name_sent
-      last_name_sent = randomIDname
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-      SendTransformNodeTemp.SetName(randomIDname)
+      SendTransformNodeTemp.SetName("REGISTRATION")
       SendTransformNodeTemp.GetMatrixTransformToParent(calibrationMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
       self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
       self.openIGTNode.PushNode(SendTransformNodeTemp)
-      infoMsg =  "Sending TRANSFORM( " + randomIDname + " )"
+      infoMsg =  "Sending TRANSFORM( REGISTRATION )"
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.infoTextbox.setText(infoMsg)
       attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
@@ -1144,3 +1213,26 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     else:
       print("No zFrame image or pre-defined calibration matrix found. Cannot calculate the calibration matrix.")
+
+  def onSendTargetPointButtonClicked(self):
+    targetPointNode = self.targetPointNodeSelector.currentNode()
+    if not targetPointNode:
+      print ("No TARGET_POINT fiducial selected.")
+    else:
+      # Print RAS coordinates of the target point fiducial into the Target point GUI
+      targetCoordinatesRAS = [0, 0, 0]
+      targetPointNode.GetNthFiducialPosition(0, targetCoordinatesRAS)
+
+      self.targetCoordinate_R = round(targetCoordinatesRAS[0],2)
+      self.targetCoordinate_A = round(targetCoordinatesRAS[1],2)
+      self.targetCoordinate_S = round(targetCoordinatesRAS[2],2)
+
+      self.targetPointTextbox_R.setText(str(self.targetCoordinate_R))
+      self.targetPointTextbox_A.setText(str(self.targetCoordinate_A))
+      self.targetPointTextbox_S.setText(str(self.targetCoordinate_S))
+
+      # Send target point via IGTLink as a 4x4 matrix transform called TARGET_POINT
+      # TODO
+
+  # def onTargetPointNodeChanged(self):
+  #   print("yo")
