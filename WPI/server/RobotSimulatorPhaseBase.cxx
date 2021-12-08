@@ -65,6 +65,7 @@ int RobotSimulatorPhaseBase::Process()
     return 1;
   }
 
+  std::cout << "Now I received the transform\n";
   // Otherwise, the current workphase is the next workphase.
   this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
   std::cout << this->Name() << ": is the current state\n"; // Added it for test

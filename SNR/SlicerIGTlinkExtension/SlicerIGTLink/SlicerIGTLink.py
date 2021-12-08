@@ -78,28 +78,29 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     # self.snrHostnameTextbox.setFixedWidth(75)
     # serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
-    snrPortTextboxLabel = qt.QLabel('SNR server port:')
+    self.snrPortTextboxLabel = qt.QLabel('SNR server port:')
     self.snrPortTextbox = qt.QLineEdit("18944")
     self.snrPortTextbox.setReadOnly(False)
     self.snrPortTextbox.setMaximumWidth(250)
-    serverFormLayout.addWidget(snrPortTextboxLabel, 0, 0)
+
+    serverFormLayout.addWidget(self.snrPortTextboxLabel, 0, 0)
     serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
 
-    snrHostnameTextboxLabel = qt.QLabel('SNR hostname:')
+    self.snrHostnameTextboxLabel = qt.QLabel('SNR hostname:')
     self.snrHostnameTextbox = qt.QLineEdit("localhost")
     self.snrHostnameTextbox.setReadOnly(False)
     self.snrHostnameTextbox.setMaximumWidth(250)
-    serverFormLayout.addWidget(snrHostnameTextboxLabel, 1, 0)
+    serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
     serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
-    # Connect to client button
-    self.connectToClientButton = qt.QPushButton("Create server")
-    self.connectToClientButton.toolTip = "Create the IGTLink server connection with shell."
-    self.connectToClientButton.enabled = True
-    self.connectToClientButton.setMaximumWidth(250)
-    # serverFormLayout.addWidget(self.connectToClientButton, 2, 0, 1, 2)
-    serverFormLayout.addWidget(self.connectToClientButton, 2, 0)
-    self.connectToClientButton.connect('clicked()', self.onConnectToClientButtonClicked)
+    # Create server button
+    self.createServerButton = qt.QPushButton("Create server")
+    self.createServerButton.toolTip = "Create the IGTLink server connection with shell."
+    self.createServerButton.enabled = True
+    self.createServerButton.setMaximumWidth(250)
+    # serverFormLayout.addWidget(self.createServerButton, 2, 0, 1, 2)
+    serverFormLayout.addWidget(self.createServerButton, 2, 0)
+    self.createServerButton.connect('clicked()', self.onCreateServerButtonClicked)
 
     self.disconnectFromSocketButton = qt.QPushButton("Disconnect from socket")
     self.disconnectFromSocketButton.toolTip = "Disconnect from the socket when you finish using audio"
@@ -440,9 +441,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.textNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(self.textNode)
 
-  def onConnectToClientButtonClicked(self):
+  def onCreateServerButtonClicked(self):
     # GUI changes to enable/disable button functionality
-    self.connectToClientButton.enabled = False
+    self.createServerButton.enabled = False
     self.disconnectFromSocketButton.enabled = True
     self.snrPortTextbox.setReadOnly(True)
     self.snrHostnameTextbox.setReadOnly(True)
@@ -455,6 +456,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     snrPort = self.snrPortTextbox.text
     snrHostname = self.snrHostnameTextbox.text
     print("Slicer-side port number: ", snrPort)
+    #VisualFeedback: color in gray when server is created
+    self.snrPortTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
+    self.snrHostnameTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
+    self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
+    self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
 
     # Initialize the IGTLink Slicer-side server component
     self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
@@ -532,7 +538,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
   def onDisconnectFromSocketButtonClicked(self):
     # GUI changes to enable/disable button functionality
     self.disconnectFromSocketButton.enabled = False
-    self.connectToClientButton.enabled = True
+    self.createServerButton.enabled = True
     self.snrPortTextbox.setReadOnly(False)
     self.snrHostnameTextbox.setReadOnly(False)
     self.snrPortTextbox.setStyleSheet("color: black")
@@ -545,6 +551,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Close socket
     self.openIGTNode.Stop()
+    #VisualFeedback: color in black when socket is disconnected
+    self.snrPortTextboxLabel.setStyleSheet('color: black')
+    self.snrHostnameTextboxLabel.setStyleSheet('color: black')
+    self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
+    self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
   def generateRandomNameID(self,last_prefix_sent):
     # Randomly choose 4 letter from all the ascii_letters
