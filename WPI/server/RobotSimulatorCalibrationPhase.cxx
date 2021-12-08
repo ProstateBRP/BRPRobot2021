@@ -44,21 +44,25 @@ int RobotSimulatorCalibrationPhase::Initialize()
 }
 
 
+// TODO: this should return a 4x4 matrix and set the robot registration to it
+// The calibration matrix is set within the RStatus object
 int RobotSimulatorCalibrationPhase::MessageHandler(igtl::MessageHeader* headerMsg)
 {
 
+  // As of now the MessageHandler in the PhaseBase always returns 0
   if (RobotSimulatorPhaseBase::MessageHandler(headerMsg))
     {
     return 1;
     }
   
-  /// Check if GET_TRANSFORM has been received
+  /// Check if Transform message for calibration has been received
   if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
       strncmp(headerMsg->GetDeviceName(), "CLB_", 4) == 0)
     {
     igtl::Matrix4x4 matrix;
     this->ReceiveTransform(headerMsg, matrix);
     
+    // Acknowledgement 
     std::string devName = headerMsg->GetDeviceName();
     std::stringstream ss;
     ss << "ACK_" << devName.substr(4, std::string::npos);
@@ -72,6 +76,7 @@ int RobotSimulatorCalibrationPhase::MessageHandler(igtl::MessageHeader* headerMs
       {
       if (this->RStatus)
         {
+        std::cout <<"RobotStatus: "<< this->RStatus;
         this->RStatus->SetCalibrationMatrix(matrix);
         }
       SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_OK, 0);
