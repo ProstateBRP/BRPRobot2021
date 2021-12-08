@@ -68,6 +68,11 @@ int RobotSimulatorPhaseBase::Process()
   // Otherwise, the current workphase is the next workphase.
   this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
   std::cout << this->Name() << ": is the current state\n"; // Added it for test
+  
+  // This checks if the navigation is asking for get_status or get_transform
+  // Get_transform will return current_position and get_status will get current_status
+  // if the return value is zero then the code enters the if statement and initiates a specialized method
+  // of the MessageHandder of the Workphase. i.e will listen to an incoming transform for the calibration step
   if (!this->CheckCommonMessage(headerMsg))
   {
     this->MessageHandler(headerMsg);
@@ -94,6 +99,8 @@ int RobotSimulatorPhaseBase::CheckWorkphaseChange(igtl::MessageHeader *headerMsg
     stringMsg->SetMessageHeader(headerMsg);
     stringMsg->AllocatePack();
     bool timeout(false);
+    
+    // The code waits here for new messages recieved from the socket
     int r = this->Socket->Receive(stringMsg->GetPackBodyPointer(), stringMsg->GetPackBodySize(), timeout);
     if (r < 0)
     {
@@ -117,9 +124,12 @@ int RobotSimulatorPhaseBase::CheckWorkphaseChange(igtl::MessageHeader *headerMsg
       if (stringMsg->GetEncoding() == 3)
       {
         this->NextWorkphase = stringMsg->GetString();
+        std::cout << "Next Work Phase is: " << this->NextWorkphase<< std::endl;
         // Get the query ID
         std::string msgName = headerMsg->GetDeviceName();
         this->QueryID = msgName.substr(4, std::string::npos);
+        std::cout << "Query ID is: " << this->QueryID << std::endl;
+
 
         return 1;
       }

@@ -52,21 +52,21 @@ int RobotCommunicationBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg,
     {
       std::cerr << "ERROR: Timeout." << std::endl;
       this->Socket->CloseSocket();
-      // exit(EXIT_FAILURE);
       return 0;
     }
     else if (r == 0)
     {
       std::cerr << "MESSAGE: Socket closed." << std::endl;
       this->Socket->CloseSocket();
-      // exit(EXIT_SUCCESS);
+      // Change the connection to 0 which makes the robotcontroller to wait for the reconnection from the client
+      connect = 0;
       return 0;
     }
     else
     {
       std::cerr << "ERROR: Receiving message." << std::endl;
       this->Socket->CloseSocket();
-      // exit(EXIT_FAILURE);
+      
       return 0;
     }
   }

@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
         //------------------------------------------------------------
         // Waiting for Connection
         socket = serverSocket->WaitForConnection(1000);
+        std::cout<< "waiting for connection\n";
 
         if (socket.IsNotNull()) // if client connected
         {
@@ -193,6 +194,7 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
     // loop
     while ((*currentPhase)->connect)
     {
+        std::cout <<"\nconnect status is: " <<(*currentPhase)->connect << std::endl;
         if ((*currentPhase)->Process())
         {
             // If Process() returns 1, phase change has been requested.
@@ -208,6 +210,8 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
                     // Change the current phase
                     currentPhase = iter;
                     (*currentPhase)->Enter(queryID.c_str()); // Initialization process
+                    break;
+
                 }
             }
         }
