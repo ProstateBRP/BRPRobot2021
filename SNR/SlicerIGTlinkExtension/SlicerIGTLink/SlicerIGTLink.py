@@ -447,8 +447,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.disconnectFromSocketButton.enabled = True
     self.snrPortTextbox.setReadOnly(True)
     self.snrHostnameTextbox.setReadOnly(True)
-    self.snrPortTextbox.setStyleSheet("color: grey")
-    self.snrHostnameTextbox.setStyleSheet("color: grey")
     self.outboundCollapsibleButton.collapsed = False
     self.inboundCollapsibleButton.collapsed = False
     self.infoCollapsibleButton.collapsed = False
@@ -541,8 +539,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.createServerButton.enabled = True
     self.snrPortTextbox.setReadOnly(False)
     self.snrHostnameTextbox.setReadOnly(False)
-    self.snrPortTextbox.setStyleSheet("color: black")
-    self.snrHostnameTextbox.setStyleSheet("color: black")
     self.outboundCollapsibleButton.collapsed = True
     self.inboundCollapsibleButton.collapsed = True
     self.infoCollapsibleButton.collapsed = True
@@ -577,7 +573,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.moveButton.enabled = True
     self.targetingButton.enabled = True
     self.calibrationButton.enabled = True
-    self.transformButton.enabled = True
+    #self.transformButton.enabled = True
 
   def deactivateButtons(self):
     self.planningButton.enabled = False
@@ -590,7 +586,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.moveButton.enabled = False
     self.targetingButton.enabled = False
     self.calibrationButton.enabled = False
-    self.transformButton.enabled = False
+    #self.transformButton.enabled = False
    
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
@@ -1204,7 +1200,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       calibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
       SendTransformNodeTemp.SetName("REGISTRATION")
-      SendTransformNodeTemp.GetMatrixTransformToParent(calibrationMatrix)
+      SendTransformNodeTemp.SetMatrixTransformToParent(calibrationMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
       self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
       self.openIGTNode.PushNode(SendTransformNodeTemp)
@@ -1217,7 +1213,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       # Update the calibration matrix table with the calculated matrix (currently just dummy code)
       for i in range(4):
         for j in range(4):
-          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(calibrationMatrix.GetElement(i, j))))
+          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(calibrationMatrix.GetElement(i, j),2))))
 
     elif zFrameNode is not None:
       self.initiateZFrameCalibration()
@@ -1243,7 +1239,19 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       self.targetPointTextbox_S.setText(str(self.targetCoordinate_S))
 
       # Send target point via IGTLink as a 4x4 matrix transform called TARGET_POINT
-      # TODO
-
-  # def onTargetPointNodeChanged(self):
-  #   print("yo")
+      targetPointMatrix = vtk.vtkMatrix4x4()
+      targetPointMatrix.Identity()
+      targetPointMatrix.SetElement(0,3,self.targetCoordinate_R)
+      targetPointMatrix.SetElement(1,3,self.targetCoordinate_A)
+      targetPointMatrix.SetElement(2,3,self.targetCoordinate_S)
+      SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+      SendTransformNodeTemp.SetName("TARGET_POINT")
+      SendTransformNodeTemp.SetMatrixTransformToParent(targetPointMatrix)
+      slicer.mrmlScene.AddNode(SendTransformNodeTemp)
+      self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+      self.openIGTNode.PushNode(SendTransformNodeTemp)
+      infoMsg =  "Sending TRANSFORM( TARGET_POINT )"
+      re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+      self.infoTextbox.setText(infoMsg)
+      attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
+      print("attribute is:", attr) 
