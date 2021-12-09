@@ -41,7 +41,7 @@ NavigationBridge::~NavigationBridge()
 // Threaded function to receive messages from Slicer via updated global variables and pass them along to WPI
 void *NavigationBridge::ReceiveFromSlicer()
 {
-  std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from Slicer and send to WPI." << std::endl;
+  std::cerr << "---> Starting thread II." << std::endl;
 
   // String arguments:
   std::string currentStringMessage = Global::globalString;
@@ -114,7 +114,7 @@ void *NavigationBridge::ReceiveFromSlicer()
 // Threaded function to receive messages from WPI and send to Slicer via NavigationSlicerScript.cxx
 void *NavigationBridge::SendToSlicer()
 {
-  std::cerr << "---> Starting thread in NavigationDynamicCommunication.cxx to receive messages from WPI and send to Slicer." << std::endl;
+  std::cerr << "---> Starting thread III." << std::endl;
   /*
   igtl::StringMessage::Pointer stringMsg;
   stringMsg = igtl::StringMessage::New();

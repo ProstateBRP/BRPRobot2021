@@ -432,14 +432,13 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     #self.infoTextbox.setFixedWidth(500)
     infoFormLayout.addRow("", self.infoTextbox)
 
-    #const char* attr3 = inode->GetAttribute("IGTLVisible");
-  
     # Add vertical spacer
     self.layout.addStretch(1)
 
     self.textNode = slicer.vtkMRMLTextNode()
     self.textNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(self.textNode)
+    self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
   def onCreateServerButtonClicked(self):
     # GUI changes to enable/disable button functionality
@@ -468,33 +467,36 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("openIGTNode: ", self.openIGTNode)
     self.IGTActive = True
 
-    # Make a node for each message type
-    ReceivedStringMsg = slicer.vtkMRMLTextNode()
-    ReceivedStringMsg.SetName("StringMessage")
-    slicer.mrmlScene.AddNode(ReceivedStringMsg)
+    # Make a node for each message type IF the nodes are not already created
+    if self.firstServer:
+      self.firstServer = False
+      # Create nodes to receive string, status, and transform messages
+      ReceivedStringMsg = slicer.vtkMRMLTextNode()
+      ReceivedStringMsg.SetName("StringMessage")
+      slicer.mrmlScene.AddNode(ReceivedStringMsg)
 
-    ReceivedStatusMsg = slicer.vtkMRMLIGTLStatusNode()
-    ReceivedStatusMsg.SetName("StatusMessage")
-    slicer.mrmlScene.AddNode(ReceivedStatusMsg)
+      ReceivedStatusMsg = slicer.vtkMRMLIGTLStatusNode()
+      ReceivedStatusMsg.SetName("StatusMessage")
+      slicer.mrmlScene.AddNode(ReceivedStatusMsg)
 
-    ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
-    ReceivedTransformMsg.SetName("TransformMessage")
-    slicer.mrmlScene.AddNode(ReceivedTransformMsg)
+      ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
+      ReceivedTransformMsg.SetName("TransformMessage")
+      slicer.mrmlScene.AddNode(ReceivedTransformMsg)
 
-    ReceivedTransformInfo = slicer.vtkMRMLTextNode()
-    ReceivedTransformInfo.SetName("TransformInfo")
-    slicer.mrmlScene.AddNode(ReceivedTransformInfo)
+      ReceivedTransformInfo = slicer.vtkMRMLTextNode()
+      ReceivedTransformInfo.SetName("TransformInfo")
+      slicer.mrmlScene.AddNode(ReceivedTransformInfo)
 
-    # Add observers on the 4 message type nodes
-    ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-    ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
-    ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-    ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
+      # Add observers on the 4 message type nodes
+      ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+      ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
+      ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+      ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
 
-    # Create a node for sending transforms
-    SendTransformNode = slicer.vtkMRMLLinearTransformNode()
-    SendTransformNode.SetName("SendTransform")
-    slicer.mrmlScene.AddNode(SendTransformNode)
+      # Create a node for sending transforms
+      SendTransformNode = slicer.vtkMRMLLinearTransformNode()
+      SendTransformNode.SetName("SendTransform")
+      slicer.mrmlScene.AddNode(SendTransformNode)
 
     # Initialize global variables 
     global last_string_sent 
