@@ -31,6 +31,7 @@ class RobotStatus
 public:
   RobotStatus();
   ~RobotStatus();
+  int GetCalibrationFlag(){return this->FlagCalibration;};
 
   void SetCalibrationMatrix(igtl::Matrix4x4 &matrix);
 

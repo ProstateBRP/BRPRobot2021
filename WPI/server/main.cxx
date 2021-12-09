@@ -75,67 +75,10 @@ int main(int argc, char *argv[])
         // If not correct, print usage
         std::cerr << "Usage: " << argv[0] << " <port> [<defect_1> [<defect_2> ... [<defect_N>]...]" << std::endl;
         std::cerr << "    <port>     : Port # (18944 in Slicer default)" << std::endl;
-        // std::cerr << "    <defect_X> : Defect to activate in 'PHASE:TYPE' format." << std::endl;
-        // std::cerr << std::endl;
-        // std::cerr << "  Available defect types:" << std::endl;
-
-        // WorkphaseList::iterator wit;
-        // for (wit = wlist.begin(); wit != wlist.end(); wit++)
-        // {
-        //     std::list<std::string> typeList;
-        //     typeList = (*wit)->GetDefectTypeList();
-        //     std::list<std::string>::iterator tit;
-        //     for (tit = typeList.begin(); tit != typeList.end(); tit++)
-        //     {
-        //         std::cerr << "    " << (*wit)->Name() << ":" << (*tit) << "  :  "
-        //                   << (*wit)->GetDefectTypeDescription((*tit).c_str()) << std::endl;
-        //     }
-        // }
-        // std::cerr << std::endl;
-
         exit(0);
     }
 
     int port = atoi(argv[1]);
-
-    // //------------------------------------------------------------
-    // // Get a list of defects and set them to the workphase list.
-    // // Defects are listed as arguments in "PHASE:DEFECT_TYPE" format.
-    // for (int i = 2; i < argc; i++)
-    // {
-    //     std::string astr = argv[i];
-    //     std::size_t found = astr.find_first_of(":");
-    //     if (found != std::string::npos)
-    //     {
-    //         std::string phase = astr.substr(0, found);
-    //         std::string type = astr.substr(found + 1, std::string::npos);
-    //         WorkphaseList::iterator witer;
-    //         for (witer = wlist.begin(); witer != wlist.end(); witer++)
-    //         {
-    //             if (phase.compare((*witer)->Name()) == 0)
-    //             {
-    //                 (*witer)->SetDefectStatus(type.c_str(), 1);
-    //             }
-    //         }
-    //     }
-    // }
-
-    // //------------------------------------------------------------
-    // // List active defects
-    // std::cerr << "MESSAGE: Defect status:" << std::endl;
-    // WorkphaseList::iterator wit;
-    // for (wit = wlist.begin(); wit != wlist.end(); wit++)
-    // {
-    //     std::list<std::string> typeList;
-    //     typeList = (*wit)->GetDefectTypeList();
-    //     std::list<std::string>::iterator tit;
-    //     for (tit = typeList.begin(); tit != typeList.end(); tit++)
-    //     {
-    //         std::string status = (*wit)->GetDefectStatus((*tit).c_str()) ? "ON" : "OFF";
-    //         std::cerr << "MESSAGE:    " << (*wit)->Name() << ":" << (*tit) << "  :  "
-    //                   << status << std::endl;
-    //     }
-    // }
 
     igtl::ServerSocket::Pointer serverSocket;
     serverSocket = igtl::ServerSocket::New();
@@ -194,7 +137,9 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
     // loop
     while ((*currentPhase)->connect)
     {
-        std::cout <<"\nconnect status is: " <<(*currentPhase)->connect << std::endl;
+        std::cout <<"connect status is: " <<(*currentPhase)->connect << std::endl;
+        // This statement checks for workphase change request
+        // If no workphase change has requested the process will take care of the received message
         if ((*currentPhase)->Process())
         {
             // If Process() returns 1, phase change has been requested.
@@ -210,6 +155,12 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
                     // Change the current phase
                     currentPhase = iter;
                     (*currentPhase)->Enter(queryID.c_str()); // Initialization process
+                    std::vector<RobotSimulatorPhaseBase *>::iterator it;
+                    for (it = wlist.begin(); it != wlist.end(); it++)
+                    {
+                        std::cout << (*it)->Name() << " : " << (*it)->GetRobotStatus()->GetCalibrationFlag() 
+                        << std::endl;
+                    }
                     break;
 
                 }

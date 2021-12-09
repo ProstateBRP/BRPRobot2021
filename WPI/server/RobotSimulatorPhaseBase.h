@@ -55,17 +55,10 @@ public:
 
   std::string GetNextWorkPhase() { return this->NextWorkphase; };
   std::string GetQueryID() { return this->QueryID; };
-
-  // Enable/disable defects. Specify s=1 when enabled.
-  // int SetDefectStatus(const char *type, int s);
-
-  // Return 0 if disabled, 1 if enabled, or -1 if the specified type is not available.
-  // int GetDefectStatus(const char *type);
-
-  // std::list<std::string> GetDefectTypeList();
-  // std::string GetDefectTypeDescription(const char *type);
-
+  
   void SetRobotStatus(RobotStatus *rs) { this->RStatus = rs; };
+  // Get robot status
+  RobotStatus* GetRobotStatus(){return this->RStatus;};
 
 protected:
   // Check if a CMD message (workphase change) has been received.
