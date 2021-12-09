@@ -26,7 +26,8 @@ import time
 import random
 import string
 import re
-# import SNR.SlicerIGTlinkExtension.SlicerIGTLink.Workflow.workflowFunctions as workflowFunctions
+import csv
+from ProstateBxLib.DataStructs import CalibrationMarker
 
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
@@ -63,20 +64,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the path collapsible button
     serverFormLayout = qt.QGridLayout(serverCollapsibleButton)
-    # nameLabel1 = qt.QLabel('SNR server port:');
-    # nameLabel2 = qt.QLabel('SNR hostname: ');
-    # serverFormLayout.addWidget(nameLabel1, 0, 0)
-    # serverFormLayout.addWidget(nameLabel2, 1, 0)
-
-    # self.snrPortTextbox = qt.QLineEdit("18944")
-    # self.snrPortTextbox.setReadOnly(False)
-    # self.snrPortTextbox.setFixedWidth(75)
-    # serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
-
-    # self.snrHostnameTextbox = qt.QLineEdit("localhost")
-    # self.snrHostnameTextbox.setReadOnly(False)
-    # self.snrHostnameTextbox.setFixedWidth(75)
-    # serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
     self.snrPortTextboxLabel = qt.QLabel('SNR server port:')
     self.snrPortTextbox = qt.QLineEdit("18944")
@@ -215,22 +202,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     outboundFormLayout.addWidget(self.EmergencyButton, 7, 1)
     self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
 
-    # Outbound Status message collapsible button
-    #outboundStatusCollapsibleButton = ctk.ctkCollapsibleButton()
-    #outboundStatusCollapsibleButton.text = "Outbound status messages (Slicer -> WPI)"
-    #self.layout.addWidget(outboundStatusCollapsibleButton)
-
-    # Layout within the path collapsible button
-    #outboundStatusFormLayout = qt.QFormLayout(outboundStatusCollapsibleButton)
-
-    # statusButton Button
-    #self.statusButton = qt.QPushButton("STATUS")
-    #self.statusButton.toolTip = "Send the Slicer Status to the WPI robot."
-    #self.statusButton.enabled = True
-    #self.statusButton.setMaximumWidth(150)
-    #outboundStatusFormLayout.addRow(self.statusButton)
-    #self.statusButton.connect('clicked()', self.onStatusButtonClicked)
-
     # Outbound tranform collapsible button
     self.outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
     self.outboundTransformCollapsibleButton.text = "Calibration Matrix"
@@ -239,14 +210,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the path collapsible button
     outboundTransformsFormLayout = qt.QFormLayout(self.outboundTransformCollapsibleButton)
-
-    # transformButton Button
-    # self.transformButton = qt.QPushButton("TRANSFORM")
-    # self.transformButton.toolTip = "Send transform to the WPI robot."
-    # self.transformButton.enabled = False
-    # self.transformButton.setMaximumWidth(250)
-    # outboundTransformsFormLayout.addWidget(self.transformButton)
-    # self.transformButton.connect('clicked()', self.onTransformButtonClicked)
 
     # Input volume selector for zFrame calibration
     self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
@@ -292,6 +255,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
     outboundTransformsFormLayout.addRow("Calibration matrix:  ", self.calibrationTableWidget)
 
+    # Add ROI button
+    self.addROIButton = qt.QPushButton("Add ROI")
+    self.addROIButton.enabled = True
+    outboundTransformsFormLayout.addWidget(self.addROIButton)
+    self.addROIButton.connect('clicked()', self.onAddROI)
+
     # Create and send new calibration matrix button
     self.createCalibrationMatrixButton = qt.QPushButton("Create and send new calibration matrix")
     self.createCalibrationMatrixButton.enabled = True
@@ -312,8 +281,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     self.calibrationMatrixSelector.setMRMLScene( slicer.mrmlScene )
     self.calibrationMatrixSelector.setToolTip( "Select the calibration matrix." )
     outboundTransformsFormLayout.addRow("Calibration matrix:  ", self.calibrationMatrixSelector)
-    # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-    #                 self.calibrationMatrixSelector, 'setMRMLScene(vtkMRMLScene*)')
 
     # Send pre-calculated calibration matrix button
     self.sendCalibrationMatrixButton = qt.QPushButton("Send pre-existing calibration matrix")
@@ -440,6 +407,54 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(self.textNode)
     self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
+    # Zcalibration ROI empty node
+    self.zFrameROI = None
+    self.zFrameROIAddedObserverTag = None
+
+    # Define the path to the calibration model config file
+    self.calibrationMarkerPath = os.path.dirname(os.path.abspath(__file__)) + "/Workflow/markers-RFR08.csv"
+
+    # Create nodes for calibration step
+    self.zTransNode = None
+    self.zTransNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
+    # self.zTransNode.Identity()
+    self.zTransNode.UnRegister(None)
+    self.zTransNode.SetName('CalibrationTransform')
+    slicer.mrmlScene.AddNode(self.zTransNode)
+
+    # The transform between the centers of calibration configuration markers and the guide sheet
+    # It will be applied to the guide sheet as well as the zTransNode
+    self.guideSheetTransformNode = None
+    self.guideSheetTransformNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
+    self.guideSheetTransformNode.UnRegister(None)
+    self.guideSheetTransformNode.SetName('GuideSheetTransform')
+    slicer.mrmlScene.AddNode(self.guideSheetTransformNode)
+
+    # To scale and shift the guide sheet holes model
+    self.guideSheetHolesTransformNode = slicer.vtkMRMLLinearTransformNode()
+    self.guideSheetHolesTransformNode.SetName('GuideSheetHolesTransform')
+    slicer.mrmlScene.AddNode(self.guideSheetHolesTransformNode)
+
+    # The translation between the center of the guide sheet and it's origin, for use
+    # when calculating target zone and grid coordinates
+    self.guideSheetCenterTransformNode = slicer.vtkMRMLLinearTransformNode()
+    self.guideSheetCenterTransformNode.SetName('GuideSheetCenterTransform')
+    slicer.mrmlScene.AddNode(self.guideSheetCenterTransformNode)
+
+    self.regSuccess = None
+    self.regSuccess = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
+    self.regSuccess.UnRegister(None)
+    self.regSuccess.SetName('regSuccess')
+    slicer.mrmlScene.AddNode(self.regSuccess)
+    
+    self.goodRegistration = False
+    self.registrationUserVerified = False
+
+    self.guideSheetCenter = np.zeros(3)
+    self.markersCenter = np.zeros(3)
+    self.markersToSheetTranslation = np.zeros(3)
+    self.calibrationOutLabelMapNode = None
+
   def onCreateServerButtonClicked(self):
     # GUI changes to enable/disable button functionality
     self.createServerButton.enabled = False
@@ -513,27 +528,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     To_compare = 0
     global last_randomIDname_transform
     last_randomIDname_transform = "SendTransform"
-
-    # wpiPort = self.wpiPortTextbox.text
-    # wpiHostname = self.wpiHostnameTextbox.text
-    # testNumber = self.testNumberTextbox.text    
-
-    # # Auto-run navigationTestSimulator.cxx:
-    # import inspect, platform, subprocess
-    # plt = platform.system()
-    # moduleDirectory = inspect.getabsfile(inspect.currentframe())
-    # print("Directory of SlicerIGTLink.py: ", moduleDirectory)
-    # moduleDirectory = moduleDirectory.split('SlicerIGTlinkExtension')[0]
-
-    # if plt == 'Windows':
-    #   bat_command = moduleDirectory + 'client/RunNavigationTestSimulator.bat'
-    #   moduleDirectory = moduleDirectory + 'client'
-    #   subprocess.Popen([bat_command, wpiHostname, wpiPort, snrHostname, snrPort, testNumber, moduleDirectory], creationflags=subprocess.CREATE_NEW_CONSOLE, env=slicer.util.startupEnvironment())
-    # else: # Linux or Mac
-    #   bat_command = moduleDirectory + 'client/RunNavigationTestSimulator.sh'
-    #   #c_command = moduleDirectory + 'client/NavigationTestSimulator'
-    #   moduleDirectory = moduleDirectory + 'client'
-    #   subprocess.Popen(args=['%s %s %s %s %s %s %s' % (bat_command, wpiHostname, wpiPort, snrHostname, snrPort, testNumber, moduleDirectory)], env=slicer.util.startupEnvironment(), shell=True)
 
   def onDisconnectFromSocketButtonClicked(self):
     # GUI changes to enable/disable button functionality
@@ -609,7 +603,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
 
-
   def onGetPoseButtonClicked(self):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
     print("Send command to get current position of the robot")
@@ -628,7 +621,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     infoMsg =  "Sending STRING( " + randomIDname + ",  GET_POSE )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
-
 
   def onTargetingButtonClicked(self):
     # Send stringMessage containing the command "TARGETING" to the script via IGTLink
@@ -776,7 +768,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
 
-
   def onStopButtonClicked(self):
     print("Sending STOP command")
     # Send stringMessage containing the command "STOP" to the script via IGTLink
@@ -824,7 +815,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
 
-    
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
     print("Sending Start up command")
@@ -973,9 +963,9 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
         statusNode.activateButtons()
       ack = 0
       # Initiate calibration matrix calculation when robot reaches CALIBRATION phase
-      if(loading_phase == "CALIBRATION"):
-        print ("Robot is awaiting calibration matrix.")
-        self.initiateZFrameCalibration()
+      # if(loading_phase == "CALIBRATION"):
+      #   print ("Robot is awaiting calibration matrix.")
+      #   self.initiateZFrameCalibration()
     else:
       print("Error in changing phase")
 
@@ -1085,121 +1075,99 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
   def initiateZFrameCalibration(self):
     # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
-    self.zFrameNode = self.zFrameVolumeSelector.currentNode()
-    calibrationMatrix = self.calibrationMatrixSelector.currentNode()
+    self.calibrationInputVolumeNode = self.zFrameVolumeSelector.currentNode()
+    
+    if self.calibrationMarkerPath is None:
+      print ("No calibration model configuration file found.")
 
-    # self.ngw = slicer.modules.HMS_NeedleGuideWidget
-
-    # if self.zFrameNode is not None:
-    #   print ("Initating calibration matrix calculation with zFrame image.")
+    elif self.calibrationInputVolumeNode is not None:
+      print ("Initating calibration matrix calculation with zFrame image.")
       
-    #   startSlice = int(self.startSliceSliderWidget.value)
-    #   # Make sure end slice is within the volume
-    #   endSlice = int(self.endSliceSliderWidget.value)
-    #   maxSlice = self.zFrameNode.GetImageData().GetDimensions()[2]
-    #   if endSlice == 0 or endSlice > maxSlice:
-    #     # Use the image end slice
-    #     endSlice = maxSlice
-    #     self.endSliceSliderWidget.value = float(endSlice)
+      # Get start and end slices
+      startSlice = int(self.startSliceSliderWidget.value)
+      endSlice = int(self.endSliceSliderWidget.value)
+      maxSlice = self.calibrationInputVolumeNode.GetImageData().GetDimensions()[2]
+      if endSlice == 0 or endSlice > maxSlice:
+        # Use the image end slice
+        endSlice = maxSlice
+        self.endSliceSliderWidget.value = float(endSlice)
 
-    #   self.zTransNode = None
-    #   self.zTransNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
-    #   self.zTransNode.UnRegister(None)
-    #   self.zTransNode.SetName('CalibrationTransform')
-    #   slicer.mrmlScene.AddNode(self.zTransNode)
-    #   workflowFunctions.setParameter('CalibrationTransformNodeID', self.zTransNode.GetID())
+      # Check for the ZFrame ROI node and if it exists, use it for the start and end slices
+      if self.zFrameROI is not None:
+        print ("Found zFrame ROI: ", self.zFrameROI.GetID())
+        center = [0.0, 0.0, 0.0]
+        self.zFrameROI.GetXYZ(center)
+        bounds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        self.zFrameROI.GetRASBounds(bounds)
+        pMin = [bounds[0], bounds[2], bounds[4], 1]
+        pMax = [bounds[1], bounds[3], bounds[5], 1]
+        rasToIJKMatrix = vtk.vtkMatrix4x4()
+        self.calibrationInputVolumeNode.GetRASToIJKMatrix(rasToIJKMatrix)
+        pos = [0,0,0,1]
+        rasToIJKMatrix.MultiplyPoint(pMin, pos)
+        startSlice = int(pos[2])
+        rasToIJKMatrix.MultiplyPoint(pMax, pos)
+        endSlice = int(pos[2])
+        # Check if slices are in bounds
+        if startSlice < 0:
+          startSlice = 0
+        if endSlice < 0:
+          endSlice = 0
+        endZ = self.calibrationInputVolumeNode.GetImageData().GetDimensions()[2]
+        endZ = endZ - 1
+        if startSlice > endZ:
+          startSlice = endZ
+        if endSlice > endZ:
+          endSlice = endZ
+        self.startSliceSliderWidget.value = float(startSlice)
+        self.endSliceSliderWidget.value = float(endSlice)
+
+      self.calibrationMarkers = self.loadCalibratorConfigFile(path=self.calibrationMarkerPath)
+
+      if self.calibrationOutLabelMapNode is None:
+        self.calibrationOutLabelMapNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLabelMapVolumeNode')
+        self.calibrationOutLabelMapNode.UnRegister(None)
+        self.calibrationOutLabelMapNode.SetName('CalibrationOutVolume')
+        slicer.mrmlScene.AddNode(self.calibrationOutLabelMapNode)
+        self.calibrationOutLabelMapNode = slicer.util.getNode('CalibrationOutVolume')
+      else:
+        volumesLogic = slicer.modules.volumes.logic()
+        volumesLogic.ClearVolumeImageData(self.calibrationOutLabelMapNode)
       
-    #   # The transform between the centers of calibration configuration markers and the guide sheet
-    #   # It will be applied to the guide sheet as well as the zTransNode
-    #   self.guideSheetTransformNode = None
-    #   self.guideSheetTransformNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
-    #   self.guideSheetTransformNode.UnRegister(None)
-    #   self.guideSheetTransformNode.SetName('GuideSheetTransform')
-    #   slicer.mrmlScene.AddNode(self.guideSheetTransformNode)
-    #   workflowFunctions.setParameter('GuideSheetTransformID', self.guideSheetTransformNode.GetID())
+      parameters = {}
+      # From nodes:
+      parameters['inputVolume'] = self.calibrationInputVolumeNode.GetID()
+      parameters['startSlice'] = startSlice
+      parameters['endSlice'] = endSlice
+      parameters['markerConfigFile'] = self.calibrationMarkerPath
+      parameters['outputVolume'] = self.calibrationOutLabelMapNode.GetID()
+      parameters['markerTransform'] = self.zTransNode.GetID()
+      parameters['regSuccess'] = self.regSuccess.GetID()
 
-    #   # To scale and shift the guide sheet holes model
-    #   self.guideSheetHolesTransformNode = slicer.vtkMRMLLinearTransformNode()
-    #   self.guideSheetHolesTransformNode.SetName('GuideSheetHolesTransform')
-    #   slicer.mrmlScene.AddNode(self.guideSheetHolesTransformNode)
-    #   workflowFunctions.setParameter('GuideSheetHolesTransformID', self.guideSheetHolesTransformNode.GetID())
+      # linereg = slicer.modules.hms_marker_detection
+      # self.cliNode = slicer.cli.run(linereg, None, parameters, waitForCompletion=True, deleteTemporaryFiles=False)
+      # self.progressBar.setCommandLineModuleNode(self.cliNode)
 
-    #   # The translation between the center of the guide sheet and it's origin, for use
-    #   # when calculating target zone and grid coordinates
-    #   self.guideSheetCenterTransformNode = slicer.vtkMRMLLinearTransformNode()
-    #   self.guideSheetCenterTransformNode.SetName('GuideSheetCenterTransform')
-    #   slicer.mrmlScene.AddNode(self.guideSheetCenterTransformNode)
-    #   workflowFunctions.setParameter('GuideSheetCenterTransformID', self.guideSheetCenterTransformNode.GetID())
+      # Update the calibration matrix table with the calculated matrix (currently just dummy code)
+      for i in range(4):
+        for j in range(4):
+          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(1)))
 
-    #   self.regSuccess = None
-    #   self.regSuccess = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
-    #   self.regSuccess.UnRegister(None)
-    #   self.regSuccess.SetName('regSuccess')
-    #   slicer.mrmlScene.AddNode(self.regSuccess)
-    #   workflowFunctions.setParameter('RegSuccessNodeID', self.regSuccess.GetID())
-    #   self.regSuccess = slicer.util.getNode('regSuccess')
-    #   self.goodRegistration = False
-    #   self.registrationUserVerified = False
+      # Send the calculated calibration matrix to WPI as the CLB matrix
+      # TODO
 
-    #   self.guideSheetCenter = np.zeros(3)
-    #   self.markersCenter = np.zeros(3)
-    #   # Translation between calibration markers and guide sheet corners centers
-    #   self.markersToSheetTranslation = np.zeros(3)
-    #   self.calibrationOutLabelMapNode = None
-    #   self.calibrationMarkerPath = None
-
-    #   parameters = {}
-    #   # from nodes:
-    #   parameters['inputVolume'] = self.zFrameNode.GetID()
-    #   parameters['startSlice'] = startSlice
-    #   parameters['endSlice'] = endSlice
-    #   parameters['markerConfigFile'] = self.calibrationMarkerPath
-    #   parameters['outputVolume'] = self.calibrationOutLabelMapNode.GetID()
-    #   parameters['markerTransform'] = self.zTransNode.GetID()
-    #   parameters['regSuccess'] = self.regSuccess.GetID()
-    #   # from settings:
-    #   # ZFrame registration algorithm settings
-    #   self.ngw.settings.beginGroup('zframe')
-    #   calibrationKeys = self.ngw.settings.allKeys()
-    #   self.ngw.settings.endGroup()
-    #   for key in calibrationKeys:
-    #       parameters[key] = self.getSetting(self.optionsGroup + key)
-
-    #   # Unset the variables that hold post registration flags
-    #   self.goodRegistration = False
-    #   self.registrationUserVerified = False
-
-    #   linereg = slicer.modules.hms_marker_detection
-    #   self.cliNode = slicer.cli.run(linereg, None, parameters, waitForCompletion=True, deleteTemporaryFiles=False)
-    #   self.progressBar.setCommandLineModuleNode(self.cliNode)
-    #   workflowFunctions.appendToStatusBox("Calibration Started...")
-    #   slicer.util.showStatusMessage( "Calibration Started...", 2000 )
-
-    #   workflowFunctions.setStatusLabel("Calibration running...")
-    #   self.cliObserver = self.cliNode.AddObserver('ModifiedEvent',self.observeCalibration)
-
-    #   # TODO
-
-    #   # Update the calibration matrix table with the calculated matrix (currently just dummy code)
-    #   for i in range(4):
-    #     for j in range(4):
-    #       self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(1)))
-
-    #   # Send the calculated calibration matrix to WPI as the CLB matrix
-    #   # TODO
-
-    # else:
-    #   print("No zFrame image found. Cannot calculate the calibration matrix.")
+    else:
+      print("No zFrame image found. Cannot calculate the calibration matrix.")
       
   def onSendCalibrationMatrixButtonClicked(self):
     # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
-    zFrameNode = self.zFrameVolumeSelector.currentNode()
-    calibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
+    calibrationInputVolumeNode = self.zFrameVolumeSelector.currentNode()
+    predefinedCalibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
 
-    if calibrationMatrixNode is not None:
+    if predefinedCalibrationMatrixNode is not None:
       # Send the pre-determined calibration matrix to WPI as the CLB matrix
       calibrationMatrix = vtk.vtkMatrix4x4()
-      calibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
+      predefinedCalibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
       SendTransformNodeTemp.SetName("REGISTRATION")
       SendTransformNodeTemp.SetMatrixTransformToParent(calibrationMatrix)
@@ -1217,7 +1185,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
         for j in range(4):
           self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(calibrationMatrix.GetElement(i, j),2))))
 
-    elif zFrameNode is not None:
+    elif calibrationInputVolumeNode is not None:
       self.initiateZFrameCalibration()
 
     else:
@@ -1257,3 +1225,68 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       self.infoTextbox.setText(infoMsg)
       attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
       print("attribute is:", attr) 
+
+# ------------------------- FUNCTIONS FOR CALIBRATION STEP ---------------------------
+
+  def onAddROI(self):
+    self.addROIAddedObserver()
+    # Go into place ROI mode
+    selectionNode =  slicer.util.getNode('vtkMRMLSelectionNodeSingleton')
+    selectionNode.SetReferenceActivePlaceNodeClassName("vtkMRMLAnnotationROINode")
+    annotationLogic = slicer.modules.annotations.logic()
+    annotationLogic.StartPlaceMode(False)
+
+  def removeZFrameROIAddedObserver(self):
+    if self.zFrameROIAddedObserverTag is not None:
+      if slicer.mrmlScene is not None:
+        slicer.mrmlScene.RemoveObserver(self.zFrameROIAddedObserverTag)
+      self.zFrameROIAddedObserverTag = None
+
+  def addROIAddedObserver(self):
+    @vtk.calldata_type(vtk.VTK_OBJECT)
+    def onNodeAdded(caller, event, calldata):
+      node = calldata
+      if isinstance(node, slicer.vtkMRMLAnnotationROINode):
+        self.removeZFrameROIAddedObserver()
+        self.zFrameROI = node
+        self.zFrameROI.SetName("Registration ROI")
+
+    # Remove any previous node added observer
+    self.removeZFrameROIAddedObserver()
+    # Remove previous ROI if any
+    if self.zFrameROI is not None:
+      slicer.mrmlScene.RemoveNode(self.zFrameROI)
+      self.zFrameROI = None
+    self.zFrameROIAddedObserverTag = slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, onNodeAdded)
+
+  def loadCalibratorConfigFile(self, path, lineLen=CalibrationMarker.CALIBRATOR_LENGTH):
+    tokens = path.split('/')
+    length = len(tokens)
+    fname = tokens[length-1]
+    extInx = fname.rfind('.')
+    calibrationBaseName = fname[0:extInx]
+    reader = csv.reader(open(path, 'r'))
+    calibrationMarkers = []
+    descriptionString = '# Harmonus Marker Configuration Description = '
+    idString = '# Harmonus Marker Configuration ID = '
+    gridIDString = '# Harmonus Guide Sheet ID = '
+    try:
+      for row in reader:
+        if row[0][0:2] == '# ':
+          # Check for description and ID, on second half of comment line
+          if (row[0].find(descriptionString) != -1):
+            # In case the description has commas in it, which would result in the
+            # post comma parts of the description ending up in the next element
+            # of row[0], join the elements with a comma before removing the prefix
+            self.markerConfigurationDescription = ','.join(row).replace(descriptionString, "")
+          elif (row[0].find("Configuration ID") != -1):
+            self.markerConfigurationID = ','.join(row).replace(idString, "")
+          elif (row[0].find(gridIDString) != -1):
+            self.markerConfigurationGridID = ','.join(row).replace(gridIDString, "")
+        else:
+          row = [float(v) for v in row]
+          if len(row) >=6:
+            calibrationMarker = CalibrationMarker(pos=row[0:3], orientation=row[3:6], flen=lineLen)
+            calibrationMarkers.append(calibrationMarker)
+    except csv.Error as e:
+      print("Error reading calibration model configuration file %s, line %d: %s" % (path, reader.line_num, e))
