@@ -54,7 +54,7 @@ void setSocketVars(char* snrHostname, int snrPort)
 
 void *startThread()
 {
-    std::cout << "\n---> Starting thread in NavigationSlicerScript.cxx to receive messages from Slicer." << std::endl;
+    std::cout << "\n---> Starting thread I." << std::endl;
     // Create thread for the receiving function
 	std::thread thr(&receivingFunction);
 	thr.detach();

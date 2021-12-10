@@ -1,0 +1,9 @@
+# Harmonus Marker Configuration ID = RFR-008
+# Harmonus Marker Configuration Description = Z-Frame 7 marker locations and directions in X,Y,Z coordinates. Part number 10145, used with 10143 (grid front) and 10144 (grid back)
+0, -5.422, 26.919, 0, 0, 1
+0, 24.578, 26.919, 0, 1, 1
+0, 54.578, 26.919, 0, 0, 1
+40, 54.578, 26.919, 1, 0, 1
+80, 54.578, 26.919, 0, 0, 1
+80, 24.578, 26.919, 0, -1, 1
+80, -5.422, 26.919, 0, 0, 1

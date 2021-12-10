@@ -1,5 +1,5 @@
 import vtk, qt, ctk, slicer
-import workflowFunctions as workflowFunctions
+import SNR.SlicerIGTlinkExtension.SlicerIGTLink.workflowFunctions as workflowFunctions
 import csv
 import numpy
 import sys
