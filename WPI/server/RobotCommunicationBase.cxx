@@ -528,9 +528,10 @@ int RobotCommunicationBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
   // Check if each column is normal:
   for (int i = 0; i < 3; i++)
   {
-    double l = matrix[0][i] * matrix[0][i] + matrix[1][i] * matrix[1][i] + matrix[2][i] * matrix[2][i];
+    double l = (matrix[0][i] * matrix[0][i]) + (matrix[1][i] * matrix[1][i]) + (matrix[2][i] * matrix[2][i]);
     if (abs(l - 1.0) > 0.00001)
     {
+      std::cerr << "Columns are not normal! l is:" << l << std::endl;;
       return 0;
     }
   }
@@ -543,6 +544,7 @@ int RobotCommunicationBase::ValidateMatrix(igtl::Matrix4x4 &matrix)
   igtl::Cross(d, a, b);
   if (abs(c[0] - d[0]) > 0.00001 || abs(c[1] - d[1]) > 0.00001 || abs(c[2] - d[2]) > 0.00001)
   {
+    std::cerr << "Columns are not orthogonal!\n";
     return 0;
   }
 

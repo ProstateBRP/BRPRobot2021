@@ -58,9 +58,12 @@ int RobotSimulatorCalibrationPhase::MessageHandler(igtl::MessageHeader* headerMs
   /// Check if Transform message for calibration has been received
   if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
       strncmp(headerMsg->GetDeviceName(), "CLB_", 4) == 0)
-    {
+      {
     igtl::Matrix4x4 matrix;
     this->ReceiveTransform(headerMsg, matrix);
+    
+    // Show the matrix that I have received
+    PrintMatrix("",matrix);
     
     // Acknowledgement 
     std::string devName = headerMsg->GetDeviceName();
@@ -78,6 +81,7 @@ int RobotSimulatorCalibrationPhase::MessageHandler(igtl::MessageHeader* headerMs
         {
         std::cout <<"RobotStatus: "<< this->RStatus;
         this->RStatus->SetCalibrationMatrix(matrix);
+        std::cout << "Calibration flag is: " <<  this->RStatus->GetCalibrationFlag() << std::endl;
         }
       SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_OK, 0);
       }
