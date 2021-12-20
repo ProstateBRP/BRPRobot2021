@@ -1,0 +1,10 @@
+# Harmonus Marker Configuration ID = RFR-011
+# Harmonus Marker Configuration Description = Z-Frame 7 marker locations and directions in R,A,S coordinates. Part number 10162, used with 10166 (RGS-007)
+# Harmonus Guide Sheet ID = RGS-007
+0, -6.762, -29, 0, 0, 1
+0, 23.238, -29, 0, -1, 1
+0, 53.238, -29, 0, 0, 1
+-40, 53.238, -29, 1, 0, 1
+-80, 53.238, -29, 0, 0, 1
+-80, 23.238, -29, 0, 1, 1
+-80, -6.762, -29, 0, 0, 1

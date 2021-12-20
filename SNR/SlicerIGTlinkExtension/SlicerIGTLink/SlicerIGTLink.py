@@ -19,6 +19,7 @@
 import os
 import unittest
 import vtk, qt, ctk, slicer
+from SNR.SlicerIGTlinkExtension.SlicerIGTLink.SliceTrackerUtils.algorithms.zFrameRegistration import OpenSourceZFrameRegistration
 from slicer.ScriptedLoadableModule import *
 import logging
 import numpy as np
@@ -28,6 +29,7 @@ import string
 import re
 import csv
 from ProstateBxLib.DataStructs import CalibrationMarker
+from SliceTrackerUtils.steps.zFrameRegistration import SliceTrackerZFrameRegistrationStep
 
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
@@ -1144,9 +1146,23 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       parameters['markerTransform'] = self.zTransNode.GetID()
       parameters['regSuccess'] = self.regSuccess.GetID()
 
+      # HMS_MARKER_DETECTION MODULE METHOD (TODO)
+      # TODO: determine how to successfully build CLI module HMS_Marker_Detection on all operating systems
       # linereg = slicer.modules.hms_marker_detection
       # self.cliNode = slicer.cli.run(linereg, None, parameters, waitForCompletion=True, deleteTemporaryFiles=False)
       # self.progressBar.setCommandLineModuleNode(self.cliNode)
+      
+
+
+      # Or, SLICETRACKER METHOD (TODO)
+      # TODO
+      # self.initiateZFrameRegistrationStep() # from SliceTracker/SliceTrackerUtils/steps/zFrameRegistration.py
+      self.redSliceNode.SetSliceVisible(True)
+      # https://github.com/SlicerProstate/SliceTracker/blob/c5c341d2c3a204275194d7f3c2720b96177fe117/SliceTracker/SliceTrackerUtils/steps/zFrameRegistration.py#L219
+      self.runZFrameRegistration(self.zFrameMaskedVolume, OpenSourceZFrameRegistration,
+                                 startSlice=startSlice, endSlice=endSlice)
+
+      # SliceTracker algorithm can be either opensourceZframeRegistration or LineMarkerRegistration
 
       # Update the calibration matrix table with the calculated matrix (currently just dummy code)
       for i in range(4):
@@ -1155,6 +1171,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
       # Send the calculated calibration matrix to WPI as the CLB matrix
       # TODO
+      
 
     else:
       print("No zFrame image found. Cannot calculate the calibration matrix.")
@@ -1290,3 +1307,14 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
             calibrationMarkers.append(calibrationMarker)
     except csv.Error as e:
       print("Error reading calibration model configuration file %s, line %d: %s" % (path, reader.line_num, e))
+
+  def runZFrameRegistration(self, inputVolume, algorithm, startSlice, endSlice):
+    registration = algorithm(inputVolume)
+    if isinstance(registration, OpenSourceZFrameRegistration):
+      registration.runRegistration(start=startSlice, end=endSlice)
+    # elif isinstance(registration, LineMarkerRegistration):
+    #   registration.runRegistration()
+    zFrameRegistrationResult = self.session.data.createZFrameRegistrationResult(self.templateVolume.GetName())
+    zFrameRegistrationResult.volume = inputVolume
+    zFrameRegistrationResult.transform = registration.getOutputTransformation()
+    return True
