@@ -19,17 +19,17 @@
 import os
 import unittest
 import vtk, qt, ctk, slicer
-from SNR.SlicerIGTlinkExtension.SlicerIGTLink.SliceTrackerUtils.algorithms.zFrameRegistration import OpenSourceZFrameRegistration
 from slicer.ScriptedLoadableModule import *
 import logging
+import SimpleITK as sitk
+import sitkUtils
 import numpy as np
 import time
 import random
 import string
 import re
 import csv
-from ProstateBxLib.DataStructs import CalibrationMarker
-from SliceTrackerUtils.steps.zFrameRegistration import SliceTrackerZFrameRegistrationStep
+# from SlicerDevelopmentToolboxUtils.mixins import ModuleLogicMixin, ModuleWidgetMixin
 
 class SlicerIGTLink(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
@@ -409,53 +409,23 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(self.textNode)
     self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
-    # Zcalibration ROI empty node
+    # Empty nodes for calibration step
     self.zFrameROI = None
     self.zFrameROIAddedObserverTag = None
-
-    # Define the path to the calibration model config file
-    self.calibrationMarkerPath = os.path.dirname(os.path.abspath(__file__)) + "/Workflow/markers-RFR08.csv"
-
-    # Create nodes for calibration step
-    self.zTransNode = None
-    self.zTransNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
-    # self.zTransNode.Identity()
-    self.zTransNode.UnRegister(None)
-    self.zTransNode.SetName('CalibrationTransform')
-    slicer.mrmlScene.AddNode(self.zTransNode)
-
-    # The transform between the centers of calibration configuration markers and the guide sheet
-    # It will be applied to the guide sheet as well as the zTransNode
-    self.guideSheetTransformNode = None
-    self.guideSheetTransformNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
-    self.guideSheetTransformNode.UnRegister(None)
-    self.guideSheetTransformNode.SetName('GuideSheetTransform')
-    slicer.mrmlScene.AddNode(self.guideSheetTransformNode)
-
-    # To scale and shift the guide sheet holes model
-    self.guideSheetHolesTransformNode = slicer.vtkMRMLLinearTransformNode()
-    self.guideSheetHolesTransformNode.SetName('GuideSheetHolesTransform')
-    slicer.mrmlScene.AddNode(self.guideSheetHolesTransformNode)
-
-    # The translation between the center of the guide sheet and it's origin, for use
-    # when calculating target zone and grid coordinates
-    self.guideSheetCenterTransformNode = slicer.vtkMRMLLinearTransformNode()
-    self.guideSheetCenterTransformNode.SetName('GuideSheetCenterTransform')
-    slicer.mrmlScene.AddNode(self.guideSheetCenterTransformNode)
-
-    self.regSuccess = None
-    self.regSuccess = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLinearTransformNode')
-    self.regSuccess.UnRegister(None)
-    self.regSuccess.SetName('regSuccess')
-    slicer.mrmlScene.AddNode(self.regSuccess)
-    
-    self.goodRegistration = False
-    self.registrationUserVerified = False
-
-    self.guideSheetCenter = np.zeros(3)
-    self.markersCenter = np.zeros(3)
-    self.markersToSheetTranslation = np.zeros(3)
-    self.calibrationOutLabelMapNode = None
+    self.outputTransform = None
+    self.redSliceWidget = slicer.app.layoutManager().sliceWidget("Red")
+    self.redSliceView = self.redSliceWidget.sliceView()
+    self.redSliceLogic = self.redSliceWidget.sliceLogic()
+    self.otsuFilter = sitk.OtsuThresholdImageFilter()
+    # self.openSourceRegistration = OpenSourceZFrameRegistration(slicer.mrmlScene)
+    self.templateVolume = None
+    self.zFrameCroppedVolume = None
+    self.zFrameLabelVolume = None
+    self.zFrameMaskedVolume = None
+    self.otsuOutputVolume = None
+    self.startIndex = None
+    self.endIndex = None
+    self.zFrameModelNode = None
 
   def onCreateServerButtonClicked(self):
     # GUI changes to enable/disable button functionality
@@ -1077,22 +1047,30 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
   def initiateZFrameCalibration(self):
     # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
-    self.calibrationInputVolumeNode = self.zFrameVolumeSelector.currentNode()
-    
-    if self.calibrationMarkerPath is None:
-      print ("No calibration model configuration file found.")
+    self.inputVolume = self.zFrameVolumeSelector.currentNode()
 
-    elif self.calibrationInputVolumeNode is not None:
+    if self.inputVolume is not None:
+      seriesNumber = self.inputVolume.GetName().split(":")[0]
+      name = seriesNumber + "-ZFrameTransform"
+      
+      # Create an empty transform for the calibration matrix output
+      if self.outputTransform:
+        slicer.mrmlScene.RemoveNode(self.outputTransform)
+        self.outputTransform = None
+      self.outputTransform = slicer.vtkMRMLLinearTransformNode()
+      self.outputTransform.SetName(name)
+      slicer.mrmlScene.AddNode(self.outputTransform)
+
       print ("Initating calibration matrix calculation with zFrame image.")
       
       # Get start and end slices
-      startSlice = int(self.startSliceSliderWidget.value)
-      endSlice = int(self.endSliceSliderWidget.value)
-      maxSlice = self.calibrationInputVolumeNode.GetImageData().GetDimensions()[2]
-      if endSlice == 0 or endSlice > maxSlice:
+      self.startSlice = int(self.startSliceSliderWidget.value)
+      self.endSlice = int(self.endSliceSliderWidget.value)
+      maxSlice = self.inputVolume.GetImageData().GetDimensions()[2]
+      if self.endSlice == 0 or self.endSlice > maxSlice:
         # Use the image end slice
-        endSlice = maxSlice
-        self.endSliceSliderWidget.value = float(endSlice)
+        self.endSlice = maxSlice
+        self.endSliceSliderWidget.value = float(self.endSlice)
 
       # Check for the ZFrame ROI node and if it exists, use it for the start and end slices
       if self.zFrameROI is not None:
@@ -1104,81 +1082,96 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
         pMin = [bounds[0], bounds[2], bounds[4], 1]
         pMax = [bounds[1], bounds[3], bounds[5], 1]
         rasToIJKMatrix = vtk.vtkMatrix4x4()
-        self.calibrationInputVolumeNode.GetRASToIJKMatrix(rasToIJKMatrix)
+        self.inputVolume.GetRASToIJKMatrix(rasToIJKMatrix)
         pos = [0,0,0,1]
         rasToIJKMatrix.MultiplyPoint(pMin, pos)
-        startSlice = int(pos[2])
+        self.startSlice = int(pos[2])
         rasToIJKMatrix.MultiplyPoint(pMax, pos)
-        endSlice = int(pos[2])
+        self.endSlice = int(pos[2])
         # Check if slices are in bounds
-        if startSlice < 0:
-          startSlice = 0
-        if endSlice < 0:
-          endSlice = 0
-        endZ = self.calibrationInputVolumeNode.GetImageData().GetDimensions()[2]
+        if self.startSlice < 0:
+          self.startSlice = 0
+        if self.endSlice < 0:
+          self.endSlice = 0
+        endZ = self.inputVolume.GetImageData().GetDimensions()[2]
         endZ = endZ - 1
-        if startSlice > endZ:
-          startSlice = endZ
-        if endSlice > endZ:
-          endSlice = endZ
-        self.startSliceSliderWidget.value = float(startSlice)
-        self.endSliceSliderWidget.value = float(endSlice)
+        if self.startSlice > endZ:
+          self.startSlice = endZ
+        if self.endSlice > endZ:
+          self.endSlice = endZ
+        self.startSliceSliderWidget.value = float(self.startSlice)
+        self.endSliceSliderWidget.value = float(self.endSlice)
 
-      self.calibrationMarkers = self.loadCalibratorConfigFile(path=self.calibrationMarkerPath)
+        # Begin zFrameRegistrationWithROI logic
+        self.ZFRAME_MODEL_PATH = 'zframe-model.vtk'
+        self.ZFRAME_MODEL_NAME = 'ZFrameModel'
 
-      if self.calibrationOutLabelMapNode is None:
-        self.calibrationOutLabelMapNode = slicer.mrmlScene.CreateNodeByClass('vtkMRMLLabelMapVolumeNode')
-        self.calibrationOutLabelMapNode.UnRegister(None)
-        self.calibrationOutLabelMapNode.SetName('CalibrationOutVolume')
-        slicer.mrmlScene.AddNode(self.calibrationOutLabelMapNode)
-        self.calibrationOutLabelMapNode = slicer.util.getNode('CalibrationOutVolume')
-      else:
-        volumesLogic = slicer.modules.volumes.logic()
-        volumesLogic.ClearVolumeImageData(self.calibrationOutLabelMapNode)
+        # Cleanup
+        #self.clearVolumeNodes()
+        #self.clearOldCalculationNodes()
+        
+        # Run ZFrame Open Source Registration
+        self.loadZFrameModel()
+
+        zFrameTemplateVolume = self.inputVolume
+        coverTemplateROI = self.zFrameROI
+
+        self.zFrameCroppedVolume = self.createCroppedVolume(zFrameTemplateVolume, coverTemplateROI)
+        self.zFrameLabelVolume = self.createLabelMapFromCroppedVolume(self.zFrameCroppedVolume, "labelmap")
+        self.zFrameMaskedVolume = self.createMaskedVolume(zFrameTemplateVolume, self.zFrameLabelVolume)
+        self.zFrameMaskedVolume.SetName(zFrameTemplateVolume.GetName() + "-label")
+        if self.startSlice is None or self.endSlice is None:
+          self.startSlice, center, self.endSlice = self.getROIMinCenterMaxSliceNumbers(coverTemplateROI)
+          self.otsuOutputVolume = self.applyITKOtsuFilter(self.zFrameMaskedVolume)
+          self.dilateMask(self.otsuOutputVolume)
+          self.startSlice, self.endSlice = self.getStartEndWithConnectedComponents(self.otsuOutputVolume, center)
+        # self.openSourceRegistration.setInputVolume(self.zFrameMaskedVolume)
+        # self.openSourceRegistration.runRegistration(self.startIndex, self.endIndex)
+        
       
-      parameters = {}
-      # From nodes:
-      parameters['inputVolume'] = self.calibrationInputVolumeNode.GetID()
-      parameters['startSlice'] = startSlice
-      parameters['endSlice'] = endSlice
-      parameters['markerConfigFile'] = self.calibrationMarkerPath
-      parameters['outputVolume'] = self.calibrationOutLabelMapNode.GetID()
-      parameters['markerTransform'] = self.zTransNode.GetID()
-      parameters['regSuccess'] = self.regSuccess.GetID()
-
-      # HMS_MARKER_DETECTION MODULE METHOD (TODO)
-      # TODO: determine how to successfully build CLI module HMS_Marker_Detection on all operating systems
-      # linereg = slicer.modules.hms_marker_detection
-      # self.cliNode = slicer.cli.run(linereg, None, parameters, waitForCompletion=True, deleteTemporaryFiles=False)
-      # self.progressBar.setCommandLineModuleNode(self.cliNode)
-      
+        # TODO
 
 
-      # Or, SLICETRACKER METHOD (TODO)
-      # TODO
-      # self.initiateZFrameRegistrationStep() # from SliceTracker/SliceTrackerUtils/steps/zFrameRegistration.py
-      self.redSliceNode.SetSliceVisible(True)
-      # https://github.com/SlicerProstate/SliceTracker/blob/c5c341d2c3a204275194d7f3c2720b96177fe117/SliceTracker/SliceTrackerUtils/steps/zFrameRegistration.py#L219
-      self.runZFrameRegistration(self.zFrameMaskedVolume, OpenSourceZFrameRegistration,
-                                 startSlice=startSlice, endSlice=endSlice)
+        # Run zFrameRegistration CLI module
+        params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
+                  'outputTransform': self.outputTransform}
+        slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
 
-      # SliceTracker algorithm can be either opensourceZframeRegistration or LineMarkerRegistration
+        self.zFrameModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
+        self.zFrameModelNode.GetDisplayNode().SetSliceIntersectionVisibility(True)
+        self.zFrameModelNode.SetDisplayVisibility(True)
 
-      # Update the calibration matrix table with the calculated matrix (currently just dummy code)
-      for i in range(4):
-        for j in range(4):
-          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(1)))
+        # self.setBackgroundAndForegroundIDs(foregroundVolumeID=None, backgroundVolumeID=self.inputVolume.GetID())
+        # self.redSliceNode.SetSliceVisible(True)
+        # self.clearVolumeNodes()
 
-      # Send the calculated calibration matrix to WPI as the CLB matrix
-      # TODO
-      
+        # Update the calibration matrix table with the calculated matrix (currently just dummy code)
+        print("1: ", self.outputTransform)
+        outputMatrix = vtk.vtkMatrix4x4()
+        self.outputTransform.GetMatrixTransformToParent(outputMatrix)
+        print("2: ", outputMatrix)
+        for i in range(4):
+          for j in range(4):
+            self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(outputMatrix.GetElement(i, j),2))))
+
+        # Send the calculated calibration matrix to WPI as the CLB matrix
+        SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+        SendTransformNodeTemp.SetName("REGISTRATION")
+        SendTransformNodeTemp.SetMatrixTransformToParent(outputMatrix)
+        slicer.mrmlScene.AddNode(SendTransformNodeTemp)
+        self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+        self.openIGTNode.PushNode(SendTransformNodeTemp)
+        infoMsg =  "Sending TRANSFORM( REGISTRATION )"
+        re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+        self.infoTextbox.setText(infoMsg)
+        attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
 
     else:
       print("No zFrame image found. Cannot calculate the calibration matrix.")
-      
+
   def onSendCalibrationMatrixButtonClicked(self):
     # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
-    calibrationInputVolumeNode = self.zFrameVolumeSelector.currentNode()
+    inputVolume = self.zFrameVolumeSelector.currentNode()
     predefinedCalibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
 
     if predefinedCalibrationMatrixNode is not None:
@@ -1195,14 +1188,14 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.infoTextbox.setText(infoMsg)
       attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
-      print("attribute is:", attr) 
+      # print("attribute is:", attr) 
     
       # Update the calibration matrix table with the calculated matrix (currently just dummy code)
       for i in range(4):
         for j in range(4):
           self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(calibrationMatrix.GetElement(i, j),2))))
 
-    elif calibrationInputVolumeNode is not None:
+    elif inputVolume is not None:
       self.initiateZFrameCalibration()
 
     else:
@@ -1243,7 +1236,7 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
       print("attribute is:", attr) 
 
-# ------------------------- FUNCTIONS FOR CALIBRATION STEP ---------------------------
+# # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
 
   def onAddROI(self):
     self.addROIAddedObserver()
@@ -1276,45 +1269,137 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       self.zFrameROI = None
     self.zFrameROIAddedObserverTag = slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, onNodeAdded)
 
-  def loadCalibratorConfigFile(self, path, lineLen=CalibrationMarker.CALIBRATOR_LENGTH):
-    tokens = path.split('/')
-    length = len(tokens)
-    fname = tokens[length-1]
-    extInx = fname.rfind('.')
-    calibrationBaseName = fname[0:extInx]
-    reader = csv.reader(open(path, 'r'))
-    calibrationMarkers = []
-    descriptionString = '# Harmonus Marker Configuration Description = '
-    idString = '# Harmonus Marker Configuration ID = '
-    gridIDString = '# Harmonus Guide Sheet ID = '
-    try:
-      for row in reader:
-        if row[0][0:2] == '# ':
-          # Check for description and ID, on second half of comment line
-          if (row[0].find(descriptionString) != -1):
-            # In case the description has commas in it, which would result in the
-            # post comma parts of the description ending up in the next element
-            # of row[0], join the elements with a comma before removing the prefix
-            self.markerConfigurationDescription = ','.join(row).replace(descriptionString, "")
-          elif (row[0].find("Configuration ID") != -1):
-            self.markerConfigurationID = ','.join(row).replace(idString, "")
-          elif (row[0].find(gridIDString) != -1):
-            self.markerConfigurationGridID = ','.join(row).replace(gridIDString, "")
-        else:
-          row = [float(v) for v in row]
-          if len(row) >=6:
-            calibrationMarker = CalibrationMarker(pos=row[0:3], orientation=row[3:6], flen=lineLen)
-            calibrationMarkers.append(calibrationMarker)
-    except csv.Error as e:
-      print("Error reading calibration model configuration file %s, line %d: %s" % (path, reader.line_num, e))
+# # ------------------------- FUNCTIONS FOR CALIBRATION STEP ---------------------------
 
-  def runZFrameRegistration(self, inputVolume, algorithm, startSlice, endSlice):
-    registration = algorithm(inputVolume)
-    if isinstance(registration, OpenSourceZFrameRegistration):
-      registration.runRegistration(start=startSlice, end=endSlice)
-    # elif isinstance(registration, LineMarkerRegistration):
-    #   registration.runRegistration()
-    zFrameRegistrationResult = self.session.data.createZFrameRegistrationResult(self.templateVolume.GetName())
-    zFrameRegistrationResult.volume = inputVolume
-    zFrameRegistrationResult.transform = registration.getOutputTransformation()
-    return True
+  def clearVolumeNodes(self):
+    if self.zFrameCroppedVolume:
+      slicer.mrmlScene.RemoveNode(self.zFrameCroppedVolume)
+      self.zFrameCroppedVolume = None
+    if self.zFrameLabelVolume:
+      slicer.mrmlScene.RemoveNode(self.zFrameLabelVolume)
+      self.zFrameLabelVolume = None
+    if self.zFrameMaskedVolume:
+      slicer.mrmlScene.RemoveNode(self.zFrameMaskedVolume)
+      self.zFrameMaskedVolume = None
+    if self.otsuOutputVolume:
+      slicer.mrmlScene.RemoveNode(self.otsuOutputVolume)
+      self.otsuOutputVolume = None
+
+  def clearOldCalculationNodes(self):
+    #if self.openSourceRegistration.inputVolume:
+    if self.inputVolume:
+      #slicer.mrmlScene.RemoveNode(self.openSourceRegistration.inputVolume)
+      #self.openSourceRegistration.inputVolume = None
+      slicer.mrmlScene.RemoveNode(self.inputVolume)
+      self.inputVolume = None
+    if self.zFrameModelNode:
+      slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
+      self.zFrameModelNode = None
+    #if self.openSourceRegistration.outputTransform:
+    if self.outputTransform:
+      #slicer.mrmlScene.RemoveNode(self.openSourceRegistration.outputTransform)
+      #self.openSourceRegistration.outputTransform = None
+      slicer.mrmlScene.RemoveNode(self.outputTransform)
+      self.outputTransform = None
+  
+  def loadZFrameModel(self):
+    if self.zFrameModelNode:
+      slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
+      self.zFrameModelNode = None
+    currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    print("zframe current file path: ", currentFilePath)
+    zFrameModelPath = os.path.join(currentFilePath, "Resources", "zframe", self.ZFRAME_MODEL_PATH)
+    _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath, returnNode=True)
+    self.zFrameModelNode.SetName(self.ZFRAME_MODEL_NAME)
+    modelDisplayNode = self.zFrameModelNode.GetDisplayNode()
+    modelDisplayNode.SetColor(1, 1, 0)
+    self.zFrameModelNode.SetDisplayVisibility(False)
+
+  def applyITKOtsuFilter(self, volume):
+    inputVolume = sitk.Cast(sitkUtils.PullVolumeFromSlicer(volume.GetID()), sitk.sitkInt16)
+    self.otsuFilter.SetInsideValue(0)
+    self.otsuFilter.SetOutsideValue(1)
+    otsuITKVolume = self.otsuFilter.Execute(inputVolume)
+    return sitkUtils.PushToSlicer(otsuITKVolume, "otsuITKVolume", 0, True)
+
+  def getROIMinCenterMaxSliceNumbers(self, coverTemplateROI):
+    center = [0.0, 0.0, 0.0]
+    coverTemplateROI.GetXYZ(center)
+    bounds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    coverTemplateROI.GetRASBounds(bounds)
+    pMin = [bounds[0], bounds[2], bounds[4]]
+    pMax = [bounds[1], bounds[3], bounds[5]]
+    return [self.getIJKForXYZ(self.redSliceWidget, pMin)[2], self.getIJKForXYZ(self.redSliceWidget, center)[2],
+            self.getIJKForXYZ(self.redSliceWidget, pMax)[2]]
+
+  def getStartEndWithConnectedComponents(self, volume, center):
+    address = sitkUtils.GetSlicerITKReadWriteAddress(volume.GetName())
+    image = sitk.ReadImage(address)
+    start = self.getStartSliceUsingConnectedComponents(center, image)
+    end = self.getEndSliceUsingConnectedComponents(center, image)
+    return start, end
+
+  def getStartSliceUsingConnectedComponents(self, center, image):
+    sliceIndex = start = center
+    while sliceIndex > 0:
+      if self.getIslandCount(image, sliceIndex) > 6:
+        start = sliceIndex
+        sliceIndex -= 1
+        continue
+      break
+    return start
+
+  def getEndSliceUsingConnectedComponents(self, center, image):
+    imageSize = image.GetSize()
+    sliceIndex = end = center
+    while sliceIndex < imageSize[2]:
+      if self.getIslandCount(image, sliceIndex) > 6:
+        end = sliceIndex
+        sliceIndex += 1
+        continue
+      break
+    return end
+
+  def createCroppedVolume(self, inputVolume, roi):
+    cropVolumeLogic = slicer.modules.cropvolume.logic()
+    cropVolumeParameterNode = slicer.vtkMRMLCropVolumeParametersNode()
+    cropVolumeParameterNode.SetROINodeID(roi.GetID())
+    cropVolumeParameterNode.SetInputVolumeNodeID(inputVolume.GetID())
+    cropVolumeParameterNode.SetVoxelBased(True)
+    cropVolumeLogic.Apply(cropVolumeParameterNode)
+    croppedVolume = slicer.mrmlScene.GetNodeByID(cropVolumeParameterNode.GetOutputVolumeNodeID())
+    return croppedVolume
+
+  def createLabelMapFromCroppedVolume(self, volume, name):
+    lowerThreshold = 0
+    upperThreshold = 2000
+    labelValue = 1
+    volumesLogic = slicer.modules.volumes.logic()
+    labelVolume = volumesLogic.CreateAndAddLabelVolume(volume, name)
+    imageData = labelVolume.GetImageData()
+    imageThreshold = vtk.vtkImageThreshold()
+    imageThreshold.SetInputData(imageData)
+    imageThreshold.ThresholdBetween(lowerThreshold, upperThreshold)
+    imageThreshold.SetInValue(labelValue)
+    imageThreshold.Update()
+    labelVolume.SetAndObserveImageData(imageThreshold.GetOutput())
+    return labelVolume
+
+  def createMaskedVolume(self, inputVolume, labelVolume):
+    maskedVolume = slicer.vtkMRMLScalarVolumeNode()
+    maskedVolume.SetName("maskedTemplateVolume")
+    slicer.mrmlScene.AddNode(maskedVolume)
+    params = {'InputVolume': inputVolume, 'MaskVolume': labelVolume, 'OutputVolume': maskedVolume}
+    slicer.cli.run(slicer.modules.maskscalarvolume, None, params, wait_for_completion=True)
+    return maskedVolume
+
+  # def setBackgroundAndForegroundIDs(self, foregroundVolumeID, backgroundVolumeID):
+    # self.redCompositeNode.SetForegroundVolumeID(foregroundVolumeID)
+    # self.redCompositeNode.SetBackgroundVolumeID(backgroundVolumeID)
+    # self.redSliceNode.SetOrientationToAxial()
+    # self.yellowCompositeNode.SetForegroundVolumeID(foregroundVolumeID)
+    # self.yellowCompositeNode.SetBackgroundVolumeID(backgroundVolumeID)
+    # self.yellowSliceNode.SetOrientationToSagittal()
+    # self.greenCompositeNode.SetForegroundVolumeID(foregroundVolumeID)
+    # self.greenCompositeNode.SetBackgroundVolumeID(backgroundVolumeID)
+    # self.greenSliceNode.SetOrientationToCoronal()
