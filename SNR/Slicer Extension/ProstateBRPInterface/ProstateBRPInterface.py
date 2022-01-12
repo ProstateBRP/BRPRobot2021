@@ -25,20 +25,22 @@ import SimpleITK as sitk
 import sitkUtils
 import numpy as np
 import time
+import datetime
 import random
 import string
 import re
 import csv
+from sys import platform
 # from SlicerDevelopmentToolboxUtils.mixins import ModuleLogicMixin, ModuleWidgetMixin
 
-class SlicerIGTLink(ScriptedLoadableModule):
+class ProstateBRPInterface(ScriptedLoadableModule):
   """Uses ScriptedLoadableModule base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Bakse/Python/slicer/ScriptedLoadableModule.py
   """
 
   def __init__(self, parent):
     ScriptedLoadableModule.__init__(self, parent)
-    self.parent.title = "Slicer IGTLink"
+    self.parent.title = "Prostate BRP Interface"
     self.parent.categories = ["IGT"]
     self.parent.dependencies = []
     self.parent.contributors = ["Rebecca Lisk"]
@@ -48,7 +50,7 @@ class SlicerIGTLink(ScriptedLoadableModule):
     self.parent.acknowledgementText = """
 """
 
-class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
+class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   """Uses ScriptedLoadableModuleWidget base class, available at:
   https://github.com/Slicer/Slicer/blob/master/Base/Python/slicer/ScriptedLoadableModule.py
   """
@@ -454,6 +456,12 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     print("openIGTNode: ", self.openIGTNode)
     self.IGTActive = True
 
+    # Create a .txt document for the command log
+    currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    self.commandLogFilePath = os.path.join(currentFilePath, "commandLogs.txt")
+    with open(self.commandLogFilePath,"a") as f:
+      f.write('\n-------------- New session started on ' + datetime.datetime.now().strftime("%d/%m/%Y at %H:%M:%S") + ' --------------\n')
+
     # Make a node for each message type IF the nodes are not already created
     if self.firstServer:
       self.firstServer = False
@@ -530,6 +538,22 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     randomIDname = ''.join(randomID)
     return randomIDname
 
+  def generateTimestampNameID(self, last_prefix_sent):
+    timestampID = [last_prefix_sent, "_"]
+    currentTime = datetime.datetime.now()
+    timestampID.append(currentTime.strftime("%d%m%Y%H%M%S"))
+    timestampIDname = ''.join(timestampID)
+    return timestampIDname
+
+  def appendToCommandLog(self, timestampIDname, infoMsg):
+    if timestampIDname.split("_")[0] == "TARGET":
+      tempTimestamp  = datetime.datetime.strptime(timestampIDname.split("_")[2], "%d%m%Y%H%M%S")
+    else: 
+      tempTimestamp = datetime.datetime.strptime(timestampIDname.split("_")[1], "%d%m%Y%H%M%S")
+    timestamp = tempTimestamp.strftime("%d/%m/%Y at %H:%M:%S")
+    with open(self.commandLogFilePath,"a") as f:
+      f.write(timestamp + " -- " + infoMsg + '\n')
+
   def activateButtons(self):
     self.planningButton.enabled = True
     self.EmergencyButton.enabled = True
@@ -562,18 +586,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     getstatusNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)  
     global last_name_sent
-    last_name_sent = randomIDname
-    getstatusNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    getstatusNode.SetName(timestampIDname)
     getstatusNode.SetText("GET_STATUS")
     getstatusNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(getstatusNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(getstatusNode)
     self.openIGTNode.PushNode(getstatusNode)
-    infoMsg =  "Sending STRING( " + randomIDname + ",  GET_STATUS )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_STATUS )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
   def onGetPoseButtonClicked(self):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
@@ -581,18 +607,20 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     getposeNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    getposeNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    getposeNode.SetName(timestampIDname)
     getposeNode.SetText("GET_POSE")
     getposeNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(getposeNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
     self.openIGTNode.PushNode(getposeNode)
-    infoMsg =  "Sending STRING( " + randomIDname + ",  GET_POSE )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_POSE )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
   def onTargetingButtonClicked(self):
     # Send stringMessage containing the command "TARGETING" to the script via IGTLink
@@ -600,10 +628,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     targetingNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    # randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    targetingNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    targetingNode.SetName(timestampIDname)
     targetingNode.SetText("TARGETING")
     targetingNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(targetingNode)
@@ -614,9 +643,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global last_string_sent
     last_string_sent = targetingNode.GetText()
     last_prefix_sent = "TGT"
-    infoMsg =  "Sending STRING( " + randomIDname + ",  TARGETING )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  TARGETING )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
     # Show Target point GUI in the module
     self.outboundTargetCollapsibleButton.collapsed = False
@@ -627,10 +657,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     moveNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    moveNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    moveNode.SetName(timestampIDname)
     moveNode.SetText("MOVE_TO_TARGET")
     moveNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(moveNode)
@@ -640,9 +671,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = moveNode.GetText()
-    infoMsg =  "Sending STRING( " + randomIDname + ",  MOVE_TO_TARGET )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  MOVE_TO_TARGET )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
   
   def onCalibrationButtonClicked(self):
     # Send stringMessage containing the command "CALIBRATION" to the script via IGTLink
@@ -650,10 +682,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     calibrationNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    calibrationNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    calibrationNode.SetName(timestampIDname)
     calibrationNode.SetText("CALIBRATION")
     calibrationNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(calibrationNode)
@@ -664,9 +697,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global last_string_sent
     last_string_sent = calibrationNode.GetText()
     last_prefix_sent = "CLB"
-    infoMsg =  "Sending STRING( " + randomIDname + ",  CALIBRATION )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  CALIBRATION )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg) 
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
     # Show Calibration matrix GUI in the module
     self.outboundTransformCollapsibleButton.collapsed = False
@@ -677,10 +711,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     planningNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    planningNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    planningNode.SetName(timestampIDname)
     planningNode.SetText("PLANNING")
     planningNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(planningNode)
@@ -690,9 +725,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = planningNode.GetText()
-    infoMsg =  "Sending STRING( " + randomIDname + ",  PLANNING )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  PLANNING )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg) 
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
   def onUnlockButtonClicked(self):
     print("Asking to Unlock the robot")
@@ -700,10 +736,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     unlockNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    unlockNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    unlockNode.SetName(timestampIDname)
     unlockNode.SetText("UNLOCK")
     unlockNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(unlockNode)
@@ -713,9 +750,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = unlockNode.GetText()
-    infoMsg =  "Sending STRING( " + randomIDname + ",  UNLOCK )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  UNLOCK )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
   def onLockButtonClicked(self):
     print("Asking to Lock the robot")
@@ -723,10 +761,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     lockNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    lockNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    lockNode.SetName(timestampIDname)
     lockNode.SetText("LOCK")
     lockNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(lockNode)
@@ -736,9 +775,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = lockNode.GetText()
-    infoMsg =  "Sending STRING( " + randomIDname + ",  LOCK )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  LOCK )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
   def onStopButtonClicked(self):
     print("Sending STOP command")
@@ -746,10 +786,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     stopNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    stopNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    stopNode.SetName(timestampIDname)
     stopNode.SetText("STOP")
     stopNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(stopNode)
@@ -760,9 +801,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     global last_string_sent
     last_string_sent = stopNode.GetText()
     self.deactivateButtons()
-    infoMsg =  "Sending STRING( " + randomIDname + ",  STOP )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  STOP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
   def onEmergencyButtonClicked(self):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
@@ -770,10 +812,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     emergencyNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    emergencyNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    emergencyNode.SetName(timestampIDname)
     emergencyNode.SetText("EMERGENCY")
     emergencyNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(emergencyNode)
@@ -783,9 +826,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = emergencyNode.GetText()
-    infoMsg =  "Sending STRING( " + randomIDname + ",  EMERGENCY )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  EMERGENCY )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
 
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
@@ -793,10 +837,11 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     startupNode = slicer.vtkMRMLTextNode()
     global last_prefix_sent
     last_prefix_sent = "CMD"
-    randomIDname = self.generateRandomNameID(last_prefix_sent)
+    #randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
     global last_name_sent
-    last_name_sent = randomIDname
-    startupNode.SetName(randomIDname)
+    last_name_sent = timestampIDname
+    startupNode.SetName(timestampIDname)
     startupNode.SetText("START_UP")
     startupNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(startupNode)
@@ -806,9 +851,10 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
     start = time.time()
     global last_string_sent
     last_string_sent = startupNode.GetText()
-    infoMsg =  "Sending STRING( " + randomIDname + ",  START_UP )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  START_UP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
     
   # def onStatusButtonClicked(self):
   #   # Send Status message
@@ -1154,15 +1200,16 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
 
         # Send the calculated calibration matrix to WPI as the CLB matrix
         SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-        SendTransformNodeTemp.SetName("REGISTRATION")
+        timestampIDname = self.generateTimestampNameID("REGISTRATION")
+        SendTransformNodeTemp.SetName(timestampIDname)
         SendTransformNodeTemp.SetMatrixTransformToParent(outputMatrix)
         slicer.mrmlScene.AddNode(SendTransformNodeTemp)
         self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
         self.openIGTNode.PushNode(SendTransformNodeTemp)
-        infoMsg =  "Sending TRANSFORM( REGISTRATION )"
+        infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
         re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
         self.infoTextbox.setText(infoMsg)
-        attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
+        self.appendToCommandLog(timestampIDname, infoMsg)
 
     else:
       print("No zFrame image found. Cannot calculate the calibration matrix.")
@@ -1177,16 +1224,16 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       calibrationMatrix = vtk.vtkMatrix4x4()
       predefinedCalibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-      SendTransformNodeTemp.SetName("REGISTRATION")
+      timestampIDname = self.generateTimestampNameID("REGISTRATION")
+      SendTransformNodeTemp.SetName(timestampIDname)
       SendTransformNodeTemp.SetMatrixTransformToParent(calibrationMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
       self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
       self.openIGTNode.PushNode(SendTransformNodeTemp)
-      infoMsg =  "Sending TRANSFORM( REGISTRATION )"
+      infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.infoTextbox.setText(infoMsg)
-      attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
-      # print("attribute is:", attr) 
+      self.appendToCommandLog(timestampIDname, infoMsg)
     
       # Update the calibration matrix table with the calculated matrix (currently just dummy code)
       for i in range(4):
@@ -1223,16 +1270,16 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       targetPointMatrix.SetElement(1,3,self.targetCoordinate_A)
       targetPointMatrix.SetElement(2,3,self.targetCoordinate_S)
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-      SendTransformNodeTemp.SetName("TARGET_POINT")
+      timestampIDname = self.generateTimestampNameID("TARGET_POINT")
+      SendTransformNodeTemp.SetName(timestampIDname)
       SendTransformNodeTemp.SetMatrixTransformToParent(targetPointMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
       self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
       self.openIGTNode.PushNode(SendTransformNodeTemp)
-      infoMsg =  "Sending TRANSFORM( TARGET_POINT )"
+      infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.infoTextbox.setText(infoMsg)
-      attr = SendTransformNodeTemp.GetAttribute("IGTLVisible");
-      print("attribute is:", attr) 
+      self.appendToCommandLog(timestampIDname, infoMsg) 
 
 # # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
 
@@ -1305,7 +1352,6 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
       slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
       self.zFrameModelNode = None
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
-    print("zframe current file path: ", currentFilePath)
     zFrameModelPath = os.path.join(currentFilePath, "Resources", "zframe", self.ZFRAME_MODEL_PATH)
     _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath, returnNode=True)
     self.zFrameModelNode.SetName(self.ZFRAME_MODEL_NAME)
