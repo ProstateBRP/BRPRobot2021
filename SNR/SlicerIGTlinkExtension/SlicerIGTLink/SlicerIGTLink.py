@@ -1146,10 +1146,8 @@ class SlicerIGTLinkWidget(ScriptedLoadableModuleWidget):
         # self.clearVolumeNodes()
 
         # Update the calibration matrix table with the calculated matrix (currently just dummy code)
-        print("1: ", self.outputTransform)
         outputMatrix = vtk.vtkMatrix4x4()
         self.outputTransform.GetMatrixTransformToParent(outputMatrix)
-        print("2: ", outputMatrix)
         for i in range(4):
           for j in range(4):
             self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(outputMatrix.GetElement(i, j),2))))
