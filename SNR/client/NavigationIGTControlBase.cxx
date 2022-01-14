@@ -67,5 +67,3 @@ int NavigationIGTControlBase::Exec()
     return 0;
     }
 }
-
-

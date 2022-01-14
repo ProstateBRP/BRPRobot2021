@@ -131,7 +131,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
     self.planningButton.enabled = False
     self.planningButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.planningButton, 3, 0)
+    outboundFormLayout.addWidget(self.planningButton, 2, 1)
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
 
     # calibrationButton Button
@@ -139,16 +139,24 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
     self.calibrationButton.enabled = False
     self.calibrationButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.calibrationButton, 3, 1)
+    outboundFormLayout.addWidget(self.calibrationButton, 3, 0)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
 
     # targetingButton Button
-    self.targetingButton = qt.QPushButton("TARGETING")
+    self.targetingButton = qt.QPushButton("TARGET POINT")
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
     self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.targetingButton, 4 , 0)
+    outboundFormLayout.addWidget(self.targetingButton, 3 , 1)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
+
+    # entryPointButton Button
+    self.entryPointButton = qt.QPushButton("ENTRY POINT")
+    self.entryPointButton.toolTip = "Send the entry point command to the WPI robot."
+    self.entryPointButton.enabled = False
+    self.entryPointButton.setMaximumWidth(250)
+    outboundFormLayout.addWidget(self.entryPointButton, 4 , 0)
+    self.entryPointButton.connect('clicked()', self.onEntryPointButtonClicked)
 
     # moveButton Button
     self.moveButton = qt.QPushButton("MOVE")
@@ -510,7 +518,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
     self.commandLogFilePath = os.path.join(currentFilePath, "commandLogs.txt")
     with open(self.commandLogFilePath,"a") as f:
-      f.write('\n-------------- New session started on ' + datetime.datetime.now().strftime("%d/%m/%Y at %H:%M:%S") + ' --------------\n')
+      f.write('\n----------------- New session started on ' + datetime.datetime.now().strftime("%d/%m/%Y at %H:%M:%S:%f") + ' -----------------\n')
 
     # Make a node for each message type IF the nodes are not already created
     if self.firstServer:
@@ -570,6 +578,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.infoCollapsibleButton.collapsed = True
     self.outboundTransformCollapsibleButton.collapsed = True
     self.outboundTargetCollapsibleButton.collapsed = True
+    self.outboundEntryCollapsibleButton.collapsed = True
 
     # Close socket
     self.openIGTNode.Stop()
@@ -591,16 +600,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def generateTimestampNameID(self, last_prefix_sent):
     timestampID = [last_prefix_sent, "_"]
     currentTime = datetime.datetime.now()
-    timestampID.append(currentTime.strftime("%d%m%Y%H%M%S"))
+    timestampID.append(currentTime.strftime("%d%m%Y%H%M%S%f"))
     timestampIDname = ''.join(timestampID)
     return timestampIDname
 
   def appendToCommandLog(self, timestampIDname, infoMsg):
     if timestampIDname.split("_")[0] == "TARGET":
-      tempTimestamp  = datetime.datetime.strptime(timestampIDname.split("_")[2], "%d%m%Y%H%M%S")
+      tempTimestamp  = datetime.datetime.strptime(timestampIDname.split("_")[2], "%d%m%Y%H%M%S%f")
     else: 
-      tempTimestamp = datetime.datetime.strptime(timestampIDname.split("_")[1], "%d%m%Y%H%M%S")
-    timestamp = tempTimestamp.strftime("%d/%m/%Y at %H:%M:%S")
+      tempTimestamp = datetime.datetime.strptime(timestampIDname.split("_")[1], "%d%m%Y%H%M%S%f")
+    timestamp = tempTimestamp.strftime("%d/%m/%Y at %H:%M:%S:%f")
     with open(self.commandLogFilePath,"a") as f:
       f.write(timestamp + " -- " + infoMsg + '\n')
 
@@ -614,6 +623,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.LockButton.enabled = True
     self.moveButton.enabled = True
     self.targetingButton.enabled = True
+    self.entryPointButton.enabled = True
     self.calibrationButton.enabled = True
     #self.transformButton.enabled = True
 
@@ -627,6 +637,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.LockButton.enabled = False
     self.moveButton.enabled = False
     self.targetingButton.enabled = False
+    self.entryPointButton.enabled = False
     self.calibrationButton.enabled = False
     #self.transformButton.enabled = False
    
@@ -700,6 +711,35 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Show Target point GUI in the module
     self.outboundTargetCollapsibleButton.collapsed = False
+
+  def onEntryPointButtonClicked(self):
+    # Send stringMessage containing the command "ENTRY" to the script via IGTLink
+    print("Send command to enter entry point selection mode")
+    entryNode = slicer.vtkMRMLTextNode()
+    global last_prefix_sent
+    last_prefix_sent = "CMD"
+    # randomIDname = self.generateRandomNameID(last_prefix_sent)
+    timestampIDname = self.generateTimestampNameID(last_prefix_sent)
+    global last_name_sent
+    last_name_sent = timestampIDname
+    entryNode.SetName(timestampIDname)
+    entryNode.SetText("ENTRY")
+    entryNode.SetEncoding(3)
+    slicer.mrmlScene.AddNode(entryNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(entryNode)
+    self.openIGTNode.PushNode(entryNode)
+    global start   
+    start = time.time()
+    global last_string_sent
+    last_string_sent = entryNode.GetText()
+    last_prefix_sent = "ENT"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  ENTRY )"
+    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    self.infoTextbox.setText(infoMsg)
+    self.appendToCommandLog(timestampIDname, infoMsg)
+
+    # Show Target point GUI in the module
+    self.outboundEntryCollapsibleButton.collapsed = False
 
   def onMoveButtonClicked(self):
     # Send stringMessage containing the command "MOVE" to the script via IGTLink
