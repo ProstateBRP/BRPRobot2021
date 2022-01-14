@@ -1200,7 +1200,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
         # Send the calculated calibration matrix to WPI as the CLB matrix
         SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-        timestampIDname = self.generateTimestampNameID("REGISTRATION")
+        timestampIDname = self.generateTimestampNameID("CLB")
         SendTransformNodeTemp.SetName(timestampIDname)
         SendTransformNodeTemp.SetMatrixTransformToParent(outputMatrix)
         slicer.mrmlScene.AddNode(SendTransformNodeTemp)
@@ -1224,7 +1224,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       calibrationMatrix = vtk.vtkMatrix4x4()
       predefinedCalibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-      timestampIDname = self.generateTimestampNameID("REGISTRATION")
+      timestampIDname = self.generateTimestampNameID("CLB")
       SendTransformNodeTemp.SetName(timestampIDname)
       SendTransformNodeTemp.SetMatrixTransformToParent(calibrationMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
@@ -1270,7 +1270,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       targetPointMatrix.SetElement(1,3,self.targetCoordinate_A)
       targetPointMatrix.SetElement(2,3,self.targetCoordinate_S)
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-      timestampIDname = self.generateTimestampNameID("TARGET_POINT")
+      timestampIDname = self.generateTimestampNameID("TGT")
       SendTransformNodeTemp.SetName(timestampIDname)
       SendTransformNodeTemp.SetMatrixTransformToParent(targetPointMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
