@@ -293,7 +293,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     outboundTransformsFormLayout.addWidget(self.sendCalibrationMatrixButton)
     self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
 
-    # Outbound target fiducial collapsible button
+    # Outbound target point fiducial collapsible button
     self.outboundTargetCollapsibleButton = ctk.ctkCollapsibleButton()
     self.outboundTargetCollapsibleButton.text = "Target Point"
     self.outboundTargetCollapsibleButton.collapsed = True
@@ -336,6 +336,56 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.sendTargetPointButton.setMaximumWidth(250)
     outboundTargetFormLayout.addWidget(self.sendTargetPointButton, 2, 1, 1, 3)
     self.sendTargetPointButton.connect('clicked()', self.onSendTargetPointButtonClicked)
+
+    # Outbound entry point fiducial collapsible button
+    self.outboundEntryCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.outboundEntryCollapsibleButton.text = "Entry Point"
+    self.outboundEntryCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.outboundEntryCollapsibleButton)
+
+    # Layout within the path collapsible button
+    outboundEntryFormLayout = qt.QGridLayout(self.outboundEntryCollapsibleButton)
+   
+    # Fiducial selector for entry point
+    self.entryPointNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
+    self.entryPointNodeSelector.objectName = 'entryPointNodeSelector'
+    self.entryPointNodeSelector.toolTip = "Select a fiducial to use as the needle insertion entry point."
+    self.entryPointNodeSelector.setNodeBaseName("ENTRY_POINT")
+    self.entryPointNodeSelector.defaultNodeColor = qt.QColor(170,0,0)
+    self.entryPointNodeSelector.tableWidget().hide()
+    self.entryPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
+    self.entryPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    entryPointSelectorLabel = qt.QLabel("Entry point: ")
+    outboundEntryFormLayout.addWidget(entryPointSelectorLabel, 0, 0)
+    outboundEntryFormLayout.addWidget(self.entryPointNodeSelector, 0, 1, 1, 3)
+    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
+                        self.entryPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
+
+    self.entryPointCheckbox = qt.QCheckBox()
+    self.entryPointCheckbox.toolTip = "Toggle whether or not restrict the plane of motion of the needle to a flat plane."
+    entryPointCheckboxLabel = qt.QLabel("Horizontal needle path")
+    outboundEntryFormLayout.addWidget(entryPointCheckboxLabel, 1, 0)
+    outboundEntryFormLayout.addWidget(self.entryPointCheckbox, 1, 1)
+
+    # Display for RAS coordinates of the selected fidudcial entry point
+    entryPointLabel = qt.QLabel("RAS coordinates:     ")
+    self.entryPointTextbox_R = qt.QLineEdit()
+    self.entryPointTextbox_A = qt.QLineEdit()
+    self.entryPointTextbox_S = qt.QLineEdit()
+    self.entryPointTextbox_R.setReadOnly(True)
+    self.entryPointTextbox_A.setReadOnly(True)
+    self.entryPointTextbox_S.setReadOnly(True)
+    outboundEntryFormLayout.addWidget(entryPointLabel, 2, 0)
+    outboundEntryFormLayout.addWidget(self.entryPointTextbox_R, 2, 1)
+    outboundEntryFormLayout.addWidget(self.entryPointTextbox_A, 2, 2)
+    outboundEntryFormLayout.addWidget(self.entryPointTextbox_S, 2, 3)
+
+    # Button to send fiducial entry point
+    self.sendEntryPointButton = qt.QPushButton("Send selected entry point")
+    self.sendEntryPointButton.enabled = True
+    # self.sendEntryPointButton.setMaximumWidth(250)
+    outboundEntryFormLayout.addWidget(self.sendEntryPointButton, 3, 1, 1, 3)
+    self.sendEntryPointButton.connect('clicked()', self.onSendEntryPointButtonClicked)
 
     # Inbound messages collapsible button
     self.inboundCollapsibleButton = ctk.ctkCollapsibleButton()
@@ -1171,12 +1221,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
           self.otsuOutputVolume = self.applyITKOtsuFilter(self.zFrameMaskedVolume)
           self.dilateMask(self.otsuOutputVolume)
           self.startSlice, self.endSlice = self.getStartEndWithConnectedComponents(self.otsuOutputVolume, center)
-        # self.openSourceRegistration.setInputVolume(self.zFrameMaskedVolume)
-        # self.openSourceRegistration.runRegistration(self.startIndex, self.endIndex)
-        
-      
-        # TODO
-
 
         # Run zFrameRegistration CLI module
         params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
@@ -1263,7 +1307,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.targetPointTextbox_A.setText(str(self.targetCoordinate_A))
       self.targetPointTextbox_S.setText(str(self.targetCoordinate_S))
 
-      # Send target point via IGTLink as a 4x4 matrix transform called TARGET_POINT
+      # Send target point via IGTLink as a 4x4 matrix transform called TGT_XXX
       targetPointMatrix = vtk.vtkMatrix4x4()
       targetPointMatrix.Identity()
       targetPointMatrix.SetElement(0,3,self.targetCoordinate_R)
@@ -1280,6 +1324,59 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.infoTextbox.setText(infoMsg)
       self.appendToCommandLog(timestampIDname, infoMsg) 
+
+  def onSendEntryPointButtonClicked(self):
+    entryPointNode = self.entryPointNodeSelector.currentNode()
+    if not entryPointNode:
+      print ("No ENTRY_POINT fiducial selected.")
+    else:
+      if self.entryPointCheckbox.isChecked():
+        # Print RAS coordinates of the RESTRICTED entry point fiducial
+        entryCoordinatesRAS = [0, 0, 0]
+        entryPointNode.GetNthFiducialPosition(0, entryCoordinatesRAS)
+
+        self.entryCoordinate_R = round(self.targetCoordinate_R,2)
+        self.entryCoordinate_A = round(entryCoordinatesRAS[1],2)
+        self.entryCoordinate_S = round(self.targetCoordinate_S,2)
+
+        self.entryPointTextbox_R.setText(str(self.entryCoordinate_R))
+        self.entryPointTextbox_A.setText(str(self.entryCoordinate_A))
+        self.entryPointTextbox_S.setText(str(self.entryCoordinate_S))
+
+        # Move the fiducial to the new point, on the same horizontal line as the Target Point
+        entryPointNode.SetNthFiducialPosition(0, self.entryCoordinate_R, self.entryCoordinate_A, self.entryCoordinate_S)
+
+      else: 
+        # Print RAS coordinates of the entry point fiducial into the Entry point GUI
+        entryCoordinatesRAS = [0, 0, 0]
+        entryPointNode.GetNthFiducialPosition(0, entryCoordinatesRAS)
+
+        self.entryCoordinate_R = round(entryCoordinatesRAS[0],2)
+        self.entryCoordinate_A = round(entryCoordinatesRAS[1],2)
+        self.entryCoordinate_S = round(entryCoordinatesRAS[2],2)
+
+        self.entryPointTextbox_R.setText(str(self.entryCoordinate_R))
+        self.entryPointTextbox_A.setText(str(self.entryCoordinate_A))
+        self.entryPointTextbox_S.setText(str(self.entryCoordinate_S))
+
+      # Send entry point via IGTLink as a 4x4 matrix transform called ENT_XXX
+      entryPointMatrix = vtk.vtkMatrix4x4()
+      entryPointMatrix.Identity()
+      entryPointMatrix.SetElement(0,3,self.entryCoordinate_R)
+      entryPointMatrix.SetElement(1,3,self.entryCoordinate_A)
+      entryPointMatrix.SetElement(2,3,self.entryCoordinate_S)
+      SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+      timestampIDname = self.generateTimestampNameID("ENT")
+      SendTransformNodeTemp.SetName(timestampIDname)
+      SendTransformNodeTemp.SetMatrixTransformToParent(entryPointMatrix)
+      slicer.mrmlScene.AddNode(SendTransformNodeTemp)
+      self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+      self.openIGTNode.PushNode(SendTransformNodeTemp)
+      infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
+      re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+      self.infoTextbox.setText(infoMsg)
+      self.appendToCommandLog(timestampIDname, infoMsg) 
+
 
 # # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
 
