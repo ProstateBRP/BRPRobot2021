@@ -26,7 +26,7 @@
 #include "igtlMessageBase.h"
 #include "RobotCommunicationBase.h"
 #include "RobotStatus.h"
-
+#include "../Utilities/Logger/Logger.hpp"
 class RobotSimulatorPhaseBase : public RobotCommunicationBase
 {
 public:

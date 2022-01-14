@@ -45,13 +45,14 @@
 #include "RobotSimulatorStopPhase.h"
 #include "RobotSimulatorEmergencyPhase.h"
 #include "RobotStatus.h"
-
+#include "../Utilities/Logger/Logger.hpp"
 typedef std::vector<RobotSimulatorPhaseBase *> WorkphaseList;
 
 int Session(igtl::Socket *socket, WorkphaseList &wlist);
 
 int main(int argc, char *argv[])
 {
+    Logger &log = Logger::GetInstance();
 
     //------------------------------------------------------------
     // Setup workphases

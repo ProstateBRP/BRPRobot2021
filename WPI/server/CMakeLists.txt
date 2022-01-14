@@ -23,6 +23,8 @@ set(ROBOT_SIM_SOURCE
   RobotSimulatorEmergencyPhase.cxx
   RobotCommunicationBase.cxx
   RobotStatus.cxx
+  ../Utilities/Logger/Logger.cpp
+  ../Utilities/Timer/Timer.cpp
 )
 
 ADD_EXECUTABLE(RobotTestSimulator  ${ROBOT_SIM_SOURCE})

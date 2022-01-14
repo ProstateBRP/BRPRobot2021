@@ -18,7 +18,6 @@
 #include "RobotSimulatorPhaseBase.h"
 #include <string.h>
 #include <stdlib.h>
-
 #include "igtlOSUtil.h"
 #include "igtlStringMessage.h"
 #include "igtlClientSocket.h"
@@ -42,6 +41,8 @@ int RobotSimulatorPhaseBase::Enter(const char *queryID)
   std::stringstream ss;
   ss << "ACK_" << queryID;
   this->SendStringMessage(ss.str().c_str(), this->Name());
+  Logger &log = Logger::GetInstance();
+  log.Log("Changed Workphase to " + string(this->Name()),ss.str(),1,1);
 
   // Send phase message
   // TODO: Check if the phase transition is allowed
