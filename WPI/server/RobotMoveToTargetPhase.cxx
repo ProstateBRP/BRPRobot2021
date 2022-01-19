@@ -1,21 +1,12 @@
 /*=========================================================================
-
-  Program:   BRP Prostate Robot: Testing Simulator (Client)
   Language:  C++
-
-  Copyright (c) Brigham and Women's Hospital. All rights reserved.
-
-  This software is distributed WITHOUT ANY WARRANTY; without even
-  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-  PURPOSE.  See the above copyright notices for more information.
-
   Please see
     http://wiki.na-mic.org/Wiki/index.php/ProstateBRP_OpenIGTLink_Communication_June_2013
-  for the detail of the testing protocol.
+  for the detail of the protocol.
 
 =========================================================================*/
 
-#include "RobotSimulatorMoveToTargetPhase.h"
+#include "RobotMoveToTargetPhase.h"
 #include <string.h>
 #include <stdlib.h>
 #include <string>
@@ -28,17 +19,17 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotSimulatorMoveToTargetPhase::RobotSimulatorMoveToTargetPhase() :
-  RobotSimulatorPhaseBase()
+RobotMoveToTargetPhase::RobotMoveToTargetPhase() :
+  RobotPhaseBase()
 {
 }
 
 
-RobotSimulatorMoveToTargetPhase::~RobotSimulatorMoveToTargetPhase()
+RobotMoveToTargetPhase::~RobotMoveToTargetPhase()
 {
 }
 
-int RobotSimulatorMoveToTargetPhase::Initialize()
+int RobotMoveToTargetPhase::Initialize()
 {
 
   igtl::Matrix4x4 matrix;
@@ -75,10 +66,10 @@ int RobotSimulatorMoveToTargetPhase::Initialize()
 }
 
 
-int RobotSimulatorMoveToTargetPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader* headerMsg)
 {
 
-  if (RobotSimulatorPhaseBase::MessageHandler(headerMsg))
+  if (RobotPhaseBase::MessageHandler(headerMsg))
     {
     return 1;
     }

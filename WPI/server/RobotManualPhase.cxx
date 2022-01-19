@@ -1,21 +1,12 @@
 /*=========================================================================
-
-  Program:   BRP Prostate Robot: Testing Simulator (Client)
   Language:  C++
-
-  Copyright (c) Brigham and Women's Hospital. All rights reserved.
-
-  This software is distributed WITHOUT ANY WARRANTY; without even
-  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-  PURPOSE.  See the above copyright notices for more information.
-
   Please see
     http://wiki.na-mic.org/Wiki/index.php/ProstateBRP_OpenIGTLink_Communication_June_2013
-  for the detail of the testing protocol.
+  for the detail of the protocol.
 
 =========================================================================*/
 
-#include "RobotSimulatorManualPhase.h"
+#include "RobotManualPhase.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -26,15 +17,15 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotSimulatorManualPhase::RobotSimulatorManualPhase() : RobotSimulatorPhaseBase()
+RobotManualPhase::RobotManualPhase() : RobotPhaseBase()
 {
 }
 
-RobotSimulatorManualPhase::~RobotSimulatorManualPhase()
+RobotManualPhase::~RobotManualPhase()
 {
 }
 
-int RobotSimulatorManualPhase::Initialize()
+int RobotManualPhase::Initialize()
 {
 
   // Send Status after waiting for 2 seconds (mimicking initialization process)
@@ -45,10 +36,10 @@ int RobotSimulatorManualPhase::Initialize()
 }
 
 // What does this function do exactly? It seems that it is always returning zero.
-int RobotSimulatorManualPhase::MessageHandler(igtl::MessageHeader *headerMsg)
+int RobotManualPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
 
-  if (RobotSimulatorPhaseBase::MessageHandler(headerMsg))
+  if (RobotPhaseBase::MessageHandler(headerMsg))
   {
     return 1;
   }

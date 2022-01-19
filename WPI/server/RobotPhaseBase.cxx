@@ -1,21 +1,12 @@
 /*=========================================================================
-
-  Program:   BRP Prostate Robot: Testing Simulator (Client)
   Language:  C++
-
-  Copyright (c) Brigham and Women's Hospital. All rights reserved.
-
-  This software is distributed WITHOUT ANY WARRANTY; without even
-  the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-  PURPOSE.  See the above copyright notices for more information.
-
   Please see
     http://wiki.na-mic.org/Wiki/index.php/ProstateBRP_OpenIGTLink_Communication_June_2013
-  for the detail of the testing protocol.
+  for the detail of the protocol.
 
 =========================================================================*/
 
-#include "RobotSimulatorPhaseBase.h"
+#include "RobotPhaseBase.h"
 #include <string.h>
 #include <stdlib.h>
 #include "igtlOSUtil.h"
@@ -25,17 +16,17 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotSimulatorPhaseBase::RobotSimulatorPhaseBase()
+RobotPhaseBase::RobotPhaseBase()
 {
   this->NextWorkphase.clear();
   this->RStatus = NULL;
 }
 
-RobotSimulatorPhaseBase::~RobotSimulatorPhaseBase()
+RobotPhaseBase::~RobotPhaseBase()
 {
 }
 
-int RobotSimulatorPhaseBase::Enter(const char *queryID)
+int RobotPhaseBase::Enter(const char *queryID)
 {
   // Send acknowledgement message with query ID
   std::stringstream ss;
@@ -51,7 +42,7 @@ int RobotSimulatorPhaseBase::Enter(const char *queryID)
   return this->Initialize();
 }
 
-int RobotSimulatorPhaseBase::Process()
+int RobotPhaseBase::Process()
 {
   // Create a message buffer to receive header
   igtl::MessageHeader::Pointer headerMsg;
@@ -70,25 +61,25 @@ int RobotSimulatorPhaseBase::Process()
   this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
   std::cout << this->Name() << ": is the current state\n"; // Added it for test
   
-  // This checks if the navigation is asking for get_status or get_transform
+  // This checks if the navigation is asking for Robot's Status or current tip position.
   // Get_transform will return current_position and get_status will get current_status
   // if the return value is zero then the code enters the if statement and initiates a specialized method
   // of the MessageHandder of the Workphase. i.e will listen to an incoming transform for the calibration step
   if (!this->CheckCommonMessage(headerMsg))
   {
-    this->MessageHandler(headerMsg);
+    MessageHandler(headerMsg);
   }
   std::cout << "Calibration flag is: " << this->GetRobotStatus()->GetCalibrationFlag() << std::endl;
   return 0;
 }
 
-int RobotSimulatorPhaseBase::MessageHandler(igtl::MessageHeader *headerMsg)
+int RobotPhaseBase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
   // TODO: Implement Message handling for GetTransform returns 1 as of now
   return 0;
 }
 
-int RobotSimulatorPhaseBase::CheckWorkphaseChange(igtl::MessageHeader *headerMsg)
+int RobotPhaseBase::CheckWorkphaseChange(igtl::MessageHeader *headerMsg)
 {
 
   // Check if the message requests phase transition
@@ -153,7 +144,10 @@ int RobotSimulatorPhaseBase::CheckWorkphaseChange(igtl::MessageHeader *headerMsg
   }
 }
 
-int RobotSimulatorPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
+// As of now Get_Transform Doesn not do anything and upon receiving the message the robot 
+// commumnication software does not send anything back.
+// TODO: Add capability to send the current location of the robot's tip to the navigation.
+int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
 {
   /// Check if GET_TRANSFORM has been received
   if (strcmp(headerMsg->GetDeviceType(), "GET_TRANSFORM") == 0 &&
@@ -171,68 +165,3 @@ int RobotSimulatorPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
 
   return 0;
 }
-
-// int RobotSimulatorPhaseBase::SetDefectStatus(const char *type, int s)
-// {
-//   std::map<std::string, int>::iterator iter;
-//   iter = this->DefectStatus.find(type);
-//   if (iter != this->DefectStatus.end())
-//   {
-//     iter->second = ((s) ? 1 : 0);
-//     return 1;
-//   }
-//   else
-//   {
-//     // The specified type is not available
-//     return 0;
-//   }
-// }
-
-// int RobotSimulatorPhaseBase::GetDefectStatus(const char *type)
-// {
-//   std::map<std::string, int>::iterator iter;
-//   iter = this->DefectStatus.find(type);
-//   if (iter != this->DefectStatus.end())
-//   {
-//     return iter->second;
-//   }
-//   else
-//   {
-//     return -1;
-//   }
-// }
-
-// std::list<std::string> RobotSimulatorPhaseBase::GetDefectTypeList()
-// {
-//   std::list<std::string> list;
-//   list.clear();
-
-//   std::map<std::string, int>::iterator iter;
-//   for (iter = this->DefectStatus.begin(); iter != this->DefectStatus.end(); iter++)
-//   {
-//     list.push_back(iter->first);
-//   }
-
-//   return list;
-// }
-
-// std::string RobotSimulatorPhaseBase::GetDefectTypeDescription(const char *type)
-// {
-//   std::map<std::string, std::string>::iterator iter;
-//   iter = this->DefectDescription.find(type);
-//   if (iter != this->DefectDescription.end())
-//   {
-//     return iter->second;
-//   }
-//   else
-//   {
-//     return std::string("");
-//   }
-// }
-
-// int RobotSimulatorPhaseBase::RegisterDefectType(const char *name, const char *desc)
-// {
-//   this->DefectStatus[name] = 0; // set 0 status
-//   this->DefectDescription[name] = desc;
-//   return 1;
-// }

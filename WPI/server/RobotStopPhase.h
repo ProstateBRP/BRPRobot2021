@@ -1,6 +1,6 @@
 /*=========================================================================
 
-  Program:   BRP Prostate Robot: Testing Simulator (Robot)
+  Program:   BRP Prostate Robot: Testing  (Robot)
   Language:  C++
 
   Copyright (c) Brigham and Women's Hospital. All rights reserved.
@@ -15,22 +15,22 @@
 
 =========================================================================*/
 
-#ifndef __RobotSimulatorCalibrationPhase_h
-#define __RobotSimulatorCalibrationPhase_h
+#ifndef __RobotStopPhase_h
+#define __RobotStopPhase_h
 
 #include "igtlSocket.h"
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
-#include "RobotSimulatorPhaseBase.h"
+#include "RobotPhaseBase.h"
 
-class RobotSimulatorCalibrationPhase : public RobotSimulatorPhaseBase
+class RobotStopPhase : public RobotPhaseBase
 {
 public:
 
-  RobotSimulatorCalibrationPhase();
-  ~RobotSimulatorCalibrationPhase();
+  RobotStopPhase();
+  ~RobotStopPhase();
 
-  virtual const char* Name() { return "CALIBRATION"; };
+  virtual const char* Name() { return "STOP"; };
 
   virtual int Initialize();
   virtual int MessageHandler(igtl::MessageHeader* headerMsg);
@@ -39,4 +39,4 @@ protected:
 
 };
 
-#endif //__RobotSimulatorCalibrationPhase_h
+#endif //__RobotStopPhase_h

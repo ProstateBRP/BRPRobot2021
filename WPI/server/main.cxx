@@ -1,6 +1,6 @@
 /*=========================================================================
 
-  Program:   BRP Prostate Robot: Testing Simulator (Server)
+  Program:   BRP Prostate Robot: Testing  (Server)
   Language:  C++
 
   Copyright (c) Brigham and Women's Hospital. All rights reserved.
@@ -34,19 +34,19 @@
 //#include "igtlStringMessage.h"
 //#include "igtlBindMessage.h"
 
-#include "RobotSimulatorPhaseBase.h"
-#include "RobotSimulatorUndefinedPhase.h"
-#include "RobotSimulatorStartUpPhase.h"
-#include "RobotSimulatorPlanningPhase.h"
-#include "RobotSimulatorCalibrationPhase.h"
-#include "RobotSimulatorTargetingPhase.h"
-#include "RobotSimulatorMoveToTargetPhase.h"
-#include "RobotSimulatorManualPhase.h"
-#include "RobotSimulatorStopPhase.h"
-#include "RobotSimulatorEmergencyPhase.h"
+#include "RobotPhaseBase.h"
+#include "RobotUndefinedPhase.h"
+#include "RobotStartUpPhase.h"
+#include "RobotPlanningPhase.h"
+#include "RobotCalibrationPhase.h"
+#include "RobotTargetingPhase.h"
+#include "RobotMoveToTargetPhase.h"
+#include "RobotManualPhase.h"
+#include "RobotStopPhase.h"
+#include "RobotEmergencyPhase.h"
 #include "RobotStatus.h"
 #include "../Utilities/Logger/Logger.hpp"
-typedef std::vector<RobotSimulatorPhaseBase *> WorkphaseList;
+typedef std::vector<RobotPhaseBase *> WorkphaseList;
 
 int Session(igtl::Socket *socket, WorkphaseList &wlist);
 
@@ -57,15 +57,15 @@ int main(int argc, char *argv[])
     //------------------------------------------------------------
     // Setup workphases
     WorkphaseList wlist;
-    wlist.push_back(new RobotSimulatorUndefinedPhase);
-    wlist.push_back(new RobotSimulatorStartUpPhase);
-    wlist.push_back(new RobotSimulatorPlanningPhase);
-    wlist.push_back(new RobotSimulatorCalibrationPhase);
-    wlist.push_back(new RobotSimulatorTargetingPhase);
-    wlist.push_back(new RobotSimulatorMoveToTargetPhase);
-    wlist.push_back(new RobotSimulatorManualPhase);
-    wlist.push_back(new RobotSimulatorStopPhase);
-    wlist.push_back(new RobotSimulatorEmergencyPhase);
+    wlist.push_back(new RobotUndefinedPhase);
+    wlist.push_back(new RobotStartUpPhase);
+    wlist.push_back(new RobotPlanningPhase);
+    wlist.push_back(new RobotCalibrationPhase);
+    wlist.push_back(new RobotTargetingPhase);
+    wlist.push_back(new RobotMoveToTargetPhase);
+    wlist.push_back(new RobotManualPhase);
+    wlist.push_back(new RobotStopPhase);
+    wlist.push_back(new RobotEmergencyPhase);
 
     std::cerr << std::endl;
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     if (argc < 2) // check number of arguments
     {
         // If not correct, print usage
-        std::cerr << "Usage: " << argv[0] << " <port> [<defect_1> [<defect_2> ... [<defect_N>]...]" << std::endl;
+        std::cerr << "Usage: " << argv[0] << "<port>" << std::endl;
         std::cerr << "    <port>     : Port # (18944 in Slicer default)" << std::endl;
         exit(0);
     }
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     {
         //------------------------------------------------------------
         // Waiting for Connection
-        socket = serverSocket->WaitForConnection(1000);
+        socket = serverSocket->WaitForConnection(2000);
         std::cout<< "waiting for connection\n";
 
         if (socket.IsNotNull()) // if client connected
@@ -122,7 +122,7 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
 
     //------------------------------------------------------------
     // Set socket and robot status
-    std::vector<RobotSimulatorPhaseBase *>::iterator iter;
+    std::vector<RobotPhaseBase *>::iterator iter;
     for (iter = wlist.begin(); iter != wlist.end(); iter++)
     {
         //std::cerr << "MESSAGE: Setting up " << (*iter)->Name() << " phase." << std::endl;
@@ -133,12 +133,11 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
 
     //------------------------------------------------------------
     // Set undefined phase as the current phase;
-    std::vector<RobotSimulatorPhaseBase *>::iterator currentPhase = wlist.begin();
+    std::vector<RobotPhaseBase *>::iterator currentPhase = wlist.begin();
     //------------------------------------------------------------
     // loop
     while ((*currentPhase)->connect)
     {
-        std::cout <<"connect status is: " <<(*currentPhase)->connect << std::endl;
         // This statement checks for workphase change request
         // If no workphase change has requested the process will take care of the received message
         if ((*currentPhase)->Process())
@@ -148,7 +147,7 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
             std::string queryID = (*currentPhase)->GetQueryID();
 
             // Find the requested workphase
-            std::vector<RobotSimulatorPhaseBase *>::iterator iter;
+            std::vector<RobotPhaseBase *>::iterator iter;
             for (iter = wlist.begin(); iter != wlist.end(); iter++)
             {
                 if (strcmp((*iter)->Name(), requestedWorkphase.c_str()) == 0)
@@ -156,7 +155,7 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
                     // Change the current phase
                     currentPhase = iter;
                     (*currentPhase)->Enter(queryID.c_str()); // Initialization process
-                    std::vector<RobotSimulatorPhaseBase *>::iterator it;
+                    std::vector<RobotPhaseBase *>::iterator it;
                     for (it = wlist.begin(); it != wlist.end(); it++)
                     {
                         std::cout << (*it)->Name() << " : " << (*it)->GetRobotStatus()->GetCalibrationFlag() 

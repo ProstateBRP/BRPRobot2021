@@ -11,21 +11,21 @@ include(${OpenIGTLink_USE_FILE})
 
 set(ROBOT_SIM_SOURCE
   main.cxx
-  RobotSimulatorPhaseBase.cxx
-  RobotSimulatorUndefinedPhase.cxx
-  RobotSimulatorStartUpPhase.cxx
-  RobotSimulatorPlanningPhase.cxx
-  RobotSimulatorCalibrationPhase.cxx
-  RobotSimulatorTargetingPhase.cxx
-  RobotSimulatorMoveToTargetPhase.cxx
-  RobotSimulatorManualPhase.cxx
-  RobotSimulatorStopPhase.cxx
-  RobotSimulatorEmergencyPhase.cxx
+  RobotPhaseBase.cxx
+  RobotUndefinedPhase.cxx
+  RobotStartUpPhase.cxx
+  RobotPlanningPhase.cxx
+  RobotCalibrationPhase.cxx
+  RobotTargetingPhase.cxx
+  RobotMoveToTargetPhase.cxx
+  RobotManualPhase.cxx
+  RobotStopPhase.cxx
+  RobotEmergencyPhase.cxx
   RobotCommunicationBase.cxx
   RobotStatus.cxx
   ../Utilities/Logger/Logger.cpp
   ../Utilities/Timer/Timer.cpp
 )
 
-ADD_EXECUTABLE(RobotTestSimulator  ${ROBOT_SIM_SOURCE})
-TARGET_LINK_LIBRARIES(RobotTestSimulator OpenIGTLink)
+ADD_EXECUTABLE(RobotTest  ${ROBOT_SIM_SOURCE})
+TARGET_LINK_LIBRARIES(RobotTest OpenIGTLink)

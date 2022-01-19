@@ -1,6 +1,6 @@
 /*=========================================================================
 
-  Program:  BRP Prostate Robot: Testing Simulator (Robot)
+  Program:  BRP Prostate Robot: Testing  (Robot)
   Language:  C++
 
   Copyright (c) Brigham and Women's Hospital. All rights reserved.

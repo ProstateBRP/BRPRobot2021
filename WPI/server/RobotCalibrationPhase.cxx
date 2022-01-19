@@ -1,6 +1,6 @@
 /*=========================================================================
 
-  Program:   BRP Prostate Robot: Testing Simulator (Client)
+  Program:   BRP Prostate Robot: Testing  (Client)
   Language:  C++
 
   Copyright (c) Brigham and Women's Hospital. All rights reserved.
@@ -15,7 +15,7 @@
 
 =========================================================================*/
 
-#include "RobotSimulatorCalibrationPhase.h"
+#include "RobotCalibrationPhase.h"
 #include <string.h>
 #include <stdlib.h>
 #include <string>
@@ -28,17 +28,17 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotSimulatorCalibrationPhase::RobotSimulatorCalibrationPhase() :
-  RobotSimulatorPhaseBase()
+RobotCalibrationPhase::RobotCalibrationPhase() :
+  RobotPhaseBase()
 {
 }
 
 
-RobotSimulatorCalibrationPhase::~RobotSimulatorCalibrationPhase()
+RobotCalibrationPhase::~RobotCalibrationPhase()
 {
 }
 
-int RobotSimulatorCalibrationPhase::Initialize()
+int RobotCalibrationPhase::Initialize()
 {
   return 1;
 }
@@ -46,11 +46,11 @@ int RobotSimulatorCalibrationPhase::Initialize()
 
 // TODO: this should return a 4x4 matrix and set the robot registration to it
 // The calibration matrix is set within the RStatus object
-int RobotSimulatorCalibrationPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+int RobotCalibrationPhase::MessageHandler(igtl::MessageHeader* headerMsg)
 {
 
   // As of now the MessageHandler in the PhaseBase always returns 0
-  if (RobotSimulatorPhaseBase::MessageHandler(headerMsg))
+  if (RobotPhaseBase::MessageHandler(headerMsg))
     {
     return 1;
     }
