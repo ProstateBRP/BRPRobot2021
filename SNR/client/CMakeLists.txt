@@ -16,7 +16,7 @@ set(NAVIGATION_TEST_SOURCE
   IGTControlBase.cxx
   NavigationIGTControlBase.cxx
   BridgeTesting/NavigationBridgeSimulator.cxx
-  BridgTesting/NavigationNormalOperationTest.cxx
+  BridgeTesting/NavigationNormalOperationTest.cxx
   BridgeTesting/NavigationStartUpErrorTest.cxx
   BridgeTesting/NavigationCalibrationErrorTest.cxx
   BridgeTesting/NavigationTargetingWithoutCalibrationTest.cxx

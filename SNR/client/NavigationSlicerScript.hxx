@@ -12,20 +12,18 @@ void SendStringToSlicer(char* argDeviceName,char* argMessage);
 void SendStatusToSlicer(char* argDeviceName, unsigned short argCode, unsigned  long  long argSubcode, char* argErrorName, char* argStatusStringMessage);
 void SendTransformToSlicer(char* argDeviceName, igtl::Matrix4x4& matrix, char *wpiDeviceName);
 
-void GetStringFromSlicer(const char* hostname, int port);
-void GetStatusFromSlicer(const char* hostname, int port);
-void GetTransformFromSlicer(const char* hostname, int port);
+// void GetStringFromSlicer(const char* hostname, int port);
+// void GetStatusFromSlicer(const char* hostname, int port);
+// void GetTransformFromSlicer(const char* hostname, int port);
 
 int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 
 // Global Variables
-
 struct Global{
    static char * hostname;
    static int port;
-   static bool testRunning;
    static std::string globalDeviceName;
    // String variables 
    static std::string globalString;

@@ -16,6 +16,8 @@
 =========================================================================*/
 
 #include <string.h>
+#include <algorithm>
+#include <cctype>
 
 #include "igtlOSUtil.h"
 #include "igtlStringMessage.h"
@@ -62,11 +64,19 @@ void *NavigationBridge::ReceiveFromSlicer()
   while(1)
   {
     // New stringMessage from Slicer
-    if (currentStringMessage.compare(Global::globalString) != 0 && Global::testRunning == true)
+    if (currentStringMessage.compare(Global::globalString) != 0)
     {
-      std::cout << "Sent stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
+      // Check to make sure the new message is all alphanumeric
       currentStringMessage = Global::globalString;
-      SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
+      if (isalpha(currentStringMessage[0]))
+      {
+        std::cout << "Sent stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
+        SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
+      }
+
+      // std::cout << "Sent stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
+      // currentStringMessage = Global::globalString;
+      // SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
     }
 
     // New statusMessage from Slicer
@@ -75,13 +85,14 @@ void *NavigationBridge::ReceiveFromSlicer()
       currentStatusArgCode != Global::globalArgCode ||
       currentStatusArgSubCode != Global::globalArgSubcode)
     {
-      if (Global::testRunning == true && Global::globalArgSubcode != 2687068) // If currentStatusArgSubCode == 2687068, then the message is Slicer's status that gets sent on start up. Remove this from the if statement in the future.
+      currentStatusArgCode = Global::globalArgCode;
+      currentStatusArgSubCode = Global::globalArgSubcode;
+      currentStatusArgErrorName = Global::globalArgErrorName;
+      currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
+      // Check to make sure the new message is all alphanumeric
+      if (isalpha(currentStatusArgStatusStringMessage[0]))
       {
         std::cout << "Sent statusMessage from Slicer to WPI: " << Global::globalArgStatusStringMessage << std::endl;
-        currentStatusArgCode = Global::globalArgCode;
-        currentStatusArgSubCode = Global::globalArgSubcode;
-        currentStatusArgErrorName = Global::globalArgErrorName;
-        currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
         SendStatusMessage(Global::globalDeviceName.c_str(), currentStatusArgCode, currentStatusArgSubCode, (currentStatusArgErrorName).c_str(), (currentStatusArgStatusStringMessage).c_str());
 
         std::cerr << "========== STATUS ==========" << std::endl;
@@ -91,6 +102,20 @@ void *NavigationBridge::ReceiveFromSlicer()
         std::cerr << " Status    : " << Global::globalArgStatusStringMessage << std::endl;
         std::cerr << "============================" << std::endl;
       }
+
+      // std::cout << "Sent statusMessage from Slicer to WPI: " << Global::globalArgStatusStringMessage << std::endl;
+      // currentStatusArgCode = Global::globalArgCode;
+      // currentStatusArgSubCode = Global::globalArgSubcode;
+      // currentStatusArgErrorName = Global::globalArgErrorName;
+      // currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
+      // SendStatusMessage(Global::globalDeviceName.c_str(), currentStatusArgCode, currentStatusArgSubCode, (currentStatusArgErrorName).c_str(), (currentStatusArgStatusStringMessage).c_str());
+
+      // std::cerr << "========== STATUS ==========" << std::endl;
+      // std::cerr << " Code      : " << Global::globalArgCode << std::endl;
+      // std::cerr << " SubCode   : " << Global::globalArgSubcode << std::endl;
+      // std::cerr << " Error Name: " << Global::globalArgErrorName << std::endl;
+      // std::cerr << " Status    : " << Global::globalArgStatusStringMessage << std::endl;
+      // std::cerr << "============================" << std::endl;
     }
 
     // New transformMessage from Slicer
@@ -98,7 +123,7 @@ void *NavigationBridge::ReceiveFromSlicer()
     {
       for (int j = 0; j < 4; j++)
       {
-        if (currentMatrix[i][j] != Global::globalMatrix[i][j] && Global::testRunning == true)
+        if (currentMatrix[i][j] != Global::globalMatrix[i][j])
         {
           std::cout << "Sent transformMessage from Slicer to WPI: " << std::endl;
           SendTransformMessage(Global::globalDeviceName.c_str(), currentMatrix);
@@ -115,16 +140,6 @@ void *NavigationBridge::ReceiveFromSlicer()
 void *NavigationBridge::SendToSlicer()
 {
   std::cerr << "---> Starting thread III." << std::endl;
-  /*
-  igtl::StringMessage::Pointer stringMsg;
-  stringMsg = igtl::StringMessage::New();
-
-  igtl::StatusMessage::Pointer statusMsg;
-  statusMsg = igtl::StatusMessage::New();
-
-  igtl::TransformMessage::Pointer transMsg;
-  transMsg = igtl::TransformMessage::New();
-  */
   while(1)
   {
 	std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -157,14 +172,13 @@ void *NavigationBridge::SendToSlicer()
 
 NavigationBridge::ErrorPointType NavigationBridge::Test()
 {
-  int queryCounter = 0;
   // Create a thread to receive from Slicer and send to WPI
-
   std::thread threadReceive(&NavigationBridge::ReceiveFromSlicer, this);
   threadReceive.detach();
   std::thread threadSend(&NavigationBridge::SendToSlicer, this);
   threadSend.detach();
 
-  std::this_thread::sleep_for(std::chrono::seconds(120));
-  return SUCCESS;
+  std::this_thread::sleep_for(std::chrono::seconds(36000));
+  //return SUCCESS;
+  return 0;
 }

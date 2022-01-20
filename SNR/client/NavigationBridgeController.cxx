@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     // Set timeout values (ms)
     navTest->SetTimeoutShort(1000);
     navTest->SetTimeoutMedium(5000);
-    navTest->SetTimeoutMedium(10000);
+    navTest->SetTimeoutLong(10000);
 
     navTest->SetSocket(socket);
     navTest->Exec();

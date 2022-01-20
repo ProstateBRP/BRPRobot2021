@@ -91,57 +91,56 @@ int main(int argc, char* argv[])
   {
     case 1:
     {
-      std::cout << "------------------- Starting NavigationNormalOperationTest -------------------" << std::endl;
       navTest = (NavigationNormalOperationTest*) new NavigationNormalOperationTest();
       break;
     }
-    // case 2:
-    //   {
-    //     navTest = (NavigationStartUpErrorTest*) new NavigationStartUpErrorTest();
-    //     break;
-    //   }
-    // case 3:
-    //   {
-    //     navTest = (NavigationCalibrationErrorTest*) new NavigationCalibrationErrorTest();
-    //     break;
-    //   }
-    // case 4:
-    //   {
-    //     navTest = (NavigationTargetingWithoutCalibrationTest*) new NavigationTargetingWithoutCalibrationTest();
-    //     break;
-    //   }
-    // case 5:
-    //   {
-    //     navTest = (NavigationOutOfRangeTest*) new NavigationOutOfRangeTest();
-    //     break;
-    //   }
-    // case 6:
-    //   {
-    //     navTest = (NavigationStopDuringOperationTest*) new NavigationStopDuringOperationTest();
-    //     break;
-    //   }
-    // case 7:
-    //   {
-    //     navTest = (NavigationEmergencyStopDuringOperationTest*) new NavigationEmergencyStopDuringOperationTest();
-    //     break;
-    //   }
-    // case 8:
-    //   {
-    //     navTest = (NavigationMoveToWithoutTargetTest*) new NavigationMoveToWithoutTargetTest();
-    //     break;
-    //   }
-    // case 9:
-    //   {
-    //     navTest = (NavigationAccidentalCommandDuringManualModeTest*) new NavigationAccidentalCommandDuringManualModeTest();
-    //     break;
-    //   }
-    // case 10:
-    //   {
-    //     navTest = (NavigationHardwareErrorDuringOperationTest*) new NavigationHardwareErrorDuringOperationTest();
-    //     break;
-    //   }
-    // default:
-    //   break;
+    case 2:
+      {
+        navTest = (NavigationStartUpErrorTest*) new NavigationStartUpErrorTest();
+        break;
+      }
+    case 3:
+      {
+        navTest = (NavigationCalibrationErrorTest*) new NavigationCalibrationErrorTest();
+        break;
+      }
+    case 4:
+      {
+        navTest = (NavigationTargetingWithoutCalibrationTest*) new NavigationTargetingWithoutCalibrationTest();
+        break;
+      }
+    case 5:
+      {
+        navTest = (NavigationOutOfRangeTest*) new NavigationOutOfRangeTest();
+        break;
+      }
+    case 6:
+      {
+        navTest = (NavigationStopDuringOperationTest*) new NavigationStopDuringOperationTest();
+        break;
+      }
+    case 7:
+      {
+        navTest = (NavigationEmergencyStopDuringOperationTest*) new NavigationEmergencyStopDuringOperationTest();
+        break;
+      }
+    case 8:
+      {
+        navTest = (NavigationMoveToWithoutTargetTest*) new NavigationMoveToWithoutTargetTest();
+        break;
+      }
+    case 9:
+      {
+        navTest = (NavigationAccidentalCommandDuringManualModeTest*) new NavigationAccidentalCommandDuringManualModeTest();
+        break;
+      }
+    case 10:
+      {
+        navTest = (NavigationHardwareErrorDuringOperationTest*) new NavigationHardwareErrorDuringOperationTest();
+        break;
+      }
+    default:
+      break;
   }
 
   if (navTest)
@@ -149,7 +148,7 @@ int main(int argc, char* argv[])
     // Set timeout values (ms)
     navTest->SetTimeoutShort(1000);
     navTest->SetTimeoutMedium(5000);
-    navTest->SetTimeoutMedium(10000);
+    navTest->SetTimeoutLong(10000);
 
     navTest->SetSocket(socket);
     navTest->Exec();

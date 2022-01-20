@@ -23,9 +23,9 @@
 #include "igtlMessageBase.h"
 #include "IGTControlBase.h"
 
-#define DEFULT_TIMEOUT_SHORT  500
-#define DEFULT_TIMEOUT_MEDIUM 1000
-#define DEFULT_TIMEOUT_LONG   5000
+#define DEFAULT_TIMEOUT_SHORT  500
+#define DEFAULT_TIMEOUT_MEDIUM 1000
+#define DEFAULT_TIMEOUT_LONG   5000
 #define DEFAULT_TIMEOUT_FALSE false
 
 class NavigationIGTControlBase : public IGTControlBase
@@ -47,7 +47,6 @@ public:
   int TimeoutShort;
   int TimeoutMedium;
   int TimeoutLong;
-
   bool TimeoutFalse;
 
 public:
@@ -57,7 +56,6 @@ public:
   virtual const char* Name()=0;
 
   virtual int Exec();
-
   inline ErrorPointType Error(unsigned short step, unsigned short point)
   {
     ErrorPointType ret;

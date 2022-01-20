@@ -60,7 +60,6 @@ int IGTControlBase::ReceiveMessageHeader(igtl::MessageHeader *headerMsg, bool ti
     {
       std::cerr << "MESSAGE: Socket closed." << std::endl;
       this->Socket->CloseSocket();
-      Global::testRunning = false;
       exit(EXIT_SUCCESS);
     }
     else

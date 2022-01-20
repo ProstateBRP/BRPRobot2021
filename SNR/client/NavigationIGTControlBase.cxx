@@ -30,9 +30,9 @@
 
 NavigationIGTControlBase::NavigationIGTControlBase()
 {
-  this->TimeoutShort  = DEFULT_TIMEOUT_SHORT;
-  this->TimeoutMedium = DEFULT_TIMEOUT_MEDIUM;
-  this->TimeoutLong   = DEFULT_TIMEOUT_LONG;
+  this->TimeoutShort  = DEFAULT_TIMEOUT_SHORT;
+  this->TimeoutMedium = DEFAULT_TIMEOUT_MEDIUM;
+  this->TimeoutLong   = DEFAULT_TIMEOUT_LONG;
   this->TimeoutFalse  = DEFAULT_TIMEOUT_FALSE;
 }
 
@@ -41,29 +41,25 @@ NavigationIGTControlBase::~NavigationIGTControlBase()
 {
 }
 
-
 int NavigationIGTControlBase::Exec()
 {
   if (this->Socket.IsNotNull())
-    {
+  {
     ErrorPointType errorPoint = this->Test();
     if (errorPoint == SUCCESS)
-      {
-      std::cerr << "MESSAGE: The test has been completed successfully." << std::endl;
-      Global::testRunning = false;
-      return 1;
-      }
-    else
-      {
-      std::cerr << "ERROR: Test failed at check point #" << GetStep(errorPoint) << "." << GetPoint(errorPoint) << std::endl;
-      Global::testRunning = false;
-      return 0;
-      }
-    }
-  else
     {
-    std::cerr << "ERROR: Socket is not available."  << std::endl;
-    Global::testRunning = false;
-    return 0;
+      std::cerr << "MESSAGE: The test has been completed successfully." << std::endl;
+      return 1;
     }
+    else
+    {
+      std::cerr << "ERROR: Test failed at check point #" << GetStep(errorPoint) << "." << GetPoint(errorPoint) << std::endl;
+      return 0;
+    }
+  }
+  else
+  {
+    std::cerr << "ERROR: Socket is not available."  << std::endl;
+    return 0;
+  }
 }
