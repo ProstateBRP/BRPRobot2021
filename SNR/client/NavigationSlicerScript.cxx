@@ -112,7 +112,6 @@ void *receivingFunction()
         }
         else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
         {
-            std::cout << "somethings going here" << std::endl;
             ReceiveStatus(socket, headerMsg);
         }
         else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
@@ -153,7 +152,7 @@ void SendStringToSlicer(char* argDeviceName, char* argMessage)
     stringMsg->SetString(argMessage);
     stringMsg->Pack();
     socket->Send(stringMsg->GetPackPointer(), stringMsg->GetPackSize());
-    std::cout << "Sent stringMessage to Slicer with argMessage: " << argMessage << std::endl;
+    // std::cout << "Sent stringMessage to Slicer with argMessage: " << argMessage << std::endl;
 
 }
 
@@ -189,7 +188,7 @@ void SendStatusToSlicer(char *argDeviceName, unsigned short argCode, unsigned lo
         statusMsg->SetStatusString(argStatusStringMessage);
         statusMsg->Pack();
         socket->Send(statusMsg->GetPackPointer(), statusMsg->GetPackSize());
-        std::cout << "Sent statusMessage to Slicer: " << argStatusStringMessage << std::endl;
+        // std::cout << "Sent statusMessage to Slicer: " << argStatusStringMessage << std::endl;
 
         std::cerr << "========== STATUS ==========" << std::endl;
         std::cerr << " Code      : " << argCode << std::endl;
@@ -226,7 +225,7 @@ void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix, char * 
     transMsg = igtl::TransformMessage::New();
     transMsg->SetDeviceName(argDeviceName);
     
-    std::cout << "Sent transformMessage to Slicer." << std::endl;
+    // std::cout << "Sent transformMessage to Slicer." << std::endl;
 
     igtl::TimeStamp::Pointer ts;
     ts = igtl::TimeStamp::New();
@@ -290,26 +289,51 @@ int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 
     int c = statusMsg->Unpack(1);
 
-    std::cout << "\n---> Received statusMessage from Slicer: " << statusMsg->GetStatusString() << std::endl;
-
-    if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    // Alphanumeric check
+    if (isalpha(statusMsg->GetStatusString()[0]) && isalpha(statusMsg->GetStatusString()[0]) && isalpha(statusMsg->GetStatusString()[0]))
     {
-        // std::cerr << "========== STATUS ==========" << std::endl;
-        // std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
-        // std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
-        // std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
-        // std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
-        // std::cerr << "============================" << std::endl << std::endl;
+        std::cout << "\n---> Received statusMessage from Slicer: " << statusMsg->GetStatusString() << std::endl;
 
-        // Modify global variables with status received    
-        Global::globalArgCode = statusMsg->GetCode();
-        Global::globalArgSubcode = statusMsg->GetSubCode();
-        Global::globalArgErrorName = statusMsg->GetErrorName();
-        Global::globalArgStatusStringMessage = statusMsg->GetStatusString();
-        Global::globalDeviceName = header->GetDeviceName();
-        return 1;
+        if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+        {
+            // std::cerr << "========== STATUS ==========" << std::endl;
+            // std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
+            // std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
+            // std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
+            // std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
+            // std::cerr << "============================" << std::endl << std::endl;
+
+            // Modify global variables with status received    
+            Global::globalArgCode = statusMsg->GetCode();
+            Global::globalArgSubcode = statusMsg->GetSubCode();
+            Global::globalArgErrorName = statusMsg->GetErrorName();
+            Global::globalArgStatusStringMessage = statusMsg->GetStatusString();
+            Global::globalDeviceName = header->GetDeviceName();
+            return 1;
+        }
     }
     return 0;
+
+    // std::cout << "\n---> Received statusMessage from Slicer: " << statusMsg->GetStatusString() << std::endl;
+
+    // if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
+    // {
+    //     // std::cerr << "========== STATUS ==========" << std::endl;
+    //     // std::cerr << " Code      : " << statusMsg->GetCode() << std::endl;
+    //     // std::cerr << " SubCode   : " << statusMsg->GetSubCode() << std::endl;
+    //     // std::cerr << " Error Name: " << statusMsg->GetErrorName() << std::endl;
+    //     // std::cerr << " Status    : " << statusMsg->GetStatusString() << std::endl;
+    //     // std::cerr << "============================" << std::endl << std::endl;
+
+    //     // Modify global variables with status received    
+    //     Global::globalArgCode = statusMsg->GetCode();
+    //     Global::globalArgSubcode = statusMsg->GetSubCode();
+    //     Global::globalArgErrorName = statusMsg->GetErrorName();
+    //     Global::globalArgStatusStringMessage = statusMsg->GetStatusString();
+    //     Global::globalDeviceName = header->GetDeviceName();
+    //     return 1;
+    // }
+    // return 0;
 }
 
 int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)

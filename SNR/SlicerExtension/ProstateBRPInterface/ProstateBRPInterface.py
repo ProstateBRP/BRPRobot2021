@@ -234,15 +234,15 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
 
-    # Start and end slices for calibration step
-    self.startSliceSliderWidget = qt.QSpinBox()
-    self.endSliceSliderWidget = qt.QSpinBox()
-    self.startSliceSliderWidget.setValue(5)
-    self.endSliceSliderWidget.setValue(16)
-    self.startSliceSliderWidget.setMaximumWidth(40)
-    self.endSliceSliderWidget.setMaximumWidth(40)
-    outboundTransformsFormLayout.addRow('Minimum slice:', self.startSliceSliderWidget)
-    outboundTransformsFormLayout.addRow('Maximum slice:', self.endSliceSliderWidget)
+    # # Start and end slices for calibration step
+    # self.startSliceSliderWidget = qt.QSpinBox()
+    # self.endSliceSliderWidget = qt.QSpinBox()
+    # self.startSliceSliderWidget.setValue(5)
+    # self.endSliceSliderWidget.setValue(16)
+    # self.startSliceSliderWidget.setMaximumWidth(40)
+    # self.endSliceSliderWidget.setMaximumWidth(40)
+    # outboundTransformsFormLayout.addRow('Minimum slice:', self.startSliceSliderWidget)
+    # outboundTransformsFormLayout.addRow('Maximum slice:', self.endSliceSliderWidget)
 
     # Calibration matrix display
     row = 4
@@ -263,6 +263,15 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
     outboundTransformsFormLayout.addRow("Calibration matrix:  ", self.calibrationTableWidget)
+
+    # Visibility icon
+    # self.calibrationVisibleButton = qt.QPushButton()
+    # eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png");
+    # self.calibrationVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+    # self.calibrationVisibleButton.setFixedWidth(25)
+    # self.calibrationVisibleButton.setCheckable(True)
+    # outboundTransformsFormLayout.addRow("", self.calibrationVisibleButton)
+    # self.calibrationVisibleButton.connect('clicked()', self.onCalibrationVisibleButtonClicked)
 
     # Add ROI button
     self.addROIButton = qt.QPushButton("Add ROI")
@@ -579,14 +588,14 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
     self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
-  def generateRandomNameID(self,last_prefix_sent):
-    # Randomly choose 4 letter from all the ascii_letters
-    randomID = [last_prefix_sent,"_"]
-    for i in range(4):
-      randomLetter = random.choice(string.ascii_letters)
-      randomID.append(str(ord(randomLetter)))
-    randomIDname = ''.join(randomID)
-    return randomIDname
+  # def generateRandomNameID(self,last_prefix_sent):
+  #   # Randomly choose 4 letter from all the ascii_letters
+  #   randomID = [last_prefix_sent,"_"]
+  #   for i in range(4):
+  #     randomLetter = random.choice(string.ascii_letters)
+  #     randomID.append(str(ord(randomLetter)))
+  #   randomIDname = ''.join(randomID)
+  #   return randomIDname
 
   def generateTimestampNameID(self, last_prefix_sent):
     timestampID = [last_prefix_sent, "_"]
@@ -602,6 +611,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     else: 
       tempTimestamp = datetime.datetime.strptime(timestampIDname.split("_")[1], "%H%M%S%f")
     timestamp = tempTimestamp.strftime("%H:%M:%S:%f")
+    # Append to commandLogs.txt
     with open(self.commandLogFilePath,"a") as f:
       f.write(timestamp + " -- " + infoMsg + '\n')
 
@@ -612,16 +622,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def appendReceivedMessageToCommandLog(self, last_string_sent, elapsed_time):
     currentInfoText = self.infoTextbox.toPlainText()
     with open(self.commandLogFilePath,"a") as f:
-      if last_string_sent.split("_")[0] == "ACK":
-        f.write("Acknowledgment received for command: " + last_string_sent + " after " + elapsed_time +  "ms\n")
-        self.infoTextbox.setText(currentInfoText + '\n' + "Acknowledgment received for command: " + last_string_sent + " after " + elapsed_time +  "ms\n")
-      elif last_string_sent.split(' ')[0] == "Received":
-        f.write(last_string_sent + '\n')
-        # self.infoTextbox.setText(currentInfoText + '\n' + last_string_sent + '\n')
+      if last_string_sent.split("_")[0] == "ACK": # NO- CHANGE
+        f.write("   -- Acknowledgment received for command: " + last_string_sent + " after " + elapsed_time +  "ms\n")
+        self.infoTextbox.setText(currentInfoText + "\n   -- Acknowledgment received for command: " + last_string_sent + " after " + elapsed_time +  "ms\n")
+      elif last_string_sent.split(' ')[0] == "Received" or last_string_sent.split(' ')[0] == "TRANSFORM":
+        f.write("   -- " + last_string_sent + '\n')
+        self.infoTextbox.setText(currentInfoText + "\n   -- " + last_string_sent + "\n")
       else:
         # TODO
-        f.write("A message other than an acknowledgement or a status was received. Modify appendReceivedMessageToCommandLog function. (TODO) \n")
-        
+        f.write("A message other than an acknowledgement or a status was received. Modify appendReceivedMessageToCommandLog function for last_string_sent: " + last_string_sent + "\n")
+
   def appendTransformToCommandLog(self, outputMatrix):
     with open(self.commandLogFilePath,"a") as f:
       f.write ("[" + str(round(outputMatrix.GetElement(0,0),2)) + ", " + str(round(outputMatrix.GetElement(0,1),2)) + ", " + str(round(outputMatrix.GetElement(0,2),2)) + ", " + str(round(outputMatrix.GetElement(0,3),2)) + "]\n")
@@ -851,7 +861,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
   def onStopButtonClicked(self):
-    print("Sending STOP command")
+    print("Sending Stop command")
     # Send stringMessage containing the command "STOP" to the script via IGTLink
     stopNode = slicer.vtkMRMLTextNode()
     self.last_prefix_sent = "CMD"
@@ -916,7 +926,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.AddPointerModel()
       TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
       locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
-      locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID());
+      locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
     # If it is unchecked
     else:
       eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
@@ -924,8 +934,29 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
       slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
 
+  # Show visual transform node of the calibration matrix
+  # def onCalibrationVisibleButtonClicked(self):
+  #   # If button is checked
+  #   print("yer")
+  #   if (self.VisibleButton.isChecked()):
+  #     eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
+  #     self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
+  #     if self.outputTransform:
+  #       print("your")
+  #       self.AddPointerModel()
+  #       TransformNodeToDisplay = self.outputTransform
+  #       locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+  #       locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
+  #   # If it is unchecked
+  #   else:
+  #     eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
+  #     self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+  #     PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+  #     slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+
+
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
-    print("New string was received")
+    print("New string received")
     ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
     end = time.time()
     elapsed_time = (end - textNode.start)*100
@@ -941,22 +972,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         nameonlyType = nameonly[0: nameonly.index(delimit2)]
         nameonlyID = nameonly[nameonly.index(delimit2) + 1: len(nameonly)]
         if(textNode.last_name_sent.find(delimit2)!=-1):
-          last_name_sentType = textNode.last_name_sent[0: textNode.last_name_sent.index(delimit2)]
+          # last_name_sentType = textNode.last_name_sent[0: textNode.last_name_sent.index(delimit2)]
           last_name_sentID = textNode.last_name_sent[textNode.last_name_sent.index(delimit2) + 1: len(textNode.last_name_sent)]
-          print(last_name_sentType)
-          print(last_name_sentID)
           if((last_name_sentID == nameonlyID) and (nameonlyType == 'ACK') and(textNode.last_string_sent == msgonly)):  # if(elapsed_time > 100) print("Received knowledgment too late, after", elapsed_time, "ms")
             print("Acknowledgment received for command:", textNode.last_string_sent, "after", elapsed_time, "ms")
-            textNode.appendReceivedMessageToCommandLog(textNode.last_string_sent, elapsed_time)
+            # textNode.appendReceivedMessageToCommandLog(textNode.last_string_sent, elapsed_time)
             textNode.ack = 1
             infoMsg =  "Received STRING from WPI: ( " + nameonly + ", " + msgonly + " )"
+            textNode.appendReceivedMessageToCommandLog(infoMsg, 0)
             re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     else:
       textNode.messageTextbox.setText(concatenateMsg)
       print("Received something different than expected, received: ", ReceivedStringMsg.GetText())      
       
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
-    print("New Status was received")
+    print("New status received")
     ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
     s1 = str(ReceivedStatusMsg.GetCode())
     s2 = str(ReceivedStatusMsg.GetSubCode())
@@ -987,23 +1017,26 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       statusNode.loading_phase = s3
     elif((statusNode.status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (statusNode.ack == 1) and (statusNode.loading_phase == nameonly)): 
       print("Robot sucessfully achieved : ", statusNode.loading_phase, "after", elapsed_time, "s")
-      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);")
+      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);") # Sets phase name in green
       if(statusNode.loading_phase == "START_UP"):
         statusNode.activateButtons()
       statusNode.ack = 0
     else:
       print("Error in changing phase")
+      print("statusNode.status_codes[ReceivedStatusMsg.GetCode()]: ", statusNode.status_codes[ReceivedStatusMsg.GetCode()])
+      print("statusNode.ack: ", statusNode.ack)
+      print("statusNode.loading_phase: ", statusNode.loading_phase)
+      print("nameonly: ", nameonly)
 
   def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+    print("New transform received")
     ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
 
-    print(transformMatrix)
     refMatrix = vtk.vtkMatrix4x4()
     LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(transformNode.last_randomIDname_transform)
     LastTransformNode.GetMatrixTransformToParent(refMatrix)
-    print(refMatrix)
     nbRows = transformNode.tableWidget.rowCount
     nbColumns = transformNode.tableWidget.columnCount
     same_transforms = 1
@@ -1025,7 +1058,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
 
   def onTransformInfoNodeModified(infoNode, unusedArg2=None, unusedArg3=None):
-    print("New transform info was received")
+    print("New transform info received")
     ReceivedTransformInfo = slicer.mrmlScene.GetFirstNodeByName("TransformInfo")
     info = ReceivedTransformInfo.GetText()
     delimit = "_"
@@ -1035,9 +1068,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       infoType = info[0: info.index(delimit)]
       infoID = info[info.index(delimit) + 1: len(info)]
       if(infoNode.last_name_sent.find(delimit)!=-1):
-       #last_name_sentType = last_name_sent[0: last_name_sent.index(delimit)]
         last_name_sentID = infoNode.last_name_sent[infoNode.last_name_sent.index(delimit) + 1: len(infoNode.last_name_sent)]
-        print(last_name_sentID)
         infoMsg =  "Received TRANSFORM from WPI: ( " + info + " )"
         re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
         infoNode.appendReceivedMessageToCommandLog(infoMsg, 0)
@@ -1104,14 +1135,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
       print ("Initating calibration matrix calculation with zFrame image.")
       
-      # Get start and end slices
-      self.startSlice = int(self.startSliceSliderWidget.value)
-      self.endSlice = int(self.endSliceSliderWidget.value)
-      maxSlice = self.inputVolume.GetImageData().GetDimensions()[2]
-      if self.endSlice == 0 or self.endSlice > maxSlice:
-        # Use the image end slice
-        self.endSlice = maxSlice
-        self.endSliceSliderWidget.value = float(self.endSlice)
+      # Get start and end slices from the StartSliceSliderWidget
+      # self.startSlice = int(self.startSliceSliderWidget.value)
+      # self.endSlice = int(self.endSliceSliderWidget.value)
+      # maxSlice = self.inputVolume.GetImageData().GetDimensions()[2]
+      # if self.endSlice == 0 or self.endSlice > maxSlice:
+      #   # Use the image end slice
+      #   self.endSlice = maxSlice
+      #   self.endSliceSliderWidget.value = float(self.endSlice)
+      self.startSlice = 5
+      self.endSlice = 16
 
       # Check for the ZFrame ROI node and if it exists, use it for the start and end slices
       if self.zFrameROI is not None:
@@ -1140,8 +1173,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
           self.startSlice = endZ
         if self.endSlice > endZ:
           self.endSlice = endZ
-        self.startSliceSliderWidget.value = float(self.startSlice)
-        self.endSliceSliderWidget.value = float(self.endSlice)
+        # self.startSliceSliderWidget.value = float(self.startSlice)
+        # self.endSliceSliderWidget.value = float(self.endSlice)
 
         # Begin zFrameRegistrationWithROI logic
         self.ZFRAME_MODEL_PATH = 'zframe-model.vtk'

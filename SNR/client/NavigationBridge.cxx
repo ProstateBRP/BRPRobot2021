@@ -68,15 +68,11 @@ void *NavigationBridge::ReceiveFromSlicer()
     {
       // Check to make sure the new message is all alphanumeric
       currentStringMessage = Global::globalString;
-      if (isalpha(currentStringMessage[0]))
+      if (isalpha(currentStringMessage[0]) && isalpha(currentStringMessage[1]) && isalpha(currentStringMessage[2]))
       {
         std::cout << "Sent stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
         SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
       }
-
-      // std::cout << "Sent stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
-      // currentStringMessage = Global::globalString;
-      // SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
     }
 
     // New statusMessage from Slicer
@@ -85,12 +81,12 @@ void *NavigationBridge::ReceiveFromSlicer()
       currentStatusArgCode != Global::globalArgCode ||
       currentStatusArgSubCode != Global::globalArgSubcode)
     {
+      // Check to make sure the new message is all alphanumeric
       currentStatusArgCode = Global::globalArgCode;
       currentStatusArgSubCode = Global::globalArgSubcode;
       currentStatusArgErrorName = Global::globalArgErrorName;
       currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
-      // Check to make sure the new message is all alphanumeric
-      if (isalpha(currentStatusArgStatusStringMessage[0]))
+      if (isalpha(currentStatusArgStatusStringMessage[0]) && isalpha(currentStatusArgStatusStringMessage[1]) && isalpha(currentStatusArgStatusStringMessage[2]))
       {
         std::cout << "Sent statusMessage from Slicer to WPI: " << Global::globalArgStatusStringMessage << std::endl;
         SendStatusMessage(Global::globalDeviceName.c_str(), currentStatusArgCode, currentStatusArgSubCode, (currentStatusArgErrorName).c_str(), (currentStatusArgStatusStringMessage).c_str());
@@ -102,20 +98,6 @@ void *NavigationBridge::ReceiveFromSlicer()
         std::cerr << " Status    : " << Global::globalArgStatusStringMessage << std::endl;
         std::cerr << "============================" << std::endl;
       }
-
-      // std::cout << "Sent statusMessage from Slicer to WPI: " << Global::globalArgStatusStringMessage << std::endl;
-      // currentStatusArgCode = Global::globalArgCode;
-      // currentStatusArgSubCode = Global::globalArgSubcode;
-      // currentStatusArgErrorName = Global::globalArgErrorName;
-      // currentStatusArgStatusStringMessage = Global::globalArgStatusStringMessage;
-      // SendStatusMessage(Global::globalDeviceName.c_str(), currentStatusArgCode, currentStatusArgSubCode, (currentStatusArgErrorName).c_str(), (currentStatusArgStatusStringMessage).c_str());
-
-      // std::cerr << "========== STATUS ==========" << std::endl;
-      // std::cerr << " Code      : " << Global::globalArgCode << std::endl;
-      // std::cerr << " SubCode   : " << Global::globalArgSubcode << std::endl;
-      // std::cerr << " Error Name: " << Global::globalArgErrorName << std::endl;
-      // std::cerr << " Status    : " << Global::globalArgStatusStringMessage << std::endl;
-      // std::cerr << "============================" << std::endl;
     }
 
     // New transformMessage from Slicer
@@ -126,9 +108,9 @@ void *NavigationBridge::ReceiveFromSlicer()
         if (currentMatrix[i][j] != Global::globalMatrix[i][j])
         {
           std::cout << "Sent transformMessage from Slicer to WPI: " << std::endl;
-          SendTransformMessage(Global::globalDeviceName.c_str(), currentMatrix);
           memcpy(currentMatrix, Global::globalMatrix, sizeof(Global::globalMatrix));
-          igtl::PrintMatrix(currentMatrix);
+          SendTransformMessage(Global::globalDeviceName.c_str(), currentMatrix);
+          // igtl::PrintMatrix(currentMatrix);
         }
       }
     }
