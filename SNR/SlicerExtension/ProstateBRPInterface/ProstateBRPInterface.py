@@ -98,29 +98,157 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 1)
     self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
 
-    # Outbound messages collapsible button
-    self.outboundCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.outboundCollapsibleButton.text = "Outbound Commands"
-    self.outboundCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.outboundCollapsibleButton)
+    # ----- MRI <--> Slicer connection GUI ------
+    # Slicer <--> MRI collapsible button
+    self.MRICommunicationCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.MRICommunicationCollapsibleButton.text = "Slicer <--> MRI"
+    self.MRICommunicationCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.MRICommunicationCollapsibleButton)
 
-    # Layout within the path collapsible button
-    outboundFormLayout = qt.QGridLayout(self.outboundCollapsibleButton)
+    # Overall layout within the path collapsible button
+    MRICommunicationLayout = qt.QVBoxLayout(self.MRICommunicationCollapsibleButton)
+
+    # Outbound layout within the path collapsible button
+    MRIOutboundCommunicationLayout = qt.QGridLayout()
+    MRICommunicationLayout.addLayout(MRIOutboundCommunicationLayout)
     
+    MRIphaseTextboxLabel = qt.QLabel('Current phase:')
+    self.MRIphaseTextbox = qt.QLineEdit("")
+    self.MRIphaseTextbox.setReadOnly(True)
+    self.MRIphaseTextbox.setFixedWidth(250)
+    self.MRIphaseTextbox.toolTip = "Show current phase: in Blue if in the phase, green if phase successfully achieved"
+    MRIOutboundCommunicationLayout.addWidget(MRIphaseTextboxLabel, 0, 0)
+    MRIOutboundCommunicationLayout.addWidget(self.MRIphaseTextbox, 0, 1)
+
+    # MRI Start up button
+    self.MRIstartupButton = qt.QPushButton("START UP SCANNER")
+    self.MRIstartupButton.toolTip = "Send the MRI scanner startup command."
+    self.MRIstartupButton.enabled = True
+    self.MRIstartupButton.setMaximumWidth(250)
+    MRIOutboundCommunicationLayout.addWidget(self.MRIstartupButton, 2, 0)
+    self.MRIstartupButton.connect('clicked()', self.onMRIStartupButtonClicked)
+
+    # MRI Disconnect scanner button
+    self.MRIdisconnectButton = qt.QPushButton("DISCONNECT SCANNER")
+    self.MRIdisconnectButton.toolTip = "Disconnect the MRI scanner."
+    self.MRIdisconnectButton.enabled = False
+    self.MRIdisconnectButton.setMaximumWidth(250)
+    MRIOutboundCommunicationLayout.addWidget(self.MRIdisconnectButton, 2, 1)
+    self.MRIdisconnectButton.connect('clicked()', self.onMRIDisconnectButtonClicked)
+
+    # MRI Start scan button
+    self.MRIstartScanButton = qt.QPushButton("START SCAN")
+    self.MRIstartScanButton.toolTip = "Begin scanning."
+    self.MRIstartScanButton.enabled = False
+    self.MRIstartScanButton.setMaximumWidth(250)
+    MRIOutboundCommunicationLayout.addWidget(self.MRIstartScanButton, 3, 0)
+    self.MRIstartScanButton.connect('clicked()', self.onMRIStartScanButtonClicked)
+
+    # MRI Stop scan button
+    self.MRIstopScanButton = qt.QPushButton("STOP SCAN")
+    self.MRIstopScanButton.toolTip = "Stop scanning."
+    self.MRIstopScanButton.enabled = False
+    self.MRIstopScanButton.setMaximumWidth(250)
+    MRIOutboundCommunicationLayout.addWidget(self.MRIstopScanButton, 3, 1)
+    self.MRIstopScanButton.connect('clicked()', self.onMRIStopScanButtonClicked)
+
+    # MRI Update scan target button
+    self.MRIupdateTargetButton = qt.QPushButton("UPDATE SCAN TARGET")
+    self.MRIupdateTargetButton.toolTip = "Open command pane to select a new scanning target."
+    self.MRIupdateTargetButton.enabled = False
+    self.MRIupdateTargetButton.setMaximumWidth(250)
+    MRIOutboundCommunicationLayout.addWidget(self.MRIupdateTargetButton, 4, 0)
+    self.MRIupdateTargetButton.connect('clicked()', self.onMRIUpdateTargetButtonClicked)
+
+    # MRI Get current scan target button
+    self.MRIgetTargetButton = qt.QPushButton("GET CURRENT SCAN TARGET")
+    self.MRIgetTargetButton.toolTip = "Request current MRI scanning target."
+    self.MRIgetTargetButton.enabled = False
+    self.MRIgetTargetButton.setMaximumWidth(250)
+    MRIOutboundCommunicationLayout.addWidget(self.MRIgetTargetButton, 4, 1)
+    self.MRIgetTargetButton.connect('clicked()', self.onMRIGetTargetButtonClicked)
+
+    # Inbound layout within the path collapsible button
+    MRIInboundCommunicationLayout = qt.QGridLayout()
+    MRICommunicationLayout.addLayout(MRIInboundCommunicationLayout)
+
+    # Add 1 line of spacing
+    MRIInboundCommunicationLayout.addWidget(qt.QLabel(" "), 0, 0)
+
+    self.MRImessageTextbox = qt.QLineEdit("No message received")
+    self.MRImessageTextbox.setReadOnly(True)
+    self.MRImessageTextbox.setFixedWidth(200)
+    MRImessageTextboxLabel = qt.QLabel('   Message received:')
+    MRIInboundCommunicationLayout.addWidget(MRImessageTextboxLabel, 1, 0)
+    MRIInboundCommunicationLayout.addWidget(self.MRImessageTextbox, 1, 1)
+
+    self.MRIstatusCodeTextbox = qt.QLineEdit("No status code received")
+    self.MRIstatusCodeTextbox.setReadOnly(True)
+    self.MRIstatusCodeTextbox.setFixedWidth(200)
+    MRIstatusCodeTextboxLabel = qt.QLabel("   Status received:")
+    MRIInboundCommunicationLayout.addWidget(MRIstatusCodeTextboxLabel, 2, 0)
+    MRIInboundCommunicationLayout.addWidget(self.MRIstatusCodeTextbox, 2, 1)
+
+    row = 4
+    column = 4
+    self.MRItableWidget = qt.QTableWidget(row, column)
+    self.MRItableWidget.setMaximumWidth(400)
+    self.MRItableWidget.verticalHeader().hide() # Remove line numbers
+    self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
+    self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.MRItableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+
+    verticalheader = self.MRItableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    MRItableWidgetLabel = qt.QLabel("   Transform received:")
+    MRIInboundCommunicationLayout.addWidget(MRItableWidgetLabel, 3, 0)
+    MRIInboundCommunicationLayout.addWidget(self.MRItableWidget, 3, 1)
+
+    # Visibility icon
+    self.MRIVisibleButton = qt.QPushButton()
+    eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png");
+    self.MRIVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+    self.MRIVisibleButton.setFixedWidth(25)
+    self.MRIVisibleButton.setCheckable(True)
+    MRIInboundCommunicationLayout.addWidget(self.MRIVisibleButton, 4, 1)
+    self.MRIVisibleButton.connect('clicked()', self.onMRIVisibleButtonClicked)
+    
+    # -------- Slicer <--> WPI connection GUI ---------
+
+    # Slicer <--> MRI collapsible button
+    self.RobotCommunicationCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.RobotCommunicationCollapsibleButton.text = "Slicer <--> Robot"
+    self.RobotCommunicationCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.RobotCommunicationCollapsibleButton)
+
+    # Overall layout within the path collapsible button
+    RobotCommunicationLayout = qt.QVBoxLayout(self.RobotCommunicationCollapsibleButton)
+
+    # Outbound layout within the path collapsible button
+    RobotOutboundCommunicationLayout = qt.QGridLayout()
+    RobotCommunicationLayout.addLayout(RobotOutboundCommunicationLayout)
+
     nameLabelphase = qt.QLabel('Current phase:')
     self.phaseTextbox = qt.QLineEdit("")
     self.phaseTextbox.setReadOnly(True)
     self.phaseTextbox.setFixedWidth(250)
     self.phaseTextbox.toolTip = "Show current phase: in Blue if in the phase, green if phase successfully achieved"
-    outboundFormLayout.addWidget(nameLabelphase, 0, 0)
-    outboundFormLayout.addWidget(self.phaseTextbox, 0, 1)
+    RobotOutboundCommunicationLayout.addWidget(nameLabelphase, 0, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.phaseTextbox, 0, 1)
 
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
     self.startupButton.toolTip = "Send the startup command to the WPI robot."
     self.startupButton.enabled = True
     self.startupButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.startupButton, 2, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.startupButton, 2, 0)
     self.startupButton.connect('clicked()', self.onStartupButtonClicked)
 
     # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
@@ -128,7 +256,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
     self.planningButton.enabled = False
     self.planningButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.planningButton, 2, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.planningButton, 2, 1)
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
 
     # calibrationButton Button
@@ -136,7 +264,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
     self.calibrationButton.enabled = False
     self.calibrationButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.calibrationButton, 3, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.calibrationButton, 3, 0)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
 
     # targetingButton Button
@@ -144,7 +272,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
     self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.targetingButton, 3 , 1)
+    RobotOutboundCommunicationLayout.addWidget(self.targetingButton, 3 , 1)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
 
     # entryPointButton Button
@@ -152,7 +280,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.entryPointButton.toolTip = "Send the entry point command to the WPI robot."
     self.entryPointButton.enabled = False
     self.entryPointButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.entryPointButton, 4 , 0)
+    RobotOutboundCommunicationLayout.addWidget(self.entryPointButton, 4 , 0)
     self.entryPointButton.connect('clicked()', self.onEntryPointButtonClicked)
 
     # moveButton Button
@@ -160,7 +288,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.moveButton.toolTip = "Send the move to target command to the WPI robot."
     self.moveButton.enabled = False
     self.moveButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.moveButton, 4, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.moveButton, 4, 1)
     self.moveButton.connect('clicked()', self.onMoveButtonClicked)
 
     # Lock Button to ask WPI to lock robot
@@ -168,7 +296,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
     self.LockButton.enabled = False
     self.LockButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.LockButton, 5, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.LockButton, 5, 0)
     self.LockButton.connect('clicked()', self.onLockButtonClicked)
 
     # Unlock Button to ask WPI to unlock robot
@@ -176,7 +304,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
     self.UnlockButton.enabled = False
     self.UnlockButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.UnlockButton, 5, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.UnlockButton, 5, 1)
     self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
 
     # Get robot pose Button to ask WPI to send the current robot position
@@ -184,7 +312,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
     self.GetPoseButton.enabled = False
     self.GetPoseButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.GetPoseButton, 6, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.GetPoseButton, 6, 0)
     self.GetPoseButton.connect('clicked()', self.onGetPoseButtonClicked)
 
     # Get robot status Button to ask WPI to send the current status position
@@ -192,7 +320,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
     self.GetStatusButton.enabled = False
     self.GetStatusButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.GetStatusButton, 6, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.GetStatusButton, 6, 1)
     self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
 
     # STOP Button 
@@ -200,7 +328,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
     self.StopButton.enabled = False
     self.StopButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.StopButton, 7, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.StopButton, 7, 0)
     self.StopButton.connect('clicked()', self.onStopButtonClicked)
 
     # EMERGENCY Button 
@@ -208,8 +336,63 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
     self.EmergencyButton.enabled = False
     self.EmergencyButton.setMaximumWidth(250)
-    outboundFormLayout.addWidget(self.EmergencyButton, 7, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.EmergencyButton, 7, 1)
     self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
+
+    # Inbound layout within the path collapsible button
+    RobotInboundCommunicationLayout = qt.QGridLayout()
+    RobotCommunicationLayout.addLayout(RobotInboundCommunicationLayout)
+   
+    # Add 1 line of spacing
+    RobotInboundCommunicationLayout.addWidget(qt.QLabel(" "), 0, 0)
+
+    self.robotMessageTextbox = qt.QLineEdit("No message received")
+    self.robotMessageTextbox.setReadOnly(True)
+    self.robotMessageTextbox.setFixedWidth(200)
+    # RobotInboundCommunicationLayout.addRow("Message received:", self.messageTextbox)
+    robotMessageTextboxLabel = qt.QLabel('   Message received:')
+    RobotInboundCommunicationLayout.addWidget(robotMessageTextboxLabel, 1, 0)
+    RobotInboundCommunicationLayout.addWidget(self.robotMessageTextbox, 1, 1)
+
+    self.robotStatusCodeTextbox = qt.QLineEdit("No status code received")
+    self.robotStatusCodeTextbox.setReadOnly(True)
+    self.robotStatusCodeTextbox.setFixedWidth(200)
+    robotStatusCodeTextboxLabel = qt.QLabel("   Status received:")
+    RobotInboundCommunicationLayout.addWidget(robotStatusCodeTextboxLabel, 2, 0)
+    RobotInboundCommunicationLayout.addWidget(self.robotStatusCodeTextbox, 2, 1)
+
+    row = 4
+    column = 4
+    self.tableWidget = qt.QTableWidget(row, column)
+    self.tableWidget.setMaximumWidth(400)
+    self.tableWidget.verticalHeader().hide() # Remove line numbers
+    self.tableWidget.horizontalHeader().hide() # Remove column numbers
+    self.tableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.tableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+
+    verticalheader = self.tableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    tableWidgetLabel = qt.QLabel("   Transform received:")
+    RobotInboundCommunicationLayout.addWidget(tableWidgetLabel, 3, 0)
+    RobotInboundCommunicationLayout.addWidget(self.tableWidget, 3, 1)
+
+    # Visibility icon
+    self.VisibleButton = qt.QPushButton()
+    eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png");
+    self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+    self.VisibleButton.setFixedWidth(25)
+    self.VisibleButton.setCheckable(True)
+    RobotInboundCommunicationLayout.addWidget(self.VisibleButton, 4, 1)
+    self.VisibleButton.connect('clicked()', self.onVisibleButtonClicked)
+
+    # -------  Calibration GUI ---------
 
     # Outbound tranform collapsible button
     self.outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
@@ -230,7 +413,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.zFrameVolumeSelector.addEnabled = False
     self.zFrameVolumeSelector.removeEnabled = False
     self.zFrameVolumeSelector.setFixedWidth(250)
-    outboundTransformsFormLayout.addRow('ZFrame image:', self.zFrameVolumeSelector)
+    outboundTransformsFormLayout.addRow('   ZFrame image:', self.zFrameVolumeSelector)
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
 
@@ -262,7 +445,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    outboundTransformsFormLayout.addRow("Calibration matrix:  ", self.calibrationTableWidget)
+    outboundTransformsFormLayout.addRow("   Calibration matrix:", self.calibrationTableWidget)
 
     # Visibility icon
     # self.calibrationVisibleButton = qt.QPushButton()
@@ -298,7 +481,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.calibrationMatrixSelector.showChildNodeTypes = False
     self.calibrationMatrixSelector.setMRMLScene( slicer.mrmlScene )
     self.calibrationMatrixSelector.setToolTip( "Select the calibration matrix." )
-    outboundTransformsFormLayout.addRow("Calibration matrix:  ", self.calibrationMatrixSelector)
+    outboundTransformsFormLayout.addRow("   Calibration matrix:  ", self.calibrationMatrixSelector)
 
     # Send pre-calculated calibration matrix button
     self.sendCalibrationMatrixButton = qt.QPushButton("Send pre-existing calibration matrix")
@@ -325,14 +508,14 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.targetPointNodeSelector.tableWidget().hide()
     self.targetPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
     self.targetPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    targetPointSelectorLabel = qt.QLabel("Target point: ")
+    targetPointSelectorLabel = qt.QLabel("   Target point: ")
     outboundTargetFormLayout.addWidget(targetPointSelectorLabel, 0, 0)
     outboundTargetFormLayout.addWidget(self.targetPointNodeSelector, 0, 1, 1, 3)
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.targetPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
 
     # Display for RAS coordinates of the selected fidudcial target point
-    targetPointLabel = qt.QLabel("RAS coordinates:     ")
+    targetPointLabel = qt.QLabel("   RAS coordinates:")
     self.targetPointTextbox_R = qt.QLineEdit()
     self.targetPointTextbox_A = qt.QLineEdit()
     self.targetPointTextbox_S = qt.QLineEdit()
@@ -369,7 +552,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.entryPointNodeSelector.tableWidget().hide()
     self.entryPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
     self.entryPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    entryPointSelectorLabel = qt.QLabel("Entry point: ")
+    entryPointSelectorLabel = qt.QLabel("   Entry point: ")
     outboundEntryFormLayout.addWidget(entryPointSelectorLabel, 0, 0)
     outboundEntryFormLayout.addWidget(self.entryPointNodeSelector, 0, 1, 1, 3)
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
@@ -377,12 +560,12 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     self.entryPointCheckbox = qt.QCheckBox()
     self.entryPointCheckbox.toolTip = "Toggle whether or not restrict the plane of motion of the needle to a flat plane."
-    entryPointCheckboxLabel = qt.QLabel("Horizontal path:")
+    entryPointCheckboxLabel = qt.QLabel("   Horizontal path:")
     outboundEntryFormLayout.addWidget(entryPointCheckboxLabel, 1, 0)
     outboundEntryFormLayout.addWidget(self.entryPointCheckbox, 1, 1)
 
     # Display for RAS coordinates of the selected fidudcial entry point
-    entryPointLabel = qt.QLabel("RAS coordinates:     ")
+    entryPointLabel = qt.QLabel("   RAS coordinates:")
     self.entryPointTextbox_R = qt.QLineEdit()
     self.entryPointTextbox_A = qt.QLineEdit()
     self.entryPointTextbox_S = qt.QLineEdit()
@@ -400,58 +583,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.sendEntryPointButton.setMaximumWidth(250)
     outboundEntryFormLayout.addWidget(self.sendEntryPointButton, 3, 1, 1, 3)
     self.sendEntryPointButton.connect('clicked()', self.onSendEntryPointButtonClicked)
-
-    # Inbound messages collapsible button
-    self.inboundCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.inboundCollapsibleButton.text = "Inbound Messages"
-    self.inboundCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.inboundCollapsibleButton)
-
-    # Layout within the path collapsible button
-    inboundFormLayout = qt.QFormLayout(self.inboundCollapsibleButton)
-
-    self.messageTextbox = qt.QLineEdit("No message received")
-    self.messageTextbox.setReadOnly(True)
-    self.messageTextbox.setFixedWidth(200)
-    inboundFormLayout.addRow("Message received:", self.messageTextbox)
-
-    # self.statusTextbox = qt.QLineEdit("No status received")
-    # self.statusTextbox.setReadOnly(True)
-    # self.statusTextbox.setFixedWidth(200)
-    # inboundFormLayout.addRow("Status received:", self.statusTextbox)
-
-    self.statusCodeTextbox = qt.QLineEdit("No status code received")
-    self.statusCodeTextbox.setReadOnly(True)
-    self.statusCodeTextbox.setFixedWidth(200)
-    inboundFormLayout.addRow("Status received:", self.statusCodeTextbox)
-
-    row = 4
-    column = 4
-    self.tableWidget = qt.QTableWidget(row, column)
-    self.tableWidget.verticalHeader().hide() # Remove line numbers
-    self.tableWidget.horizontalHeader().hide() # Remove column numbers
-    self.tableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.tableWidget.horizontalHeader()
-    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-
-    verticalheader = self.tableWidget.verticalHeader()
-    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    inboundFormLayout.addRow("Transform received:", self.tableWidget)
-
-    # Visibility icon
-    self.VisibleButton = qt.QPushButton()
-    eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png");
-    self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
-    self.VisibleButton.setFixedWidth(25)
-    self.VisibleButton.setCheckable(True)
-    inboundFormLayout.addRow("", self.VisibleButton)
-    self.VisibleButton.connect('clicked()', self.onVisibleButtonClicked)
         
     # Info messages collapsible button
     self.infoCollapsibleButton = ctk.ctkCollapsibleButton()
@@ -500,8 +631,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.disconnectFromSocketButton.enabled = True
     self.snrPortTextbox.setReadOnly(True)
     self.snrHostnameTextbox.setReadOnly(True)
-    self.outboundCollapsibleButton.collapsed = False
-    self.inboundCollapsibleButton.collapsed = False
+    self.RobotCommunicationCollapsibleButton.collapsed = False
+    # self.MRICommunicationCollapsibleButton.collapsed = False
     self.infoCollapsibleButton.collapsed = False
 
     snrPort = self.snrPortTextbox.text
@@ -573,8 +704,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.createServerButton.enabled = True
     self.snrPortTextbox.setReadOnly(False)
     self.snrHostnameTextbox.setReadOnly(False)
-    self.outboundCollapsibleButton.collapsed = True
-    self.inboundCollapsibleButton.collapsed = True
+    self.RobotCommunicationCollapsibleButton.collapsed = True
+    self.MRICommunicationCollapsibleButton.collapsed = True
     self.infoCollapsibleButton.collapsed = True
     self.outboundTransformCollapsibleButton.collapsed = True
     self.outboundTargetCollapsibleButton.collapsed = True
@@ -773,6 +904,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
+    # TODO - DELETE THIS LINE - FOR DEBUGGING ONLY 
+    # (function call to getRobotPoseUntilTargetIsReached should be executed once the MOVE_TO_TARGET acknowledgement is received)
+    # self.getRobotPoseUntilTargetIsReached()
+
     # Hide Calibration, Entry, and Targetting GUIs
     self.outboundEntryCollapsibleButton.collapsed = True
     self.outboundTargetCollapsibleButton.collapsed = True
@@ -934,6 +1069,39 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
       slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
 
+  def onMRIStartupButtonClicked(self):
+    self.MRIdisconnectButton.enabled = True
+    self.MRIstartupButton.enabled = False
+
+    self.MRIstartScanButton.enabled = True
+    self.MRIstopScanButton.enabled = True
+    self.MRIupdateTargetButton.enabled = True
+    self.MRIgetTargetButton.enabled = True
+    
+  def onMRIDisconnectButtonClicked(self):
+    self.MRIstartupButton.enabled = True
+    self.MRIdisconnectButton.enabled = False
+
+    self.MRIstartScanButton.enabled = False
+    self.MRIstopScanButton.enabled = False
+    self.MRIupdateTargetButton.enabled = False
+    self.MRIgetTargetButton.enabled = False
+
+  def onMRIStartScanButtonClicked(self):
+    print("Start MRI scan.")
+
+  def onMRIStopScanButtonClicked(self):
+    print("Stop MRI scan.")
+
+  def onMRIUpdateTargetButtonClicked(self):
+    print("Update MRI scanning target.")
+
+  def onMRIGetTargetButtonClicked(self):
+    print("Request current MRI scanning target.")
+
+  def onMRIVisibleButtonClicked(self):
+    print("MRI transform visibility toggled.")
+
   # Show visual transform node of the calibration matrix
   # def onCalibrationVisibleButtonClicked(self):
   #   # If button is checked
@@ -966,7 +1134,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     if(concatenateMsg.find(delimit)!=-1): # found Delimiter is in the string
       nameonly = concatenateMsg[0: concatenateMsg.index(delimit)]
       msgonly = concatenateMsg[concatenateMsg.index(delimit) + 2: len(concatenateMsg)]
-      textNode.messageTextbox.setText(msgonly)
+      textNode.robotMessageTextbox.setText(msgonly)
       delimit2 = "_"
       if(nameonly.find(delimit2)!=-1):
         nameonlyType = nameonly[0: nameonly.index(delimit2)]
@@ -982,7 +1150,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
             textNode.appendReceivedMessageToCommandLog(infoMsg, 0)
             re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     else:
-      textNode.messageTextbox.setText(concatenateMsg)
+      textNode.robotMessageTextbox.setText(concatenateMsg)
       print("Received something different than expected, received: ", ReceivedStringMsg.GetText())      
       
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
@@ -1003,7 +1171,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Status codes -- see igtl_status.h
     statusNode.status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
-    statusNode.statusCodeTextbox.setText(statusNode.status_codes[ReceivedStatusMsg.GetCode()])
+    statusNode.robotStatusCodeTextbox.setText(statusNode.status_codes[ReceivedStatusMsg.GetCode()])
     end = time.time()
     elapsed_time = end - statusNode.start
     infoMsg =  "Received STATUS from WPI: ( " + nameonly + ", " + statusNode.status_codes[ReceivedStatusMsg.GetCode()] + " )"
@@ -1013,20 +1181,24 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     if((statusNode.status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (statusNode.ack == 1) and (nameonly == 'CURRENT_STATUS')): 
       print("Robot is in phase: ", s3, "after", elapsed_time*100, "ms")
       statusNode.phaseTextbox.setText(s3)
-      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 0, 255);") # Sets phase name in blue 
+      statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 0, 255);") # Sets phase name in blue
       statusNode.loading_phase = s3
     elif((statusNode.status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (statusNode.ack == 1) and (statusNode.loading_phase == nameonly)): 
       print("Robot sucessfully achieved : ", statusNode.loading_phase, "after", elapsed_time, "s")
       statusNode.phaseTextbox.setStyleSheet("color: rgb(0, 255, 0);") # Sets phase name in green
+      # Activate command buttons on Start up
       if(statusNode.loading_phase == "START_UP"):
         statusNode.activateButtons()
+      # Call function to receive pose repeatedly from robot if the current phase is MOVE_TO_TARGET
+      elif(statusNode.loading_phase == "MOVE_TO_TARGET"):
+        statusNode.getRobotPoseUntilTargetIsReached()
       statusNode.ack = 0
     else:
       print("Error in changing phase")
-      print("statusNode.status_codes[ReceivedStatusMsg.GetCode()]: ", statusNode.status_codes[ReceivedStatusMsg.GetCode()])
-      print("statusNode.ack: ", statusNode.ack)
-      print("statusNode.loading_phase: ", statusNode.loading_phase)
-      print("nameonly: ", nameonly)
+      # print("statusNode.status_codes[ReceivedStatusMsg.GetCode()]: ", statusNode.status_codes[ReceivedStatusMsg.GetCode()])
+      # print("statusNode.ack: ", statusNode.ack)
+      # print("statusNode.loading_phase: ", statusNode.loading_phase)
+      # print("nameonly: ", nameonly)
 
   def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
     print("New transform received")
@@ -1354,6 +1526,45 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
       self.appendTransformToCommandLog(entryPointMatrix) 
+
+  def getRobotPoseUntilTargetIsReached(self):
+    # When Move button is clicked, request current pose from WPI every second
+    print ("TODO - getRobotPoseUntilTargetIsReached()")
+    
+    # Get the most recently generated target point
+    # Send target point via IGTLink as a 4x4 matrix transform called TGT_XXX
+    targetPositionNode = slicer.vtkMRMLLinearTransformNode()
+    transformNodes = slicer.util.getNodesByClass("vtkMRMLLinearTransformNode")
+    for transformNode in transformNodes:
+      if transformNode.GetName().split("_")[0] == "TGT":
+        targetPositionNode = transformNode
+    targetPositionMatrix = vtk.vtkMatrix4x4()
+    targetPositionNode.GetMatrixTransformToParent(targetPositionMatrix)
+    # print("TARGET POSITION NODE: ", targetPositionNode)
+
+    # Request the current position from the robot (onGetPoseButtonClicked())
+    # Robot will respond with a transform with the name CURRENT_POSITION
+    self.onGetPoseButtonClicked()
+    
+    # Get transform CURRENT_POSITION
+    currentPositionNode = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+    currentPositionMatrix = vtk.vtkMatrix4x4()
+    currentPositionNode.GetMatrixTransformToParent(currentPositionMatrix)
+    # print("CURRENT POSITION NODE: ", currentPositionNode)
+
+    positionsAreEqual = True
+    for i in range(4):
+      for j in range(4):
+        if not round(targetPositionMatrix.GetElement(i, j),2) == round(currentPositionMatrix.GetElement(i, j),2):
+          positionsAreEqual = False
+          break
+
+    if positionsAreEqual:
+      print("--------------- Robot has reached the target")
+    else:
+      print("--------------- Robot has NOT yet reached the target")
+      time.sleep(2)
+      self.getRobotPoseUntilTargetIsReached()
 
 
 # # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
