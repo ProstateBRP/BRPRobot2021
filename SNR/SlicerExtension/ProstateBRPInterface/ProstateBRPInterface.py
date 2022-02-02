@@ -650,7 +650,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.SetTypeServer(int(snrPort))
     self.openIGTNode.Start()
     print("openIGTNode: ", self.openIGTNode)
-    self.IGTActive = True
 
     # Create a .txt document for the command log
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
@@ -658,36 +657,34 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     with open(self.commandLogFilePath,"a") as f:
       f.write('\n----------------- New session started on ' + datetime.datetime.now().strftime("%d/%m/%Y at %H:%M:%S:%f") + ' -----------------\n')
 
-    # Make a node for each message type IF the nodes are not already created
-    if self.firstServer:
-      self.firstServer = False
-      # Create nodes to receive string, status, and transform messages
-      ReceivedStringMsg = slicer.vtkMRMLTextNode()
-      ReceivedStringMsg.SetName("StringMessage")
-      slicer.mrmlScene.AddNode(ReceivedStringMsg)
+    # Make a node for each message type 
+    # Create nodes to receive string, status, and transform messages
+    ReceivedStringMsg = slicer.vtkMRMLTextNode()
+    ReceivedStringMsg.SetName("StringMessage")
+    slicer.mrmlScene.AddNode(ReceivedStringMsg)
 
-      ReceivedStatusMsg = slicer.vtkMRMLIGTLStatusNode()
-      ReceivedStatusMsg.SetName("StatusMessage")
-      slicer.mrmlScene.AddNode(ReceivedStatusMsg)
+    ReceivedStatusMsg = slicer.vtkMRMLIGTLStatusNode()
+    ReceivedStatusMsg.SetName("StatusMessage")
+    slicer.mrmlScene.AddNode(ReceivedStatusMsg)
 
-      ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
-      ReceivedTransformMsg.SetName("TransformMessage")
-      slicer.mrmlScene.AddNode(ReceivedTransformMsg)
+    ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
+    ReceivedTransformMsg.SetName("TransformMessage")
+    slicer.mrmlScene.AddNode(ReceivedTransformMsg)
 
-      ReceivedTransformInfo = slicer.vtkMRMLTextNode()
-      ReceivedTransformInfo.SetName("TransformInfo")
-      slicer.mrmlScene.AddNode(ReceivedTransformInfo)
+    ReceivedTransformInfo = slicer.vtkMRMLTextNode()
+    ReceivedTransformInfo.SetName("TransformInfo")
+    slicer.mrmlScene.AddNode(ReceivedTransformInfo)
 
-      # Add observers on the 4 message type nodes
-      ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-      ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
-      ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-      ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
+    # Add observers on the 4 message type nodes
+    ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+    ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
+    ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+    ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
 
-      # Create a node for sending transforms
-      SendTransformNode = slicer.vtkMRMLLinearTransformNode()
-      SendTransformNode.SetName("SendTransform")
-      slicer.mrmlScene.AddNode(SendTransformNode)
+    # Create a node for sending transforms
+    SendTransformNode = slicer.vtkMRMLLinearTransformNode()
+    SendTransformNode.SetName("SendTransform")
+    slicer.mrmlScene.AddNode(SendTransformNode)
 
     # Initialize variables 
     self.last_string_sent = "nostring"
@@ -713,20 +710,35 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Close socket
     self.openIGTNode.Stop()
-    #VisualFeedback: color in black when socket is disconnected
     self.snrPortTextboxLabel.setStyleSheet('color: black')
     self.snrHostnameTextboxLabel.setStyleSheet('color: black')
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
     self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
-  # def generateRandomNameID(self,last_prefix_sent):
-  #   # Randomly choose 4 letter from all the ascii_letters
-  #   randomID = [last_prefix_sent,"_"]
-  #   for i in range(4):
-  #     randomLetter = random.choice(string.ascii_letters)
-  #     randomID.append(str(ord(randomLetter)))
-  #   randomIDname = ''.join(randomID)
-  #   return randomIDname
+    # Clear textboxes
+    self.MRIphaseTextbox.setText("")
+    self.MRImessageTextbox.setText("No message received")
+    self.MRIstatusCodeTextbox.setText("No status code received")
+    self.entryPointTextbox_R.setText("")
+    self.entryPointTextbox_A.setText("")
+    self.entryPointTextbox_S.setText("")
+    self.targetPointTextbox_R.setText("")
+    self.targetPointTextbox_A.setText("")
+    self.targetPointTextbox_S.setText("")
+    self.robotMessageTextbox.setText("No message received")
+    self.robotStatusCodeTextbox.setText("No status code received")
+    self.phaseTextbox.setText("")
+    self.infoTextbox.setText("")
+   
+    # Clear tables
+    for i in range(4):
+      for j in range(4):
+        self.calibrationTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
+        self.tableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
+   
+    # Delete all nodes from the scene
+    slicer.mrmlScene.RemoveNode(self.openIGTNode)
+    slicer.mrmlScene.Clear(0) 
 
   def generateTimestampNameID(self, last_prefix_sent):
     timestampID = [last_prefix_sent, "_"]
@@ -1249,6 +1261,96 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
           print("Acknowledgment received for transform:", infoNode.last_name_sent)
         infoNode.to_compare = 1
 
+  def createInitialNeedleModel(self):
+    # https://vtkusers.public.kitware.narkive.com/tNhV02qi/aligning-a-cylinder-between-two-points#selection:2.877.26 
+    PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("NeedleModelNode")
+    slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+
+    vector_R = self.targetCoordinate_R - self.entryCoordinate_R
+    vector_A = self.targetCoordinate_A - self.entryCoordinate_A
+    vector_S = self.targetCoordinate_S - self.entryCoordinate_S
+
+    # Normalize for decrease computation time
+    needleVector = np.array([vector_R, vector_A, vector_S])
+    np.linalg.norm(needleVector)
+    vector_R = needleVector[0]
+    vector_A = needleVector[1]
+    vector_S = needleVector[2]
+
+    magnitude = np.sqrt(vector_R**2 + vector_A**2 + vector_S**2)
+    if not magnitude == 0.0:
+      rotationAngle = np.arccos(vector_A / np.sqrt(vector_R**2 + vector_A**2 + vector_S**2))
+    else:
+      rotationAngle = 90.0
+
+    self.needleModel = vtk.vtkCylinderSource()
+    self.needleModel.SetRadius(0.5)
+    self.needleModel.SetResolution(50)
+    self.needleModel.SetHeight(np.sqrt(vector_R**2 + vector_A**2 + vector_S**2))
+
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(self.needleModel.GetOutputPort())
+    actor = vtk.vtkActor()
+    actor.SetOrientation(0,0,90)
+    # actor.GetProperty().SetColor(220,220,220)
+    actor.SetMapper(mapper)
+
+    locatorModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "NeedleModelNode")
+    locatorModelNode.SetAndObservePolyData(self.needleModel.GetOutput())
+    locatorModelNode.CreateDefaultDisplayNodes()
+    locatorModelNode.SetDisplayVisibility(True)
+    self.needleModel.Update()
+
+    # Rotate needleModel cylinder
+    transformFilter = vtk.vtkTransformPolyDataFilter()
+    transform = vtk.vtkTransform()
+    transform.Translate(self.entryCoordinate_R + vector_R/2.0, self.entryCoordinate_A + vector_A/2.0, self.entryCoordinate_S + vector_S/2.0)
+    transform.RotateWXYZ(np.rad2deg(rotationAngle), vector_S, 0.0, -vector_R)
+    transform.Update()
+    transformFilter.SetInputConnection(self.needleModel.GetOutputPort())
+    transformFilter.SetTransform(transform)
+
+    # Add small spheres at the entry and target points
+    self.targetSphere = vtk.vtkSphereSource()
+    self.targetSphere.SetRadius(1.0)
+    self.targetSphere.SetCenter(self.targetCoordinate_R, self.targetCoordinate_A, self.targetCoordinate_S)
+    self.entrySphere = vtk.vtkSphereSource()
+    self.entrySphere.SetRadius(1.0)
+    self.entrySphere.SetCenter(self.entryCoordinate_R, self.entryCoordinate_A, self.entryCoordinate_S)
+
+    self.append = vtk.vtkAppendPolyData()
+    self.append.AddInputConnection(self.targetSphere.GetOutputPort())
+    self.append.AddInputConnection(self.entrySphere.GetOutputPort())
+    self.append.AddInputConnection(transformFilter.GetOutputPort())
+    self.append.Update()
+
+    locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
+
+
+  def updateNeedleModelPosition(self, currentPositionMatrix):
+    # For now, just place a small sphere @ the received needle tip position
+    slicer.mrmlScene.RemoveNode(slicer.mrmlScene.GetFirstNodeByName("CurrentNeedleTipPositionNode"))
+
+    self.currentPositionSphere = vtk.vtkSphereSource()
+    self.currentPositionSphere.SetRadius(2.0)
+    #self.currentPositionSphere.SetCenter(10, 10, 10)
+    self.currentPositionSphere.SetCenter(currentPositionMatrix.GetElement(0,3), currentPositionMatrix.GetElement(1,3), currentPositionMatrix.GetElement(2,3))
+
+    mapper = vtk.vtkPolyDataMapper()
+    mapper.SetInputConnection(self.currentPositionMatrix.GetOutputPort())
+    self.actor = vtk.vtkActor()
+    self.actor.GetProperty().SetColor(220, 220, 220)
+    self.actor.SetMapper(mapper)
+
+    locatorModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "CurrentNeedleTipPositionNode")
+    locatorModelNode.SetAndObservePolyData(self.currentPositionSphere.GetOutput())
+    locatorModelNode.CreateDefaultDisplayNodes()
+    locatorModelNode.SetDisplayVisibility(True)
+    self.currentPositionSphere.Update()
+
+    # TODO - eventually change this to show the entire needle probe model.
+
+
   def AddPointerModel(self):   
     self.cyl = vtk.vtkCylinderSource()
     self.cyl.SetRadius(1.5)
@@ -1272,20 +1374,20 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     #Rotate cylinder
     transformFilter = vtk.vtkTransformPolyDataFilter()
     transform = vtk.vtkTransform()
-    transform.RotateX(90.0);
-    transform.Translate(0.0, -50.0, 0.0);
-    transform.Update();
-    transformFilter.SetInputConnection(self.cyl.GetOutputPort());
-    transformFilter.SetTransform(transform);
+    transform.RotateX(90.0)
+    transform.Translate(0.0, -50.0, 0.0)
+    transform.Update()
+    transformFilter.SetInputConnection(self.cyl.GetOutputPort())
+    transformFilter.SetTransform(transform)
 
     self.sphere = vtk.vtkSphereSource()
-    self.sphere.SetRadius(3.0);
-    self.sphere.SetCenter(0, 0, 0);
+    self.sphere.SetRadius(3.0)
+    self.sphere.SetCenter(0, 0, 0)
 
     self.append = vtk.vtkAppendPolyData()
-    self.append.AddInputConnection(self.sphere.GetOutputPort());
-    self.append.AddInputConnection(transformFilter.GetOutputPort());
-    self.append.Update();
+    self.append.AddInputConnection(self.sphere.GetOutputPort())
+    self.append.AddInputConnection(transformFilter.GetOutputPort())
+    self.append.Update()
 
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
 
@@ -1444,6 +1546,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     targetPointNode = self.targetPointNodeSelector.currentNode()
     if not targetPointNode:
       print ("No TARGET_POINT fiducial selected.")
+    elif not self.phaseTextbox.text == 'TARGETING':
+      print ("Robot is not yet in TARGETING workphase. Please enter TARGETING workphase before sending target or entry points.")
     else:
       # Print RAS coordinates of the target point fiducial into the Target point GUI
       targetCoordinatesRAS = [0, 0, 0]
@@ -1479,8 +1583,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     entryPointNode = self.entryPointNodeSelector.currentNode()
     if not entryPointNode:
       print ("No ENTRY_POINT fiducial selected.")
+    elif not self.phaseTextbox.text == 'TARGETING':
+      print ("Robot is not yet in TARGETING workphase. Please enter TARGETING workphase before sending target or entry points.")
     else:
       if self.entryPointCheckbox.isChecked():
+      
         # Print RAS coordinates of the RESTRICTED entry point fiducial
         entryCoordinatesRAS = [0, 0, 0]
         entryPointNode.GetNthFiducialPosition(0, entryCoordinatesRAS)
@@ -1527,35 +1634,66 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
       self.appendTransformToCommandLog(entryPointMatrix) 
 
+      # Create a 3D model of the needle between the target and entry points
+      self.createInitialNeedleModel()
+
   def getRobotPoseUntilTargetIsReached(self):
     # When Move button is clicked, request current pose from WPI every second
     print ("TODO - getRobotPoseUntilTargetIsReached()")
     
-    # Get the most recently generated target point
-    # Send target point via IGTLink as a 4x4 matrix transform called TGT_XXX
+    # Get the REACHABLE_TARGET transform
     targetPositionNode = slicer.vtkMRMLLinearTransformNode()
     transformNodes = slicer.util.getNodesByClass("vtkMRMLLinearTransformNode")
+    reachableTargetFound = False
     for transformNode in transformNodes:
-      if transformNode.GetName().split("_")[0] == "TGT":
+      if transformNode.GetName().split("_")[0] == "REACHABLE":
         targetPositionNode = transformNode
+        reachableTargetFound = True
+    
+    if not reachableTargetFound:
+      print ("No transform found that is named REACHABLE_TARGET.")
+      # FOR DEBUGGING PURPOSES ONLY - get matrix named TGT_XXX instead: TODO (delete)
+      for transformNode in transformNodes:
+        if transformNode.GetName().split("_")[0] == "TGT":
+          targetPositionNode = transformNode
+
     targetPositionMatrix = vtk.vtkMatrix4x4()
     targetPositionNode.GetMatrixTransformToParent(targetPositionMatrix)
-    # print("TARGET POSITION NODE: ", targetPositionNode)
+    print("REACHABLE TARGET POSITION NODE: ", targetPositionMatrix)
 
-    # Request the current position from the robot (onGetPoseButtonClicked())
+    # Request the current position from the robot
     # Robot will respond with a transform with the name CURRENT_POSITION
-    self.onGetPoseButtonClicked()
-    
+    # self.onGetPoseButtonClicked()
+    # print("Send command to get current position of the robot")
+    getposeNode = slicer.vtkMRMLTextNode()
+    self.last_prefix_sent = "CMD"
+    timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
+    self.last_name_sent = self.generateTimestampNameID(self.last_prefix_sent)
+    getposeNode.SetName(timestampIDname)
+    getposeNode.SetText("GET_POSE")
+    getposeNode.SetEncoding(3)
+    slicer.mrmlScene.AddNode(getposeNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
+    self.openIGTNode.PushNode(getposeNode)
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_POSE )"
+    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+
+    time.sleep(0.1)
+
     # Get transform CURRENT_POSITION
-    currentPositionNode = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-    currentPositionMatrix = vtk.vtkMatrix4x4()
-    currentPositionNode.GetMatrixTransformToParent(currentPositionMatrix)
-    # print("CURRENT POSITION NODE: ", currentPositionNode)
+    self.currentPositionNode = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+    self.currentPositionMatrix = vtk.vtkMatrix4x4()
+    self.currentPositionNode.GetMatrixTransformToParent(self.currentPositionMatrix)
+    print("CURRENT POSITION NODE: ", self.currentPositionNode)
+
+    # Update needle model in 3D Slicer pane via updateNeedleModelPosition:
+    self.updateNeedleModelPosition(currentPositionMatrix)
 
     positionsAreEqual = True
     for i in range(4):
       for j in range(4):
-        if not round(targetPositionMatrix.GetElement(i, j),2) == round(currentPositionMatrix.GetElement(i, j),2):
+        if not round(targetPositionMatrix.GetElement(i, j),1) == round(currentPositionMatrix.GetElement(i, j),1):
           positionsAreEqual = False
           break
 
@@ -1563,7 +1701,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       print("--------------- Robot has reached the target")
     else:
       print("--------------- Robot has NOT yet reached the target")
-      time.sleep(2)
+      time.sleep(1)
       self.getRobotPoseUntilTargetIsReached()
 
 
