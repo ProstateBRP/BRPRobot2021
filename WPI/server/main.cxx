@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
         //------------------------------------------------------------
         // Waiting for Connection
         socket = serverSocket->WaitForConnection(2000);
-        std::cout<< "waiting for connection\n";
+        std::cout << "waiting for connection\n";
 
         if (socket.IsNotNull()) // if client connected
         {
@@ -125,7 +125,7 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
     std::vector<RobotPhaseBase *>::iterator iter;
     for (iter = wlist.begin(); iter != wlist.end(); iter++)
     {
-        //std::cerr << "MESSAGE: Setting up " << (*iter)->Name() << " phase." << std::endl;
+        // std::cerr << "MESSAGE: Setting up " << (*iter)->Name() << " phase." << std::endl;
         (*iter)->SetSocket(socket);
         (*iter)->SetRobotStatus(rs);
         (*iter)->connect = 1;
@@ -155,18 +155,10 @@ int Session(igtl::Socket *socket, WorkphaseList &wlist)
                     // Change the current phase
                     currentPhase = iter;
                     (*currentPhase)->Enter(queryID.c_str()); // Initialization process
-                    std::vector<RobotPhaseBase *>::iterator it;
-                    for (it = wlist.begin(); it != wlist.end(); it++)
-                    {
-                        std::cout << (*it)->Name() << " : " << (*it)->GetRobotStatus()->GetCalibrationFlag() 
-                        << std::endl;
-                    }
                     break;
-
                 }
             }
         }
-        
     }
 
     return 1;
