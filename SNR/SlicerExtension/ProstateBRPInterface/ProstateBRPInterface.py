@@ -178,7 +178,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.MRImessageTextbox = qt.QLineEdit("No message received")
     self.MRImessageTextbox.setReadOnly(True)
     self.MRImessageTextbox.setFixedWidth(200)
-    MRImessageTextboxLabel = qt.QLabel('   Message received:')
+    MRImessageTextboxLabel = qt.QLabel("   Message received:")
     MRIInboundCommunicationLayout.addWidget(MRImessageTextboxLabel, 1, 0)
     MRIInboundCommunicationLayout.addWidget(self.MRImessageTextbox, 1, 1)
 
@@ -192,7 +192,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     row = 4
     column = 4
     self.MRItableWidget = qt.QTableWidget(row, column)
-    self.MRItableWidget.setMaximumWidth(400)
+    #self.MRItableWidget.setMaximumWidth(400)
+    self.MRItableWidget.setMinimumHeight(95)
     self.MRItableWidget.verticalHeader().hide() # Remove line numbers
     self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
     self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
@@ -259,20 +260,12 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
 
     # targetingButton Button
-    self.targetingButton = qt.QPushButton("TARGET POINT")
+    self.targetingButton = qt.QPushButton("TARGETING")
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
     self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.targetingButton, 4 , 0)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
-
-    # # entryPointButton Button
-    # self.entryPointButton = qt.QPushButton("ENTRY POINT")
-    # self.entryPointButton.toolTip = "Send the entry point command to the WPI robot."
-    # self.entryPointButton.enabled = False
-    # self.entryPointButton.setMaximumWidth(250)
-    # RobotOutboundCommunicationLayout.addWidget(self.entryPointButton, 4 , 0)
-    # self.entryPointButton.connect('clicked()', self.onEntryPointButtonClicked)
 
     # moveButton Button
     self.moveButton = qt.QPushButton("MOVE")
@@ -340,8 +333,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.robotMessageTextbox = qt.QLineEdit("No message received")
     self.robotMessageTextbox.setReadOnly(True)
     self.robotMessageTextbox.setFixedWidth(200)
-    # RobotInboundCommunicationLayout.addRow("Message received:", self.messageTextbox)
-    robotMessageTextboxLabel = qt.QLabel('   Message received:')
+    robotMessageTextboxLabel = qt.QLabel("   Message received:")
     RobotInboundCommunicationLayout.addWidget(robotMessageTextboxLabel, 1, 0)
     RobotInboundCommunicationLayout.addWidget(self.robotMessageTextbox, 1, 1)
 
@@ -354,25 +346,26 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     row = 4
     column = 4
-    self.tableWidget = qt.QTableWidget(row, column)
-    self.tableWidget.setMaximumWidth(400)
-    self.tableWidget.verticalHeader().hide() # Remove line numbers
-    self.tableWidget.horizontalHeader().hide() # Remove column numbers
-    self.tableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.tableWidget.horizontalHeader()
+    self.robotTableWidget = qt.QTableWidget(row, column)
+    #self.robotTableWidget.setMaximumWidth(400)
+    self.robotTableWidget.setMinimumHeight(95)
+    self.robotTableWidget.verticalHeader().hide() # Remove line numbers
+    self.robotTableWidget.horizontalHeader().hide() # Remove column numbers
+    self.robotTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.robotTableWidget.horizontalHeader()
     horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
     horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
 
-    verticalheader = self.tableWidget.verticalHeader()
+    verticalheader = self.robotTableWidget.verticalHeader()
     verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    tableWidgetLabel = qt.QLabel("   Transform received:")
-    RobotInboundCommunicationLayout.addWidget(tableWidgetLabel, 3, 0)
-    RobotInboundCommunicationLayout.addWidget(self.tableWidget, 3, 1)
+    robotTableWidgetLabel = qt.QLabel("   Transform received:")
+    RobotInboundCommunicationLayout.addWidget(robotTableWidgetLabel, 3, 0)
+    RobotInboundCommunicationLayout.addWidget(self.robotTableWidget, 3, 1)
 
     # # Visibility icon
     # self.VisibleButton = qt.QPushButton()
@@ -422,6 +415,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     row = 4
     column = 4
     self.calibrationTableWidget = qt.QTableWidget(row, column)
+    self.calibrationTableWidget.setMinimumHeight(95)
     self.calibrationTableWidget.verticalHeader().hide() # Remove line numbers
     self.calibrationTableWidget.horizontalHeader().hide() # Remove column numbers
     self.calibrationTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
@@ -436,7 +430,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    outboundTransformsFormLayout.addRow("   Calibration matrix:", self.calibrationTableWidget)
+    outboundTransformsFormLayout.addRow("   Calibration matrix: ", self.calibrationTableWidget)
 
     # Add ROI button
     self.addROIButton = qt.QPushButton("Add ROI")
@@ -478,9 +472,15 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.planningCollapsibleButton.collapsed = True
     self.layout.addWidget(self.planningCollapsibleButton)
 
-    # Layout within the path collapsible button
-    planningLayout = qt.QGridLayout(self.planningCollapsibleButton)
-   
+    # Overall layout within the planning collapsible button
+    # planningLayout = qt.QGridLayout(self.planningCollapsibleButton)
+    planningLayout = qt.QVBoxLayout(self.planningCollapsibleButton)
+
+    # Top layout within the planning collapsible button
+    # planningLayoutTop = qt.QGridLayout()
+    planningLayoutTop = qt.QFormLayout()
+    planningLayout.addLayout(planningLayoutTop)
+
     self.targetPointNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
     self.targetPointNodeSelector.objectName = 'targetPointNodeSelector'
     self.targetPointNodeSelector.toolTip = "Select a fiducial to use as the needle insertion target point."
@@ -489,22 +489,20 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.targetPointNodeSelector.tableWidget().hide()
     self.targetPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
     self.targetPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    targetPointSelectorLabel = qt.QLabel("   Target point: ")
-    planningLayout.addWidget(targetPointSelectorLabel, 0, 0)
-    planningLayout.addWidget(self.targetPointNodeSelector, 0, 1, 1, 3)
+    # targetPointSelectorLabel = qt.QLabel("   Target point: ")
+    # planningLayoutTop.addWidget(targetPointSelectorLabel, 0, 0)
+    # planningLayoutTop.addWidget(self.targetPointNodeSelector, 0, 1, 1, 3)
+    planningLayoutTop.addRow("   Target point: ", self.targetPointNodeSelector)
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.targetPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
     self.targetPointNodeSelector.connect('updateFinished()', self.onTargetPointFiducialChanged)
-  
-    # TODO -- fix line 497 or the function itself
-    # TODO - On select fiducial, call fn to create/update a transform node via onTargetPointFiducialChanged
-    # TODO - Connect this transform node to the display table & rotation sliders
-    
+
     # Transform matrix display table
     row = 4
     column = 4
     self.targetTableWidget = qt.QTableWidget(row, column)
-    self.targetTableWidget.setMaximumWidth(400)
+    # self.targetTableWidget.setMaximumWidth(400)
+    self.targetTableWidget.setMinimumHeight(95)
     self.targetTableWidget.verticalHeader().hide() # Remove line numbers
     self.targetTableWidget.horizontalHeader().hide() # Remove column numbers
     self.targetTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
@@ -519,9 +517,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    targetTableWidgetLabel = qt.QLabel("   Target transform:  ")
-    planningLayout.addWidget(targetTableWidgetLabel, 2, 0)
-    planningLayout.addWidget(self.targetTableWidget, 2, 1, 1, 3)
+    # targetTableWidgetLabel = qt.QLabel("   Target transform:  ")
+    # planningLayoutTop.addWidget(targetTableWidgetLabel, 2, 0)
+    # planningLayoutTop.addWidget(self.targetTableWidget, 2, 1, 1, 3)
+    planningLayoutTop.addRow("   Target transform:   ", self.targetTableWidget)
 
     # Visibility icon
     self.targetNeedleVisibleButton = qt.QPushButton()
@@ -529,9 +528,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.targetNeedleVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
     self.targetNeedleVisibleButton.setFixedWidth(25)
     self.targetNeedleVisibleButton.setCheckable(True)
-    planningLayout.addWidget(self.targetNeedleVisibleButton, 3, 1)
-    self.targetNeedleVisibleButton.connect('clicked()', self.onTargetNeedleVisibleButtonClicked)
-
+    # planningLayoutTop.addWidget(self.targetNeedleVisibleButton, 3, 1)
+    planningLayoutTop.addRow(" ", self.targetNeedleVisibleButton)
+    self.targetNeedleVisibleButton.connect('clicked()', self.onPlannedTargetNeedleVisibleButtonClicked)
+    
     # Translation sliders
     self.translationSliderWidget = slicer.qMRMLTransformSliders()
     self.translationSliderWidget.Title = 'Translation'
@@ -539,7 +539,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.translationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
     self.translationSliderWidget.setMRMLScene(slicer.mrmlScene)
     self.translationSliderWidget.minMaxVisible = False
-    planningLayout.addWidget(self.translationSliderWidget, 4, 0, 1, 4)    
+    # planningLayoutTop.addWidget(self.translationSliderWidget, 4, 0, 1, 4)
+    planningLayoutTop.addRow(self.translationSliderWidget)    
 
     # LR and PA rotation sliders
     self.orientationSliderWidget = slicer.qMRMLTransformSliders()
@@ -548,133 +549,58 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.orientationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
     self.orientationSliderWidget.setMRMLScene(slicer.mrmlScene)
     self.orientationSliderWidget.minMaxVisible = False
-    planningLayout.addWidget(self.orientationSliderWidget, 5, 0, 1, 4)    
+    # planningLayoutTop.addWidget(self.orientationSliderWidget, 5, 0, 1, 4)
+    planningLayoutTop.addRow(self.orientationSliderWidget)    
+
+    # Bottom layout within the planning collapsible button 
+    # (includes the reference frame toggle button and the reset button)
+    #planningLayoutBottom = qt.QGridLayout()
+    planningLayoutBottom = qt.QHBoxLayout()
+    planningLayout.addLayout(planningLayoutBottom)
 
     # Button to toggle translation in local reference frame
     self.referenceFrameToggleButton = qt.QPushButton()
     globalReferenceIcon = qt.QIcon(":Icons/RotateFirst.png")
     self.referenceFrameToggleButton.setIcon(globalReferenceIcon)
-    self.referenceFrameToggleButton.setFixedWidth(50)
-    self.referenceFrameToggleButton.setFixedHeight(30)
+    self.referenceFrameToggleButton.setMaximumWidth(50)
+    self.referenceFrameToggleButton.setMaximumHeight(25)
     self.referenceFrameToggleButton.toolTip = "Translation in global or local (rotated) reference frame"
     self.referenceFrameToggleButton.setCheckable(True)
-    planningLayout.addWidget(self.referenceFrameToggleButton, 6, 0)
+    planningLayoutBottom.addWidget(self.referenceFrameToggleButton, 0, 0)
     self.referenceFrameToggleButton.connect('clicked()', self.onTargetReferenceFrameButtonToggled)
 
+    # Button to reset needle to original target point & upright position
+    self.resetNeedlePositionButton = qt.QPushButton("Reset")
+    self.resetNeedlePositionButton.enabled = True
+    self.resetNeedlePositionButton.toolTip = "Reset the needle model back to the target fiducial"
+    self.resetNeedlePositionButton.setMaximumWidth(50)
+    self.resetNeedlePositionButton.setMaximumHeight(25)
+    planningLayoutBottom.addWidget(self.resetNeedlePositionButton, 0, 1)
+    self.resetNeedlePositionButton.connect('clicked()', self.onTargetPointFiducialChanged)
+
+    # Add spacer to left align the reference frame toggle button and reset button
+    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
+    planningLayoutBottom.addSpacerItem(spacer)
+
     # Needle view panel collapsible button
-    self.needleViewPanelCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.needleViewPanelCollapsibleButton.text = "Needle View Panel"
-    self.needleViewPanelCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.needleViewPanelCollapsibleButton)
+    self.modelViewPanelCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.modelViewPanelCollapsibleButton.text = "Model View Panel"
+    self.modelViewPanelCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.modelViewPanelCollapsibleButton)
 
     # Layout within the needle view panel collapsible button
-    needleViewPanelLayout = qt.QGridLayout(self.needleViewPanelCollapsibleButton)
+    modelViewPanelLayout = qt.QGridLayout(self.modelViewPanelCollapsibleButton)
 
-    # TODO - needle panel GUI and functionality
+    # Model view panel GUI and functionality
+      # Planned target transform (PointerModel = plannedTarget)    
+      # Reachable target transform (PointerModel = reachableTarget)
+      # Current location transform (PointerModel = currentLocation)
+    self.treeView = slicer.qMRMLSubjectHierarchyTreeView()
+    self.treeView.nodeTypes = ["vtkMRMLModelNode"]
+    # self.treeView.setMRMLScene(slicer.mrmlScene)
+    # if just needle models are desired in the model view panel -- use setNameFilter()
+    modelViewPanelLayout.addWidget(self.treeView, 0, 0)
 
-    # Planned target transform (PointerModel = plannedTarget)
-    
-    # Reachable target transform (PointerModel = reachableTarget)
-
-    # Current location transform (PointerModel = currentLocation)
-
-
-
-    # # Outbound target point fiducial collapsible button
-    # self.outboundTargetCollapsibleButton = ctk.ctkCollapsibleButton()
-    # self.outboundTargetCollapsibleButton.text = "Target Point"
-    # self.outboundTargetCollapsibleButton.collapsed = True
-    # self.layout.addWidget(self.outboundTargetCollapsibleButton)
-
-    # # Layout within the path collapsible button
-    # outboundTargetFormLayout = qt.QGridLayout(self.outboundTargetCollapsibleButton)
-   
-    # Fiducial selector for target point
-    # self.targetPointNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
-    # self.targetPointNodeSelector.objectName = 'targetPointNodeSelector'
-    # self.targetPointNodeSelector.toolTip = "Select a fiducial to use as the needle insertion target point."
-    # self.targetPointNodeSelector.setNodeBaseName("TARGET_POINT")
-    # self.targetPointNodeSelector.defaultNodeColor = qt.QColor(170,0,0)
-    # self.targetPointNodeSelector.tableWidget().hide()
-    # self.targetPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
-    # self.targetPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    # targetPointSelectorLabel = qt.QLabel("   Target point: ")
-    # outboundTargetFormLayout.addWidget(targetPointSelectorLabel, 0, 0)
-    # outboundTargetFormLayout.addWidget(self.targetPointNodeSelector, 0, 1, 1, 3)
-    # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-    #                     self.targetPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
-
-    # # Display for RAS coordinates of the selected fidudcial target point
-    # targetPointLabel = qt.QLabel("   RAS coordinates:")
-    # self.targetPointTextbox_R = qt.QLineEdit()
-    # self.targetPointTextbox_A = qt.QLineEdit()
-    # self.targetPointTextbox_S = qt.QLineEdit()
-    # self.targetPointTextbox_R.setReadOnly(True)
-    # self.targetPointTextbox_A.setReadOnly(True)
-    # self.targetPointTextbox_S.setReadOnly(True)
-    # outboundTargetFormLayout.addWidget(targetPointLabel, 1, 0)
-    # outboundTargetFormLayout.addWidget(self.targetPointTextbox_R, 1, 1)
-    # outboundTargetFormLayout.addWidget(self.targetPointTextbox_A, 1, 2)
-    # outboundTargetFormLayout.addWidget(self.targetPointTextbox_S, 1, 3)
-
-    # # Button to send fiducial target point
-    # self.sendTargetPointButton = qt.QPushButton("Send selected target point")
-    # self.sendTargetPointButton.enabled = True
-    # # self.sendTargetPointButton.setMaximumWidth(250)
-    # outboundTargetFormLayout.addWidget(self.sendTargetPointButton, 2, 1, 1, 3)
-    # self.sendTargetPointButton.connect('clicked()', self.onSendTargetPointButtonClicked)
-
-    # # Outbound entry point fiducial collapsible button
-    # self.outboundEntryCollapsibleButton = ctk.ctkCollapsibleButton()
-    # self.outboundEntryCollapsibleButton.text = "Entry Point"
-    # self.outboundEntryCollapsibleButton.collapsed = True
-    # self.layout.addWidget(self.outboundEntryCollapsibleButton)
-
-    # # Layout within the path collapsible button
-    # outboundEntryFormLayout = qt.QGridLayout(self.outboundEntryCollapsibleButton)
-   
-
-    # # Fiducial selector for entry point
-    # self.entryPointNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
-    # self.entryPointNodeSelector.objectName = 'entryPointNodeSelector'
-    # self.entryPointNodeSelector.toolTip = "Select a fiducial to use as the needle insertion entry point."
-    # self.entryPointNodeSelector.setNodeBaseName("ENTRY_POINT")
-    # self.entryPointNodeSelector.defaultNodeColor = qt.QColor(170,0,0)
-    # self.entryPointNodeSelector.tableWidget().hide()
-    # self.entryPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
-    # self.entryPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    # entryPointSelectorLabel = qt.QLabel("   Entry point: ")
-    # outboundEntryFormLayout.addWidget(entryPointSelectorLabel, 0, 0)
-    # outboundEntryFormLayout.addWidget(self.entryPointNodeSelector, 0, 1, 1, 3)
-    # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-    #                     self.entryPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
-
-    # self.entryPointCheckbox = qt.QCheckBox()
-    # self.entryPointCheckbox.toolTip = "Toggle whether or not restrict the plane of motion of the needle to a flat plane."
-    # entryPointCheckboxLabel = qt.QLabel("   Horizontal path:")
-    # outboundEntryFormLayout.addWidget(entryPointCheckboxLabel, 1, 0)
-    # outboundEntryFormLayout.addWidget(self.entryPointCheckbox, 1, 1)
-
-    # # Display for RAS coordinates of the selected fidudcial entry point
-    # entryPointLabel = qt.QLabel("   RAS coordinates:")
-    # self.entryPointTextbox_R = qt.QLineEdit()
-    # self.entryPointTextbox_A = qt.QLineEdit()
-    # self.entryPointTextbox_S = qt.QLineEdit()
-    # self.entryPointTextbox_R.setReadOnly(True)
-    # self.entryPointTextbox_A.setReadOnly(True)
-    # self.entryPointTextbox_S.setReadOnly(True)
-    # outboundEntryFormLayout.addWidget(entryPointLabel, 2, 0)
-    # outboundEntryFormLayout.addWidget(self.entryPointTextbox_R, 2, 1)
-    # outboundEntryFormLayout.addWidget(self.entryPointTextbox_A, 2, 2)
-    # outboundEntryFormLayout.addWidget(self.entryPointTextbox_S, 2, 3)
-
-    # # Button to send fiducial entry point
-    # self.sendEntryPointButton = qt.QPushButton("Send selected entry point")
-    # self.sendEntryPointButton.enabled = True
-    # # self.sendEntryPointButton.setMaximumWidth(250)
-    # outboundEntryFormLayout.addWidget(self.sendEntryPointButton, 3, 1, 1, 3)
-    # self.sendEntryPointButton.connect('clicked()', self.onSendEntryPointButtonClicked)
-        
     # Info messages collapsible button
     self.infoCollapsibleButton = ctk.ctkCollapsibleButton()
     self.infoCollapsibleButton.text = "Command Log"
@@ -702,7 +628,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.zFrameROI = None
     self.zFrameROIAddedObserverTag = None
     self.outputTransform = None
-    self.targetTransform = None
+    self.plannedTargetTransform = None
+    self.reachableTargetTransform = None
+    self.currentPositionTransform = None
     self.redSliceWidget = slicer.app.layoutManager().sliceWidget("Red")
     self.redSliceView = self.redSliceWidget.sliceView()
     self.redSliceLogic = self.redSliceWidget.sliceLogic()
@@ -812,12 +740,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.MRIphaseTextbox.setText("")
     self.MRImessageTextbox.setText("No message received")
     self.MRIstatusCodeTextbox.setText("No status code received")
-    # self.entryPointTextbox_R.setText("")
-    # self.entryPointTextbox_A.setText("")
-    # self.entryPointTextbox_S.setText("")
-    self.targetPointTextbox_R.setText("")
-    self.targetPointTextbox_A.setText("")
-    self.targetPointTextbox_S.setText("")
     self.robotMessageTextbox.setText("No message received")
     self.robotStatusCodeTextbox.setText("No status code received")
     self.phaseTextbox.setText("")
@@ -827,7 +749,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     for i in range(4):
       for j in range(4):
         self.calibrationTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
-        self.tableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
+        self.robotTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
+        self.MRItableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
+        self.targetTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
    
     # Delete all nodes from the scene
     slicer.mrmlScene.RemoveNode(self.openIGTNode)
@@ -892,7 +816,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.LockButton.enabled = True
     self.moveButton.enabled = True
     self.targetingButton.enabled = True
-    # self.entryPointButton.enabled = True
     self.calibrationButton.enabled = True
 
   def deactivateButtons(self):
@@ -905,7 +828,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.LockButton.enabled = False
     self.moveButton.enabled = False
     self.targetingButton.enabled = False
-    # self.entryPointButton.enabled = False
     self.calibrationButton.enabled = False
    
   def onGetStatusButtonClicked(self):
@@ -962,34 +884,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
     # Show Target point GUI in the module
-    # self.outboundEntryCollapsibleButton.collapsed = True
-    #self.outboundTargetCollapsibleButton.collapsed = False
     self.outboundTransformCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
-
-  # def onEntryPointButtonClicked(self):
-  #   # Send stringMessage containing the command "ENTRY" to the script via IGTLink
-  #   entryNode = slicer.vtkMRMLTextNode()
-  #   self.last_prefix_sent = "CMD"
-  #   timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
-  #   self.last_name_sent = timestampIDname
-  #   entryNode.SetName(timestampIDname)
-  #   entryNode.SetText("ENTRY")
-  #   entryNode.SetEncoding(3)
-  #   slicer.mrmlScene.AddNode(entryNode)
-  #   self.openIGTNode.RegisterOutgoingMRMLNode(entryNode)
-  #   self.openIGTNode.PushNode(entryNode)
-  #   self.start = time.time()
-  #   self.last_string_sent = entryNode.GetText()
-  #   self.last_prefix_sent = "ENT"
-  #   infoMsg =  "Sending STRING( " + timestampIDname + ",  ENTRY )"
-  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-  #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-
-  #   # Show Entry point GUI in the module and hide Calibration and Targeting GUIs
-  #   self.outboundEntryCollapsibleButton.collapsed = False
-  #   self.outboundTargetCollapsibleButton.collapsed = True
-  #   self.outboundTransformCollapsibleButton.collapsed = True
 
   def onMoveButtonClicked(self):
     # Send stringMessage containing the command "MOVE" to the script via IGTLink
@@ -1165,44 +1061,83 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
-  def onVisibleButtonClicked(self):
-    # If button is checked
-    if (self.VisibleButton.isChecked()):
-      eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
-      self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
-      self.AddPointerModel()
-      TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-      locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
-      locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
-    # If it is unchecked
-    else:
-      eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
-      self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
-      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
-      slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+  # def onVisibleButtonClicked(self):
+  #   # If button is checked
+  #   if (self.VisibleButton.isChecked()):
+  #     eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
+  #     self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
+  #     self.AddPointerModel("PointerNode")
+  #     TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+  #     locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+  #     locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
+  #   # If it is unchecked
+  #   else:
+  #     eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
+  #     self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+  #     PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+  #     slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
 
-  def onTargetNeedleVisibleButtonClicked(self):
+  def onPlannedTargetNeedleVisibleButtonClicked(self):
     # If button is checked
     if (self.targetNeedleVisibleButton.isChecked()):
-    
-      # new - TODO
-      if slicer.mrmlScene.GetFirstNodeByName("PointerNode") is not None:
-        PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+      if slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedle") is not None:
+        PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedle")
         slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
-      
       eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
       self.targetNeedleVisibleButton.setIcon(qt.QIcon(eyeIconVisible))
-      self.AddPointerModel()
-      TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("TargetTransformNode")
-      locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+      self.AddPointerModel("PlannedTargetNeedle")
+      TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetTransform")
+      locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedle")
       locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
-
     # If it is unchecked
     else:
       eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
       self.targetNeedleVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
-      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
+      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedle")
       slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+
+  def onReachableTargetTransformReceived(self):
+    # Update self.reachableTargetTransform s.t. it contains the REACHABLE_TARGET message sent by WPI
+    if self.reachableTargetTransform:
+      slicer.mrmlScene.RemoveNode(self.reachableTargetTransform)
+      self.reachableTargetTransform = None
+    self.reachableTargetTransform = slicer.vtkMRMLLinearTransformNode()
+    self.reachableTargetTransform.SetName("ReachableTargetTransform")
+    # TODO - update reachableTargetTransform s.t. it contains the REACHABLE_TARGET message sent by WPI
+    slicer.mrmlScene.AddNode(self.reachableTargetTransform)
+
+    # Add reachable target model to Slicer GUI
+    if slicer.mrmlScene.GetFirstNodeByName("ReachableTargetNeedle") is not None:
+      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("ReachableTargetNeedle")
+      slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+    self.AddPointerModel("ReachableTargetNeedle")
+    TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("ReachableTargetTransform")
+    locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("ReachableTargetNeedle")
+    locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
+    # TODO - determine when to call this function 
+
+  # def onCurrentPositionTransformReceived_v2(self, currentPositionTransform):
+    # TODO?
+
+  def onCurrentPositionTransformReceived(self):
+    # Update self.currentPositionTransform s.t. it contains the CURRENT_POSITION message sent by WPI
+    if self.currentPositionTransform:
+      slicer.mrmlScene.RemoveNode(self.currentPositionTransform)
+      self.currentPositionTransform = None
+    self.currentPositionTransform = slicer.vtkMRMLLinearTransformNode()
+    self.currentPositionTransform.SetName("ReachableTargetTransform")
+    # TODO - update currentPositionTransform s.t. it contains the CURRENT_POSITION message sent by WPI
+    slicer.mrmlScene.AddNode(self.currentPositionTransform)
+
+    # Add current position needle model to Slicer GUI
+    if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle") is not None:
+      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle")
+      slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+    self.AddPointerModel("CurrentPositionNeedle")
+    TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform")
+    locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle")
+    locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
+    # TODO - determine when to call this function
 
   def onTargetReferenceFrameButtonToggled(self):
     # If button is checked
@@ -1247,7 +1182,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
   def onMRIGetTargetButtonClicked(self):
     print("Request current MRI scanning target.")
-
 
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string received")
@@ -1338,8 +1272,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     refMatrix = vtk.vtkMatrix4x4()
     LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(transformNode.last_randomIDname_transform)
     LastTransformNode.GetMatrixTransformToParent(refMatrix)
-    nbRows = transformNode.tableWidget.rowCount
-    nbColumns = transformNode.tableWidget.columnCount
+    nbRows = transformNode.robotTableWidget.rowCount
+    nbColumns = transformNode.robotTableWidget.columnCount
     same_transforms = 1
     for i in range(nbRows):
       for j in range(nbColumns):
@@ -1350,7 +1284,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         if(transformNode.to_compare == 1):
           if(val != ref):
             same_transforms = 0
-        transformNode.tableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
+        transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
     infoMsg = ""
     if ((transformNode.to_compare == 1) and (same_transforms == 0)):
       infoMsg =  "TRANSFORM received from WPI doesn't match transform sent"
@@ -1362,14 +1296,23 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     print("New transform info received")
     ReceivedTransformInfo = slicer.mrmlScene.GetFirstNodeByName("TransformInfo")
     info = ReceivedTransformInfo.GetText()
-    delimit = "_"
-    if((info == "CURRENT_POSITION") or (info == "TARGET")):
+    print("transform info: ", info)
+    # if (info == "CURRENT_POSITION") or (info == "TARGET"):
+    if info == "TARGET":
       print("Transform received")
-    elif(info.find(delimit)!=-1): # Check for delimiter
-      infoType = info[0: info.index(delimit)]
-      infoID = info[info.index(delimit) + 1: len(info)]
-      if(infoNode.last_name_sent.find(delimit)!=-1):
-        last_name_sentID = infoNode.last_name_sent[infoNode.last_name_sent.index(delimit) + 1: len(infoNode.last_name_sent)]
+    elif info == "REACHABLE_TARGET":
+      print("TODO - REACHABLE_TARGET RECEIVED - call onReachableTargetTransformReceived")
+      infoNode.onReachableTargetTransformReceived()
+      # TODO
+    elif info == "CURRENT_POSITION":
+      print("TODO - CURRENT_POSTION RECEIVED - call onCurrentPositionTransformReceived")
+      infoNode.onCurrentPositionTransformReceived()
+      # TODO
+    elif(info.find("_")!=-1): # Check for delimiter "_"
+      infoType = info[0: info.index("_")]
+      infoID = info[info.index("_") + 1: len(info)]
+      if(infoNode.last_name_sent.find("_")!=-1):
+        last_name_sentID = infoNode.last_name_sent[infoNode.last_name_sent.index("_") + 1: len(infoNode.last_name_sent)]
         infoMsg =  "Received TRANSFORM from WPI: ( " + info + " )"
         re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
         infoNode.appendReceivedMessageToCommandLog(infoMsg, 0)
@@ -1378,97 +1321,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
           print("Acknowledgment received for transform:", infoNode.last_name_sent)
         infoNode.to_compare = 1
 
-  # def createInitialNeedleModel(self):
-  #   # https://vtkusers.public.kitware.narkive.com/tNhV02qi/aligning-a-cylinder-between-two-points#selection:2.877.26 
-  #   PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("NeedleModelNode")
-  #   slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
-
-  #   vector_R = self.targetCoordinate_R - self.entryCoordinate_R
-  #   vector_A = self.targetCoordinate_A - self.entryCoordinate_A
-  #   vector_S = self.targetCoordinate_S - self.entryCoordinate_S
-
-  #   # Normalize for decrease computation time
-  #   needleVector = np.array([vector_R, vector_A, vector_S])
-  #   np.linalg.norm(needleVector)
-  #   vector_R = needleVector[0]
-  #   vector_A = needleVector[1]
-  #   vector_S = needleVector[2]
-
-  #   magnitude = np.sqrt(vector_R**2 + vector_A**2 + vector_S**2)
-  #   if not magnitude == 0.0:
-  #     rotationAngle = np.arccos(vector_A / np.sqrt(vector_R**2 + vector_A**2 + vector_S**2))
-  #   else:
-  #     rotationAngle = 90.0
-
-  #   self.needleModel = vtk.vtkCylinderSource()
-  #   self.needleModel.SetRadius(0.5)
-  #   self.needleModel.SetResolution(50)
-  #   self.needleModel.SetHeight(np.sqrt(vector_R**2 + vector_A**2 + vector_S**2))
-
-  #   mapper = vtk.vtkPolyDataMapper()
-  #   mapper.SetInputConnection(self.needleModel.GetOutputPort())
-  #   actor = vtk.vtkActor()
-  #   actor.SetOrientation(0,0,90)
-  #   # actor.GetProperty().SetColor(220,220,220)
-  #   actor.SetMapper(mapper)
-
-  #   locatorModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "NeedleModelNode")
-  #   locatorModelNode.SetAndObservePolyData(self.needleModel.GetOutput())
-  #   locatorModelNode.CreateDefaultDisplayNodes()
-  #   locatorModelNode.SetDisplayVisibility(True)
-  #   self.needleModel.Update()
-
-  #   # Rotate needleModel cylinder
-  #   transformFilter = vtk.vtkTransformPolyDataFilter()
-  #   transform = vtk.vtkTransform()
-  #   transform.Translate(self.entryCoordinate_R + vector_R/2.0, self.entryCoordinate_A + vector_A/2.0, self.entryCoordinate_S + vector_S/2.0)
-  #   transform.RotateWXYZ(np.rad2deg(rotationAngle), vector_S, 0.0, -vector_R)
-  #   transform.Update()
-  #   transformFilter.SetInputConnection(self.needleModel.GetOutputPort())
-  #   transformFilter.SetTransform(transform)
-
-  #   # Add small spheres at the entry and target points
-  #   self.targetSphere = vtk.vtkSphereSource()
-  #   self.targetSphere.SetRadius(1.0)
-  #   self.targetSphere.SetCenter(self.targetCoordinate_R, self.targetCoordinate_A, self.targetCoordinate_S)
-  #   self.entrySphere = vtk.vtkSphereSource()
-  #   self.entrySphere.SetRadius(1.0)
-  #   self.entrySphere.SetCenter(self.entryCoordinate_R, self.entryCoordinate_A, self.entryCoordinate_S)
-
-  #   self.append = vtk.vtkAppendPolyData()
-  #   self.append.AddInputConnection(self.targetSphere.GetOutputPort())
-  #   self.append.AddInputConnection(self.entrySphere.GetOutputPort())
-  #   self.append.AddInputConnection(transformFilter.GetOutputPort())
-  #   self.append.Update()
-
-  #   locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
-
-
-  # def updateNeedleModelPosition(self, currentPositionMatrix):
-  #   # For now, just place a small sphere @ the received needle tip position
-  #   slicer.mrmlScene.RemoveNode(slicer.mrmlScene.GetFirstNodeByName("CurrentNeedleTipPositionNode"))
-
-  #   self.currentPositionSphere = vtk.vtkSphereSource()
-  #   self.currentPositionSphere.SetRadius(2.0)
-  #   #self.currentPositionSphere.SetCenter(10, 10, 10)
-  #   self.currentPositionSphere.SetCenter(currentPositionMatrix.GetElement(0,3), currentPositionMatrix.GetElement(1,3), currentPositionMatrix.GetElement(2,3))
-
-  #   mapper = vtk.vtkPolyDataMapper()
-  #   mapper.SetInputConnection(self.currentPositionMatrix.GetOutputPort())
-  #   self.actor = vtk.vtkActor()
-  #   self.actor.GetProperty().SetColor(220, 220, 220)
-  #   self.actor.SetMapper(mapper)
-
-  #   locatorModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "CurrentNeedleTipPositionNode")
-  #   locatorModelNode.SetAndObservePolyData(self.currentPositionSphere.GetOutput())
-  #   locatorModelNode.CreateDefaultDisplayNodes()
-  #   locatorModelNode.SetDisplayVisibility(True)
-  #   self.currentPositionSphere.Update()
-
-  #   # TODO - eventually change this to show the entire needle probe model.
-
-
-  def AddPointerModel(self):   
+  def AddPointerModel(self, pointerNodeName):   
     self.cyl = vtk.vtkCylinderSource()
     self.cyl.SetRadius(1.5)
     self.cyl.SetResolution(50)
@@ -1482,10 +1335,17 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     actor.SetMapper(mapper)
 
     node = self.cyl.GetOutput()
-    locatorModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", "PointerNode")
+    locatorModelNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLModelNode", pointerNodeName)
     locatorModelNode.SetAndObservePolyData(node)
     locatorModelNode.CreateDefaultDisplayNodes()
     locatorModelNode.SetDisplayVisibility(True)
+    # Set needle model color based on the type of needle (planned target, reachable target, or current position)
+    if pointerNodeName == "PlannedTargetNeedle": 
+      locatorModelNode.GetDisplayNode().SetColor(0.80,0.80,0.80) # grey
+    elif pointerNodeName == "ReachableTargetNeedle":
+      locatorModelNode.GetDisplayNode().SetColor(0.48,0.75,0.40) # green
+    else: #pointerNodeName == "CurrentPositionNeedle"
+      locatorModelNode.GetDisplayNode().SetColor(0.40,0.48,0.75) # blue
     self.cyl.Update()
 
     #Rotate cylinder
@@ -1507,6 +1367,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.append.Update()
 
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
+    self.treeView.setMRMLScene(slicer.mrmlScene)
 
   def initiateZFrameCalibration(self):
     # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
@@ -1666,43 +1527,42 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       # if not self.phaseTextbox.text == 'PLANNING':
       #   print ("Robot is not yet in PLANNING workphase. Please enter PLANNING workphase before selecting the target point.")
       # else: 
-      if self.targetTransform:
-        slicer.mrmlScene.RemoveNode(self.targetTransform)
-        self.targetTransform = None
-      self.targetTransform = slicer.vtkMRMLLinearTransformNode()
-      self.targetTransform.SetName("TargetTransformNode")
-      slicer.mrmlScene.AddNode(self.targetTransform)
-      self.targetTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
+      if not targetPointNode.GetNumberOfControlPoints() == 0:
+        print("debug point 1")
+        if self.plannedTargetTransform:
+          slicer.mrmlScene.RemoveNode(self.plannedTargetTransform)
+          self.plannedTargetTransform = None
+        self.plannedTargetTransform = slicer.vtkMRMLLinearTransformNode()
+        self.plannedTargetTransform.SetName("PlannedTargetTransform")
+        slicer.mrmlScene.AddNode(self.plannedTargetTransform)
+        self.plannedTargetTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
 
-      # Add display node to targetTransform
-      self.targetTransformDisplayNode = slicer.mrmlScene.AddNode(slicer.vtkMRMLTransformDisplayNode())
-      self.targetTransformDisplayNode.SetVisibility(True)
-      self.targetTransform.SetAndObserveDisplayNodeID(self.targetTransformDisplayNode.GetID())
+        # Add display node to targetTransform
+        # self.plannedTargetTransformDisplayNode = slicer.mrmlScene.AddNode(slicer.vtkMRMLTransformDisplayNode())
+        # self.plannedTargetTransformDisplayNode.SetVisibility(True)
+        # self.plannedTargetTransform.SetAndObserveDisplayNodeID(self.plannedTargetTransformDisplayNode.GetID())
 
-      # Add position element to target transform from the position of the target fiducial
-      # targetPointNode = self.targetPointNodeSelector.currentNode()
-      targetCoordinatesRAS = [0, 0, 0]
-      print ("DEBUG STATEMENT 1")
-      targetPointNode.GetNthFiducialPosition(0, targetCoordinatesRAS)
-      targetPointMatrix = vtk.vtkMatrix4x4()
-      targetPointMatrix.Identity()
-      targetPointMatrix.SetElement(0,3,targetCoordinatesRAS[0])
-      targetPointMatrix.SetElement(1,3,targetCoordinatesRAS[1])
-      targetPointMatrix.SetElement(2,3,targetCoordinatesRAS[2])
-      self.targetTransform.SetMatrixTransformToParent(targetPointMatrix)
-      
-      # Connect this transform node to the rotation sliders
-      self.orientationSliderWidget.setMRMLTransformNode(self.targetTransform)
-      self.translationSliderWidget.setMRMLTransformNode(self.targetTransform)
+        # Add position element to target transform from the position of the target fiducial
+        targetCoordinatesRAS = targetPointNode.GetNthControlPointPositionVector(0)
+        targetPointMatrix = vtk.vtkMatrix4x4()
+        targetPointMatrix.Identity()
+        targetPointMatrix.SetElement(0,3,targetCoordinatesRAS[0])
+        targetPointMatrix.SetElement(1,3,targetCoordinatesRAS[1])
+        targetPointMatrix.SetElement(2,3,targetCoordinatesRAS[2])
+        self.plannedTargetTransform.SetMatrixTransformToParent(targetPointMatrix)
+        
+        # Connect this transform node to the rotation sliders
+        self.orientationSliderWidget.setMRMLTransformNode(self.plannedTargetTransform)
+        self.translationSliderWidget.setMRMLTransformNode(self.plannedTargetTransform)
 
-      # Set 3D visualization of needle to "On" when the target transform resets
-      self.targetNeedleVisibleButton.setChecked(True)
-      self.onTargetNeedleVisibleButtonClicked()
+        # Set 3D visualization of needle to "On" when the target transform resets
+        self.targetNeedleVisibleButton.setChecked(True)
+        self.onPlannedTargetNeedleVisibleButtonClicked()
 
   def onTargetTransformNodeModified(self, unusedArg2=None, unusedArg3=None):
     # Update targetTableWidget when the targetTransform is modified
     targetTransformMatrix = vtk.vtkMatrix4x4()
-    self.targetTransform.GetMatrixTransformToParent(targetTransformMatrix)
+    self.plannedTargetTransform.GetMatrixTransformToParent(targetTransformMatrix)
     nbRows = self.targetTableWidget.rowCount
     nbColumns = self.targetTableWidget.columnCount
     for i in range(nbRows):
@@ -1712,7 +1572,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def sendTargetTransform(self):
     # Send the 4x4 targeting matrix to WPI as the TGT matrix
     targetMatrix = vtk.vtkMatrix4x4()
-    self.targetTransform.GetMatrixTransformToParent(targetMatrix)
+    self.plannedTargetTransform.GetMatrixTransformToParent(targetMatrix)
     SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
     timestampIDname = self.generateTimestampNameID("TGT")
     SendTransformNodeTemp.SetName(timestampIDname)
@@ -1822,14 +1682,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def getRobotPoseUntilTargetIsReached(self):
     # When Move button is clicked, request current pose from WPI every second
     print ("TODO - getRobotPoseUntilTargetIsReached()")
-    
+
+    # TODO !
+
     # Get the REACHABLE_TARGET transform
-    targetPositionNode = slicer.vtkMRMLLinearTransformNode()
+    reachableTargetPositionNode = slicer.vtkMRMLLinearTransformNode()
     transformNodes = slicer.util.getNodesByClass("vtkMRMLLinearTransformNode")
     reachableTargetFound = False
     for transformNode in transformNodes:
       if transformNode.GetName().split("_")[0] == "REACHABLE":
-        targetPositionNode = transformNode
+        reachableTargetPositionNode = transformNode
         reachableTargetFound = True
     
     if not reachableTargetFound:
@@ -1837,10 +1699,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       # FOR DEBUGGING PURPOSES ONLY - get matrix named TGT_XXX instead: TODO (delete)
       for transformNode in transformNodes:
         if transformNode.GetName().split("_")[0] == "TGT":
-          targetPositionNode = transformNode
+          reachableTargetPositionNode = transformNode
 
     targetPositionMatrix = vtk.vtkMatrix4x4()
-    targetPositionNode.GetMatrixTransformToParent(targetPositionMatrix)
+    reachableTargetPositionNode.GetMatrixTransformToParent(targetPositionMatrix)
     print("REACHABLE TARGET POSITION NODE: ", targetPositionMatrix)
 
     # Request the current position from the robot
@@ -1868,14 +1730,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.currentPositionMatrix = vtk.vtkMatrix4x4()
     self.currentPositionNode.GetMatrixTransformToParent(self.currentPositionMatrix)
     print("CURRENT POSITION NODE: ", self.currentPositionNode)
+    #self.onCurrentPositionTransformReceived_v2(self.currentPositionNode)
 
     # Update needle model in 3D Slicer pane via updateNeedleModelPosition:
-    self.updateNeedleModelPosition(currentPositionMatrix)
+    # self.updateNeedleModelPosition(currentPositionMatrix)
+    # TODO
 
     positionsAreEqual = True
     for i in range(4):
       for j in range(4):
-        if not round(targetPositionMatrix.GetElement(i, j),1) == round(currentPositionMatrix.GetElement(i, j),1):
+        if not round(targetPositionMatrix.GetElement(i, j),1) == round(self.currentPositionMatrix.GetElement(i, j),1):
           positionsAreEqual = False
           break
 
@@ -1962,7 +1826,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath, returnNode=True)
     self.zFrameModelNode.SetName(self.ZFRAME_MODEL_NAME)
     modelDisplayNode = self.zFrameModelNode.GetDisplayNode()
-    modelDisplayNode.SetColor(1, 1, 0)
+    #modelDisplayNode.SetColor(1, 1, 0)
+    modelDisplayNode.SetColor(0.9,0.9,0.4)
     self.zFrameModelNode.SetDisplayVisibility(False)
 
   def applyITKOtsuFilter(self, volume):
