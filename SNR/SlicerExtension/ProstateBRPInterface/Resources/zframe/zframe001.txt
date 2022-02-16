@@ -1,0 +1,29 @@
+
+Configuration file for Z-frame version z001 - Seven fiducial frame
+
+The z001 z-frame model is uniquely defined by the locations of seven
+fiducials and the vectors that describe the diagonals of each face.
+
+The origin of the Z-frame is the center of the cube (0,0,0)
+
+The origin of each of the 3 sides of the z-frame is the end of the
+diagonal fiducial attached to Pz3, the 3rd corner of the side in question.
+
+(Start point, End point)
+Fiducial 1: ((30,-30,-30), (30,-30,30))
+Fiducial 2: ((30,-30,30), (30,30,-30))
+Fiducial 3: ((30,30,-30), (30,30,30))
+Fiducial 4: ((30,30,30) , (-30,30,-30))
+Fiducial 5: ((-30,30,-30), (-30,30,30))
+Fiducial 6: ((-30,30,30), (-30,-30,-30))
+Fiducial 7: ((-30,-30,-30), (-30,-30,30))
+
+Side 1 origin: (30,30,-30)
+Base origin: (-30,30,-30)
+Side 2 origin: (-30,-30,-30)
+
+Side 1 diagonal: (0, -1, 1)
+Base diagonal: (1, 0, 1)
+Side 2 diagonal: (0, 1, 1)
+
+

@@ -227,6 +227,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     RobotOutboundCommunicationLayout = qt.QGridLayout()
     RobotCommunicationLayout.addLayout(RobotOutboundCommunicationLayout)
 
+    # Current Phase button
     nameLabelphase = qt.QLabel('Current phase:')
     self.phaseTextbox = qt.QLineEdit("")
     self.phaseTextbox.setReadOnly(True)
@@ -386,6 +387,14 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Layout within the path collapsible button
     outboundTransformsFormLayout = qt.QFormLayout(self.outboundTransformCollapsibleButton)
+
+    # Z-frame configuration file selection box
+    self.configFileSelectionBox = qt.QComboBox()
+    self.configFileSelectionBox.addItems(["Z-frame z001", "Z-frame z002"])
+    self.configFileSelectionBox.setFixedWidth(250)
+    #self.configFileSelectionBox.setPlaceholderText(qt.QStringLiteral("Select ZFrame Configuration"))
+    self.configFileSelectionBox.currentIndexChanged.connect(self.onConfigFileSelectionChanged)
+    outboundTransformsFormLayout.addRow('   Zframe config:', self.configFileSelectionBox)
 
     # Input volume selector for zFrame calibration
     self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
@@ -830,6 +839,27 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.targetingButton.enabled = False
     self.calibrationButton.enabled = False
    
+  def onConfigFileSelectionChanged(self):
+    configFileSelection = self.configFileSelectionBox.currentText
+    print("Z-frame configuration file: ", configFileSelection)
+
+    # Locate the filepath of the selected configuration file
+    configFileFound = False
+    currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    if configFileSelection == 'Z-frame z001':
+      self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe001.txt")
+    elif configFileSelection == 'Z-frame z002':
+      self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe002.txt")
+
+    print("configFilePath: ", self.zframeConfigFilePath)
+
+    with open(self.zframeConfigFilePath,"r") as f:
+      configFileLines = f.readlines()
+
+    # TODO - parse zFrame configuration file here to identify the dimensions and topology of the zframe
+    # for line in configFileLines:
+    #   print (line)
+  
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
     print("Send command to get current status of the robot")
@@ -855,12 +885,12 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
     self.last_name_sent = timestampIDname
     getposeNode.SetName(timestampIDname)
-    getposeNode.SetText("GET_POSE")
+    getposeNode.SetText("GET_TRANSFORM")
     getposeNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(getposeNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
     self.openIGTNode.PushNode(getposeNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_POSE )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_TRANSFORM )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
@@ -940,6 +970,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.outboundEntryCollapsibleButton.collapsed = True
     # self.outboundTargetCollapsibleButton.collapsed = True
     self.outboundTransformCollapsibleButton.collapsed = False
+
+    # Initate ROI selection automatically
+    self.onAddROI()
 
   def onPlanningButtonClicked(self):
     # Send stringMessage containing the command "PLANNING" to the script via IGTLink
@@ -1714,12 +1747,12 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
     self.last_name_sent = self.generateTimestampNameID(self.last_prefix_sent)
     getposeNode.SetName(timestampIDname)
-    getposeNode.SetText("GET_POSE")
+    getposeNode.SetText("GET_TRANSFORM")
     getposeNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(getposeNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
     self.openIGTNode.PushNode(getposeNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_POSE )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_TRANSFORM )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
@@ -1732,8 +1765,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     print("CURRENT POSITION NODE: ", self.currentPositionNode)
     #self.onCurrentPositionTransformReceived_v2(self.currentPositionNode)
 
-    # Update needle model in 3D Slicer pane via updateNeedleModelPosition:
-    # self.updateNeedleModelPosition(currentPositionMatrix)
+    # Update needle model in 3D Slicer pane
     # TODO
 
     positionsAreEqual = True
@@ -1748,7 +1780,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     else:
       print("--------------- Robot has NOT yet reached the target")
       time.sleep(1)
-      self.getRobotPoseUntilTargetIsReached()
+      #self.getRobotPoseUntilTargetIsReached()
 
 
 # # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
