@@ -71,6 +71,7 @@ void *NavigationBridge::ReceiveFromSlicer()
       if (isalpha(currentStringMessage[0]) && isalpha(currentStringMessage[1]) && isalpha(currentStringMessage[2]))
       {
         std::cout << "Sent stringMessage from Slicer to WPI: " << Global::globalString << std::endl;
+        std::cout << "String message deviceName: " << Global::globalDeviceName.c_str() << std::endl; // new
         SendStringMessage(Global::globalDeviceName.c_str(), currentStringMessage.c_str());
       }
     }
@@ -89,6 +90,7 @@ void *NavigationBridge::ReceiveFromSlicer()
       if (isalpha(currentStatusArgStatusStringMessage[0]) && isalpha(currentStatusArgStatusStringMessage[1]) && isalpha(currentStatusArgStatusStringMessage[2]))
       {
         std::cout << "Sent statusMessage from Slicer to WPI: " << Global::globalArgStatusStringMessage << std::endl;
+        std::cout << "Status message deviceName: " << Global::globalDeviceName.c_str() << std::endl; // new
         SendStatusMessage(Global::globalDeviceName.c_str(), currentStatusArgCode, currentStatusArgSubCode, (currentStatusArgErrorName).c_str(), (currentStatusArgStatusStringMessage).c_str());
 
         std::cerr << "========== STATUS ==========" << std::endl;
@@ -108,6 +110,7 @@ void *NavigationBridge::ReceiveFromSlicer()
         if (currentMatrix[i][j] != Global::globalMatrix[i][j])
         {
           std::cout << "Sent transformMessage from Slicer to WPI: " << std::endl;
+          std::cout << "Transform message deviceName: " << Global::globalDeviceName.c_str() << std::endl; // new
           memcpy(currentMatrix, Global::globalMatrix, sizeof(Global::globalMatrix));
           SendTransformMessage(Global::globalDeviceName.c_str(), currentMatrix);
           // igtl::PrintMatrix(currentMatrix);

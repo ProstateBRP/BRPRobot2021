@@ -1,3 +1,4 @@
+zframe001
 
 Configuration file for Z-frame version z001 - Seven fiducial frame
 

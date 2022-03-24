@@ -18,6 +18,7 @@
 
 import os
 import unittest
+# from matplotlib.pyplot import get
 import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
@@ -380,21 +381,25 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # -------  Calibration GUI ---------
 
     # Outbound tranform collapsible button
-    self.outboundTransformCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.outboundTransformCollapsibleButton.text = "Calibration"
-    self.outboundTransformCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.outboundTransformCollapsibleButton)
+    self.calibrationCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.calibrationCollapsibleButton.text = "Calibration"
+    self.calibrationCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.calibrationCollapsibleButton)
 
-    # Layout within the path collapsible button
-    outboundTransformsFormLayout = qt.QFormLayout(self.outboundTransformCollapsibleButton)
+    # Layout within the collapsible button
+    calibrationLayout = qt.QVBoxLayout(self.calibrationCollapsibleButton)
+
+    # Top layout within the calibration collapsible button (CalibrationLayout)
+    calibrationLayoutTop = qt.QFormLayout()
+    calibrationLayout.addLayout(calibrationLayoutTop)
 
     # Z-frame configuration file selection box
     self.configFileSelectionBox = qt.QComboBox()
-    self.configFileSelectionBox.addItems(["Z-frame z001", "Z-frame z002"])
+    self.configFileSelectionBox.addItems(["Z-frame z001", "Z-frame z002", "Z-frame z003"])
     self.configFileSelectionBox.setFixedWidth(250)
     #self.configFileSelectionBox.setPlaceholderText(qt.QStringLiteral("Select ZFrame Configuration"))
     self.configFileSelectionBox.currentIndexChanged.connect(self.onConfigFileSelectionChanged)
-    outboundTransformsFormLayout.addRow('   Zframe config:', self.configFileSelectionBox)
+    calibrationLayoutTop.addRow('   Zframe config:', self.configFileSelectionBox)
 
     # Input volume selector for zFrame calibration
     self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
@@ -406,19 +411,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.zFrameVolumeSelector.addEnabled = False
     self.zFrameVolumeSelector.removeEnabled = False
     self.zFrameVolumeSelector.setFixedWidth(250)
-    outboundTransformsFormLayout.addRow('   ZFrame image:', self.zFrameVolumeSelector)
+    calibrationLayoutTop.addRow('   ZFrame image:', self.zFrameVolumeSelector)
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
-
-    # # Start and end slices for calibration step
-    # self.startSliceSliderWidget = qt.QSpinBox()
-    # self.endSliceSliderWidget = qt.QSpinBox()
-    # self.startSliceSliderWidget.setValue(5)
-    # self.endSliceSliderWidget.setValue(16)
-    # self.startSliceSliderWidget.setMaximumWidth(40)
-    # self.endSliceSliderWidget.setMaximumWidth(40)
-    # outboundTransformsFormLayout.addRow('Minimum slice:', self.startSliceSliderWidget)
-    # outboundTransformsFormLayout.addRow('Maximum slice:', self.endSliceSliderWidget)
 
     # Calibration matrix display
     row = 4
@@ -439,20 +434,100 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    outboundTransformsFormLayout.addRow("   Calibration matrix: ", self.calibrationTableWidget)
+    calibrationLayoutTop.addRow("   Calibration matrix: ", self.calibrationTableWidget)
+
+    # Create a new QHBoxLayout() within calibrationLayoutTop to place 3 buttons next to one another
+    calibrationLayoutMiddle = qt.QHBoxLayout()
+    calibrationLayout.addLayout(calibrationLayoutMiddle)
+
+    # Add spacer to right align the Add ROI, Initiate Calibration, and Send Transform buttons
+    spacer = qt.QSpacerItem(130, 10, qt.QSizePolicy.Maximum)
+    calibrationLayoutMiddle.addSpacerItem(spacer)
 
     # Add ROI button
     self.addROIButton = qt.QPushButton("Add ROI")
     self.addROIButton.enabled = True
-    outboundTransformsFormLayout.addWidget(self.addROIButton)
+    calibrationLayoutMiddle.addWidget(self.addROIButton)
     self.addROIButton.connect('clicked()', self.onAddROI)
 
-    # Create and send new calibration matrix button
-    self.createCalibrationMatrixButton = qt.QPushButton("Create and send new calibration matrix")
+    # Create new calibration matrix button
+    self.createCalibrationMatrixButton = qt.QPushButton("Initiate Calibration")
     self.createCalibrationMatrixButton.enabled = True
-    # self.createCalibrationMatrixButton.setMaximumWidth(250)
-    outboundTransformsFormLayout.addWidget(self.createCalibrationMatrixButton)
+    calibrationLayoutMiddle.addWidget(self.createCalibrationMatrixButton)
     self.createCalibrationMatrixButton.connect('clicked()', self.initiateZFrameCalibration)
+
+    # Create and send new calibration matrix button
+    self.sendCalibrationMatrixButton = qt.QPushButton("Send Transform")
+    self.sendCalibrationMatrixButton.enabled = False
+    calibrationLayoutMiddle.addWidget(self.sendCalibrationMatrixButton)
+    self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
+
+    # Add spacer to left align the reference frame toggle button and reset button
+    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
+    calibrationLayout.addSpacerItem(spacer)
+
+    # Bottom layout within the calibration collapsible button (CalibrationLayout)
+    calibrationLayoutBottom = qt.QFormLayout()
+    calibrationLayout.addLayout(calibrationLayoutBottom)
+
+    # Manual registration section
+    self.manualRegistrationCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.manualRegistrationCollapsibleButton.text = "Manual Registration"
+    self.manualRegistrationCollapsibleButton.collapsed = True
+    # self.manualRegistrationCollapsibleButton.setStyleSheet("background-color:rgba(238,238,238,1); border: none")
+    calibrationLayoutBottom.addWidget(self.manualRegistrationCollapsibleButton)
+
+    # Layout within the path collapsible button
+    manualRegistrationLayout = qt.QFormLayout(self.manualRegistrationCollapsibleButton)
+
+    # Define dummy registration transform to link to transform sliders below
+    self.outputTransform = slicer.vtkMRMLTransformNode()
+    self.outputTransform = slicer.vtkMRMLLinearTransformNode()
+    self.outputTransform.SetName('outputTransform')
+    slicer.mrmlScene.AddNode(self.outputTransform)
+
+    # Translation sliders
+    self.registrationTranslationSliderWidget = slicer.qMRMLTransformSliders()
+    self.registrationTranslationSliderWidget.Title = 'Translation'
+    self.registrationTranslationSliderWidget.setMRMLTransformNode(slicer.util.getNode("outputTransform"))
+    self.registrationTranslationSliderWidget.setMRMLScene(slicer.mrmlScene)
+    self.registrationTranslationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.registrationTranslationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.registrationTranslationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.registrationTranslationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
+    self.registrationTranslationSliderWidget.minMaxVisible = False
+    manualRegistrationLayout.addRow(self.registrationTranslationSliderWidget)    
+
+    # Rotation sliders
+    self.registrationOrientationSliderWidget = slicer.qMRMLTransformSliders()
+    self.registrationOrientationSliderWidget.Title = 'Rotation'
+    self.registrationOrientationSliderWidget.setMRMLTransformNode(slicer.util.getNode("outputTransform"))
+    self.registrationOrientationSliderWidget.setMRMLScene(slicer.mrmlScene)
+    self.registrationOrientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.registrationOrientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.registrationOrientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.registrationOrientationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
+    self.registrationOrientationSliderWidget.minMaxVisible = False
+    manualRegistrationLayout.addRow(self.registrationOrientationSliderWidget)    
+
+    # # Advanced Registration Options section
+    # self.advancedRegistrationCollapsibleButton = ctk.ctkCollapsibleButton()
+    # self.advancedRegistrationCollapsibleButton.text = "Advanced Registration Options"
+    # self.advancedRegistrationCollapsibleButton.collapsed = True
+    # calibrationLayoutBottom.addWidget(self.advancedRegistrationCollapsibleButton)
+
+    # # Layout within the path collapsible button
+    # advancedRegistrationLayout = qt.QFormLayout(self.advancedRegistrationCollapsibleButton)
+
+    # # Start and end slices for calibration step
+    # self.startSliceSliderWidget = qt.QSpinBox()
+    # self.endSliceSliderWidget = qt.QSpinBox()
+    # self.startSliceSliderWidget.setValue(0)
+    # self.endSliceSliderWidget.setValue(20)
+    # self.startSliceSliderWidget.setMaximumWidth(40)
+    # self.endSliceSliderWidget.setMaximumWidth(40)
+    # advancedRegistrationLayout.addRow('Minimum slice:', self.startSliceSliderWidget)
+    # advancedRegistrationLayout.addRow('Maximum slice:', self.endSliceSliderWidget)
 
     # # TO SELECT AN EXISTING CALIBRATION MATRIX CALUCLATED BY HARMONUS (outside of the module):
     # # Delete once Calibration step is testing and working
@@ -466,14 +541,17 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.calibrationMatrixSelector.showChildNodeTypes = False
     # self.calibrationMatrixSelector.setMRMLScene( slicer.mrmlScene )
     # self.calibrationMatrixSelector.setToolTip( "Select the calibration matrix." )
-    # outboundTransformsFormLayout.addRow("   Calibration matrix:  ", self.calibrationMatrixSelector)
+    # calibrationLayoutTop.addRow("   Calibration matrix:  ", self.calibrationMatrixSelector)
 
     # # Send pre-calculated calibration matrix button
     # self.sendCalibrationMatrixButton = qt.QPushButton("Send pre-existing calibration matrix")
     # self.sendCalibrationMatrixButton.enabled = True
     # # self.createCalibrationMatrixButton.setMaximumWidth(250)
-    # outboundTransformsFormLayout.addWidget(self.sendCalibrationMatrixButton)
+    # calibrationLayoutTop.addWidget(self.sendCalibrationMatrixButton)
     # self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
+
+
+    # Planning phase GUI ---------------------------------------
 
     # Planning phase collapsible button
     self.planningCollapsibleButton = ctk.ctkCollapsibleButton()
@@ -498,9 +576,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.targetPointNodeSelector.tableWidget().hide()
     self.targetPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
     self.targetPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    # targetPointSelectorLabel = qt.QLabel("   Target point: ")
-    # planningLayoutTop.addWidget(targetPointSelectorLabel, 0, 0)
-    # planningLayoutTop.addWidget(self.targetPointNodeSelector, 0, 1, 1, 3)
     planningLayoutTop.addRow("   Target point: ", self.targetPointNodeSelector)
     self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
                         self.targetPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
@@ -526,40 +601,78 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    # targetTableWidgetLabel = qt.QLabel("   Target transform:  ")
-    # planningLayoutTop.addWidget(targetTableWidgetLabel, 2, 0)
-    # planningLayoutTop.addWidget(self.targetTableWidget, 2, 1, 1, 3)
     planningLayoutTop.addRow("   Target transform:   ", self.targetTableWidget)
 
-    # Visibility icon
+    # Create a new QHBoxLayout() within planningLayout to place 2 visibility buttons next to one another
+    planningLayoutMiddle = qt.QHBoxLayout()
+    planningLayout.addLayout(planningLayoutMiddle)
+    
+    # Add spacer to right align the two visibility buttons
+    spacer = qt.QSpacerItem(132, 10, qt.QSizePolicy.Maximum)
+    planningLayoutMiddle.addSpacerItem(spacer)
+
+    # Needle model visibility icon
     self.targetNeedleVisibleButton = qt.QPushButton()
     eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
     self.targetNeedleVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
     self.targetNeedleVisibleButton.setFixedWidth(25)
+    self.targetNeedleVisibleButton.setFixedHeight(25)
     self.targetNeedleVisibleButton.setCheckable(True)
-    # planningLayoutTop.addWidget(self.targetNeedleVisibleButton, 3, 1)
-    planningLayoutTop.addRow(" ", self.targetNeedleVisibleButton)
+    planningLayoutMiddle.addWidget(self.targetNeedleVisibleButton)
     self.targetNeedleVisibleButton.connect('clicked()', self.onPlannedTargetNeedleVisibleButtonClicked)
-    
+
+    # Needle trajectory visibility icon
+    currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    self.targetNeedleTrajectoryVisibleButton = qt.QPushButton()
+    trajectoryIcon = qt.QIcon(os.path.join(currentFilePath, "Resources/UI/Icons/trajectoryIcon.png"))
+    self.targetNeedleTrajectoryVisibleButton.setIconSize(qt.QSize(20, 20))
+    self.targetNeedleTrajectoryVisibleButton.setIcon(trajectoryIcon)
+    self.targetNeedleTrajectoryVisibleButton.setFixedWidth(25)
+    self.targetNeedleTrajectoryVisibleButton.setFixedHeight(25)
+    self.targetNeedleTrajectoryVisibleButton.setCheckable(True)
+    planningLayoutMiddle.addWidget(self.targetNeedleTrajectoryVisibleButton)
+    self.targetNeedleTrajectoryVisibleButton.connect('clicked()', self.onPlannedTrajectoryVisibleButtonClicked)
+
+    # Add spacer to right align the visibility buttons
+    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
+    planningLayoutMiddle.addSpacerItem(spacer)
+
+    # Add planningLayoutSLiders to contain the translation sliders
+    planningLayoutSliders = qt.QFormLayout()
+    planningLayout.addLayout(planningLayoutSliders)
+
+    # self.plannedTargetTransform = None
+    self.plannedTargetTransform = slicer.vtkMRMLTransformNode()
+    self.plannedTargetTransform.SetName("PlannedTargetTransform")
+    self.plannedTargetTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
+    slicer.mrmlScene.AddNode(self.plannedTargetTransform)
+
     # Translation sliders
     self.translationSliderWidget = slicer.qMRMLTransformSliders()
     self.translationSliderWidget.Title = 'Translation'
+    self.translationSliderWidget.setMRMLTransformNode(slicer.util.getNode("PlannedTargetTransform"))
+    self.translationSliderWidget.setMRMLScene(slicer.mrmlScene)
+    # Setting of qMRMLTransformSliders.TypeOfTransform is not robust: it has to be set after setMRMLScene and
+    # has to be set twice (with setting the type to something else in between).
+    # Therefore the following 3 lines are needed, and they are needed here:
+    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
     self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
     self.translationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
-    self.translationSliderWidget.setMRMLScene(slicer.mrmlScene)
     self.translationSliderWidget.minMaxVisible = False
-    # planningLayoutTop.addWidget(self.translationSliderWidget, 4, 0, 1, 4)
-    planningLayoutTop.addRow(self.translationSliderWidget)    
+    planningLayoutSliders.addRow(self.translationSliderWidget)    
 
-    # LR and PA rotation sliders
+    # Rotation sliders
     self.orientationSliderWidget = slicer.qMRMLTransformSliders()
     self.orientationSliderWidget.Title = 'Rotation'
+    self.orientationSliderWidget.setMRMLTransformNode(slicer.util.getNode("PlannedTargetTransform"))
+    self.orientationSliderWidget.setMRMLScene(slicer.mrmlScene)
+    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
     self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
     self.orientationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
-    self.orientationSliderWidget.setMRMLScene(slicer.mrmlScene)
     self.orientationSliderWidget.minMaxVisible = False
-    # planningLayoutTop.addWidget(self.orientationSliderWidget, 5, 0, 1, 4)
-    planningLayoutTop.addRow(self.orientationSliderWidget)    
+    planningLayoutSliders.addRow(self.orientationSliderWidget)    
 
     # Bottom layout within the planning collapsible button 
     # (includes the reference frame toggle button and the reset button)
@@ -636,8 +749,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Empty nodes for planning and calibration steps
     self.zFrameROI = None
     self.zFrameROIAddedObserverTag = None
-    self.outputTransform = None
-    self.plannedTargetTransform = None
+    # self.outputTransform = None
+    # self.plannedTargetTransform = None
     self.reachableTargetTransform = None
     self.currentPositionTransform = None
     self.redSliceWidget = slicer.app.layoutManager().sliceWidget("Red")
@@ -733,10 +846,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.RobotCommunicationCollapsibleButton.collapsed = True
     self.MRICommunicationCollapsibleButton.collapsed = True
     self.infoCollapsibleButton.collapsed = True
-    self.outboundTransformCollapsibleButton.collapsed = True
-    #self.outboundTargetCollapsibleButton.collapsed = True
+    self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
-    #self.outboundEntryCollapsibleButton.collapsed = True
 
     # Close socket
     self.openIGTNode.Stop()
@@ -850,32 +961,74 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe001.txt")
     elif configFileSelection == 'Z-frame z002':
       self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe002.txt")
-
-    print("configFilePath: ", self.zframeConfigFilePath)
+    elif configFileSelection == 'Z-frame z003':
+      self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe003.txt")
 
     with open(self.zframeConfigFilePath,"r") as f:
       configFileLines = f.readlines()
 
-    # TODO - parse zFrame configuration file here to identify the dimensions and topology of the zframe
-    # for line in configFileLines:
-    #   print (line)
-  
+    # Parse zFrame configuration file here to identify the dimensions and topology of the zframe
+    # Save the origins and diagonal vectors of each of the 3 sides of the zframe in a 2D array
+    self.frameTopology = []
+    for line in configFileLines:
+      if line.startswith('Side 1') or line.startswith('Side 2'): 
+        vec = [float(s) for s in re.findall(r'-?\d+\.?\d*', line)]
+        vec.pop(0)
+        self.frameTopology.append(vec)
+      elif line.startswith('Base'):
+        vec = [float(s) for s in re.findall(r'-?\d+\.?\d*', line)]
+        self.frameTopology.append(vec)
+
+    # Convert frameTopology points to a string, for the sake of passing it as a string argument to the ZframeRegistration CLI 
+    self.frameTopologyString = ' '.join([str(elem) for elem in self.frameTopology])
+
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
     print("Send command to get current status of the robot")
-    getstatusNode = slicer.vtkMRMLTextNode()
-    self.last_prefix_sent = "CMD"
-    timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)  
-    self.last_name_sent = timestampIDname
-    getstatusNode.SetName(timestampIDname)
-    getstatusNode.SetText("GET_STATUS")
-    getstatusNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(getstatusNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(getstatusNode)
-    self.openIGTNode.PushNode(getstatusNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_STATUS )"
-    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    # getstatusNode = slicer.vtkMRMLTextNode()
+    # self.last_prefix_sent = "CMD"
+    # timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)  
+    # self.last_name_sent = timestampIDname
+    # getstatusNode.SetName(timestampIDname)
+    # getstatusNode.SetText("GET_STATUS")
+    # getstatusNode.SetEncoding(3)
+    # slicer.mrmlScene.AddNode(getstatusNode)
+    # self.openIGTNode.RegisterOutgoingMRMLNode(getstatusNode)
+    # self.openIGTNode.PushNode(getstatusNode)
+    # infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_STATUS )"
+    # re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    # self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+
+    getStatusNode = slicer.vtkMRMLIGTLQueryNode()
+    getStatusNode.SetIGTLDeviceName("STATUS")
+    # getStatusNode.SetQueryType("TYPE_GET")
+    getStatusNode.SetQueryType(1) # Query type "1" corresponds with "GET"; Query type "2" corresponds with "START"; Query type 3 corresponds with "STOP"
+    getStatusNode.SetIGTLName("GET")
+    slicer.mrmlScene.AddNode(getStatusNode)
+    # self.last_prefix_sent = "STATUS_"
+    # timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)  
+    # self.last_name_sent = timestampIDname
+    # getStatusNode.SetIGTLName(timestampIDname)
+    self.openIGTNode.RegisterOutgoingMRMLNode(getStatusNode)
+    self.openIGTNode.PushNode(getStatusNode)
+
+    # infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_STATUS )"
+    # re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    # self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+
+
+    # PYTHON CONSOLE TEST
+    # openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
+    # slicer.mrmlScene.AddNode(openIGTNode)
+    # openIGTNode.SetTypeServer(18946)
+    # getStatusNode = slicer.vtkMRMLIGTLQueryNode()
+    # slicer.mrmlScene.AddNode(getStatusNode)
+    # getStatusNode.SetIGTLDeviceName("STATUS")
+    # getStatusNode.SetIGTLName("GET")
+    # getStatusNode.SetQueryType(1)
+    # openIGTNode.RegisterOutgoingMRMLNode(getStatusNode)
+    # openIGTNode.PushNode(getStatusNode)
+
 
   def onGetPoseButtonClicked(self):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
@@ -914,7 +1067,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
     # Show Target point GUI in the module
-    self.outboundTransformCollapsibleButton.collapsed = True
+    self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
 
   def onMoveButtonClicked(self):
@@ -943,7 +1096,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Hide Calibration, Planning, and Targetting GUIs
     # self.outboundEntryCollapsibleButton.collapsed = True
     # self.outboundTargetCollapsibleButton.collapsed = True
-    self.outboundTransformCollapsibleButton.collapsed = True
+    self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
   
   def onCalibrationButtonClicked(self):
@@ -967,9 +1120,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
     # Show Calibration matrix GUI in the module
-    # self.outboundEntryCollapsibleButton.collapsed = True
-    # self.outboundTargetCollapsibleButton.collapsed = True
-    self.outboundTransformCollapsibleButton.collapsed = False
+    self.calibrationCollapsibleButton.collapsed = False
 
     # Initate ROI selection automatically
     self.onAddROI()
@@ -995,8 +1146,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Show planning GUI, hide calibration GUI and target point GUI
     self.planningCollapsibleButton.collapsed = False
-    # self.outboundTargetCollapsibleButton.collapsed = True
-    self.outboundTransformCollapsibleButton.collapsed = True
+    self.calibrationCollapsibleButton.collapsed = True
 
   def onUnlockButtonClicked(self):
     print("Asking to Unlock the robot")
@@ -1094,6 +1244,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
+    # TODO - get rid of this, for debugging only
+    self.activateButtons()
+
   # def onVisibleButtonClicked(self):
   #   # If button is checked
   #   if (self.VisibleButton.isChecked()):
@@ -1122,12 +1275,42 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetTransform")
       locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedle")
       locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
+
+      # Add dashed line for needle trajectory
+      if slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory") is not None:
+        PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
+        slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+      self.AddNeedleTrajectoryLine("PlannedTargetNeedleTrajectory")
+      TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetTransform")
+      locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
+      locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
+
     # If it is unchecked
     else:
       eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
       self.targetNeedleVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
       PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedle")
       slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
+      slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+
+  def onPlannedTrajectoryVisibleButtonClicked(self):
+    # If button is checked
+    if (self.targetNeedleTrajectoryVisibleButton.isChecked()):
+      # Remove line for needle trajectory
+      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
+      slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+
+    # If it is unchecked
+    else:
+      # Add dashed line for needle trajectory
+      if slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory") is not None:
+        PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
+        slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
+      self.AddNeedleTrajectoryLine("PlannedTargetNeedleTrajectory")
+      TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetTransform")
+      locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
+      locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
 
   def onReachableTargetTransformReceived(self):
     # Update self.reachableTargetTransform s.t. it contains the REACHABLE_TARGET message sent by WPI
@@ -1402,7 +1585,25 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
     self.treeView.setMRMLScene(slicer.mrmlScene)
 
+  def AddNeedleTrajectoryLine(self, modelNodeName):
+    points = vtk.vtkPoints()
+    points.SetNumberOfPoints(2)
+    points.SetPoint(0,   0, 0, 0)
+    points.SetPoint(1,   0, 0, 200)
+    line = vtk.vtkLineSource()
+    line.SetPoints(points)
+    lineNode = slicer.modules.models.logic().AddModel(line.GetOutputPort())
+    lineNode.SetName(modelNodeName)
+    modelDisplay = lineNode.GetDisplayNode()
+    modelDisplay.SetColor(1,0,0)
+    modelDisplay.SetLineWidth(1)
+    modelDisplay.SetOpacity(1)
+    modelDisplay.SetVisibility2D(1)
+
   def initiateZFrameCalibration(self):
+    # Begin by identifying the zframe dropdown selection & parsing the config file to package topological dimensions into a ZframeRegistration argument
+    self.onConfigFileSelectionChanged()
+
     # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
     self.inputVolume = self.zFrameVolumeSelector.currentNode()
 
@@ -1417,6 +1618,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.outputTransform = slicer.vtkMRMLLinearTransformNode()
       self.outputTransform.SetName(name)
       slicer.mrmlScene.AddNode(self.outputTransform)
+      self.registrationTranslationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
+      self.registrationOrientationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
+      self.outputTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onRegistrationTransformManuallyModified)
 
       print ("Initating calibration matrix calculation with zFrame image.")
       
@@ -1461,17 +1665,22 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         # self.startSliceSliderWidget.value = float(self.startSlice)
         # self.endSliceSliderWidget.value = float(self.endSlice)
 
-        # Begin zFrameRegistrationWithROI logic
-        self.ZFRAME_MODEL_PATH = 'zframe-model.vtk'
-        self.ZFRAME_MODEL_NAME = 'ZFrameModel'
+        if self.configFileSelectionBox.currentText == "Z-frame z001":
+          self.ZFRAME_MODEL_PATH = 'zframe001-model.vtk'
+          zframeConfig = 'z001'
+        elif self.configFileSelectionBox.currentText == "Z-frame z002":
+          self.ZFRAME_MODEL_PATH = 'zframe002-model.vtk'
+          zframeConfig = 'z002'
+        else: # if self.configFileSelectionBox.currentText == "Z-frame z003":
+          self.ZFRAME_MODEL_PATH = 'zframe003-model.vtk'
+          zframeConfig = 'z003'
 
-        # Cleanup
-        #self.clearVolumeNodes()
-        #self.clearOldCalculationNodes()
+        self.ZFRAME_MODEL_NAME = 'ZFrameModel'
         
         # Run ZFrame Open Source Registration
         self.loadZFrameModel()
 
+        # Begin zFrameRegistrationWithROI logic
         zFrameTemplateVolume = self.inputVolume
         coverTemplateROI = self.zFrameROI
 
@@ -1486,72 +1695,117 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
           self.startSlice, self.endSlice = self.getStartEndWithConnectedComponents(self.otsuOutputVolume, center)
 
         # Run zFrameRegistration CLI module
+        # params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
+        #            'outputTransform': self.outputTransform}
         params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
-                  'outputTransform': self.outputTransform}
+                  'outputTransform': self.outputTransform, 'zframeConfig': zframeConfig, 'frameTopology': self.frameTopologyString}
         slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
 
+        # if the zframe model is z002, apply an intermediate transform (because the .vtk file has a different origin than z001)
+        # if self.configFileSelectionBox.currentText == "Z-frame z002":
+        #   self.intermediateTransform = slicer.vtkMRMLLinearTransformNode()
+        #   slicer.mrmlScene.AddNode(self.intermediateTransform)
+        #   intermediateTransformMatrix = vtk.vtkMatrix4x4()
+        #   intermediateTransformMatrix.Identity()
+        #   intermediateTransformMatrix.SetElement(0, 3, 63.0)
+        #   # intermediateTransformMatrix.SetElement(1, 3, -44.0)
+        #   intermediateTransformMatrix.SetElement(1, 3, -37.22)
+        #   intermediateTransformMatrix.SetElement(2, 3, 35.0)
+        #   intermediateTransformMatrix.SetElement(1, 1, -1.0)
+        #   intermediateTransformMatrix.SetElement(2, 2, -1.0)
+        #   self.intermediateTransform.SetMatrixTransformToParent(intermediateTransformMatrix)
+        #   # Apply the intermediate transform to the 9-fiducial .vtk model
+        #   self.zFrameModelNode.SetAndObserveTransformNodeID(self.intermediateTransform.GetID())
+        #   slicer.vtkSlicerTransformLogic().hardenTransform(self.zFrameModelNode)
+        #   slicer.mrmlScene.RemoveNode(self.intermediateTransform)
+
         self.zFrameModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
-        self.zFrameModelNode.GetDisplayNode().SetSliceIntersectionVisibility(True)
+        self.zFrameModelNode.GetDisplayNode().SetVisibility2D(True)
         self.zFrameModelNode.SetDisplayVisibility(True)
 
-        # self.setBackgroundAndForegroundIDs(foregroundVolumeID=None, backgroundVolumeID=self.inputVolume.GetID())
-        # self.redSliceNode.SetSliceVisible(True)
-        # self.clearVolumeNodes()
-
-        # Send the calculated calibration matrix to WPI as the CLB matrix
+        # Update the calibration matrix table with the calculated matrix 
         outputMatrix = vtk.vtkMatrix4x4()
         self.outputTransform.GetMatrixTransformToParent(outputMatrix)
-        SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-        timestampIDname = self.generateTimestampNameID("CLB")
-        SendTransformNodeTemp.SetName(timestampIDname)
-        SendTransformNodeTemp.SetMatrixTransformToParent(outputMatrix)
-        slicer.mrmlScene.AddNode(SendTransformNodeTemp)
-        self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
-        self.openIGTNode.PushNode(SendTransformNodeTemp)
-        infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
-        re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-        self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-
-        # Update the calibration matrix table with the calculated matrix (currently just dummy code)
         for i in range(4):
           for j in range(4):
             self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(outputMatrix.GetElement(i, j),2))))
-        self.appendTransformToCommandLog(outputMatrix)
 
+        # # Send the calculated calibration matrix to WPI as the CLB matrix
+        # if (slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLIGTLConnectorNode') > 0): # AKA, if the IGTL connector is active
+        #   SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+        #   timestampIDname = self.generateTimestampNameID("CLB")
+        #   SendTransformNodeTemp.SetName(timestampIDname)
+        #   SendTransformNodeTemp.SetMatrixTransformToParent(outputMatrix)
+        #   slicer.mrmlScene.AddNode(SendTransformNodeTemp)
+        #   self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+        #   self.openIGTNode.PushNode(SendTransformNodeTemp)
+        #   infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
+        #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+        #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+        #   self.appendTransformToCommandLog(outputMatrix)
+
+        # Remove unnecessary nodes from the Slicer scene
+        self.clearVolumeNodes()
+
+        # Enable the sendCalibrationMatrixButton
+        self.sendCalibrationMatrixButton.enabled = True
+        
     else:
       print("No zFrame image found. Cannot calculate the calibration matrix.")
 
   def onSendCalibrationMatrixButtonClicked(self):
-    # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
-    inputVolume = self.zFrameVolumeSelector.currentNode()
-    predefinedCalibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
 
-    if predefinedCalibrationMatrixNode is not None:
-      # Send the pre-determined calibration matrix to WPI as the CLB matrix
-      calibrationMatrix = vtk.vtkMatrix4x4()
-      predefinedCalibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
+    # Package the registration transform generated by the ZFrameRegistration algorithm into a 4x4 matrix
+    outputMatrix = vtk.vtkMatrix4x4()
+    self.outputTransform.GetMatrixTransformToParent(outputMatrix)
+
+    # Send the calculated calibration matrix to WPI as the CLB matrix
+    if (slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLIGTLConnectorNode') > 0): # AKA, if the IGTL connector is active
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
       timestampIDname = self.generateTimestampNameID("CLB")
       SendTransformNodeTemp.SetName(timestampIDname)
-      SendTransformNodeTemp.SetMatrixTransformToParent(calibrationMatrix)
+      SendTransformNodeTemp.SetMatrixTransformToParent(outputMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
       self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
       self.openIGTNode.PushNode(SendTransformNodeTemp)
       infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-    
-      # Update the calibration matrix table with the calculated matrix (currently just dummy code)
-      for i in range(4):
-        for j in range(4):
-          self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(calibrationMatrix.GetElement(i, j),2))))
-      self.appendTransformToCommandLog(calibrationMatrix)
-
-    elif inputVolume is not None:
-      self.initiateZFrameCalibration()
+      self.appendTransformToCommandLog(outputMatrix)
 
     else:
-      print("No zFrame image or pre-defined calibration matrix found. Cannot calculate the calibration matrix.")
+      print("OpenIGTLink connector is not active. Cannot send the registration transform.")
+    
+    # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
+    # inputVolume = self.zFrameVolumeSelector.currentNode()
+    # predefinedCalibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
+
+    # if predefinedCalibrationMatrixNode is not None:
+    #   # Send the pre-determined calibration matrix to WPI as the CLB matrix
+    #   calibrationMatrix = vtk.vtkMatrix4x4()
+    #   predefinedCalibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
+    #   SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+    #   timestampIDname = self.generateTimestampNameID("CLB")
+    #   SendTransformNodeTemp.SetName(timestampIDname)
+    #   SendTransformNodeTemp.SetMatrixTransformToParent(calibrationMatrix)
+    #   slicer.mrmlScene.AddNode(SendTransformNodeTemp)
+    #   self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
+    #   self.openIGTNode.PushNode(SendTransformNodeTemp)
+    #   infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
+    #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    
+    #   # Update the calibration matrix table with the calculated matrix (currently just dummy code)
+    #   for i in range(4):
+    #     for j in range(4):
+    #       self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(calibrationMatrix.GetElement(i, j),2))))
+    #   self.appendTransformToCommandLog(calibrationMatrix)
+
+    # elif inputVolume is not None:
+    #   self.initiateZFrameCalibration()
+
+    # else:
+    #   print("No zFrame image or pre-defined calibration matrix found. Cannot calculate the calibration matrix.")
 
   # Function to reset the 4x4 target transform to an identity matrix at the position of the new fiducial when the target point fiducial is updated
   def onTargetPointFiducialChanged(self):
@@ -1561,14 +1815,13 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       #   print ("Robot is not yet in PLANNING workphase. Please enter PLANNING workphase before selecting the target point.")
       # else: 
       if not targetPointNode.GetNumberOfControlPoints() == 0:
-        print("debug point 1")
-        if self.plannedTargetTransform:
-          slicer.mrmlScene.RemoveNode(self.plannedTargetTransform)
-          self.plannedTargetTransform = None
-        self.plannedTargetTransform = slicer.vtkMRMLLinearTransformNode()
-        self.plannedTargetTransform.SetName("PlannedTargetTransform")
-        slicer.mrmlScene.AddNode(self.plannedTargetTransform)
-        self.plannedTargetTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
+        # if self.plannedTargetTransform:
+        #   slicer.mrmlScene.RemoveNode(self.plannedTargetTransform)
+        #   self.plannedTargetTransform = None
+        # self.plannedTargetTransform = slicer.vtkMRMLTransformNode()
+        # self.plannedTargetTransform.SetName("PlannedTargetTransform")
+        # slicer.mrmlScene.AddNode(self.plannedTargetTransform)
+        # self.plannedTargetTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
 
         # Add display node to targetTransform
         # self.plannedTargetTransformDisplayNode = slicer.mrmlScene.AddNode(slicer.vtkMRMLTransformDisplayNode())
@@ -1602,6 +1855,14 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       for j in range(nbColumns):
         self.targetTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(targetTransformMatrix.GetElement(i,j),2))))
 
+  def onRegistrationTransformManuallyModified(self, unusedArg2=None, unusedArg3=None):
+    # Update the registration transform manually when the Manual Registration sliders are used
+    outputMatrix = vtk.vtkMatrix4x4()
+    self.outputTransform.GetMatrixTransformToParent(outputMatrix)
+    for i in range(4):
+      for j in range(4):
+        self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(outputMatrix.GetElement(i, j),2))))
+
   def sendTargetTransform(self):
     # Send the 4x4 targeting matrix to WPI as the TGT matrix
     targetMatrix = vtk.vtkMatrix4x4()
@@ -1617,101 +1878,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
   
-  # def onSendTargetPointButtonClicked(self):
-  #   targetPointNode = self.targetPointNodeSelector.currentNode()
-  #   if not targetPointNode:
-  #     print ("No TARGET_POINT fiducial selected.")
-  #   elif not self.phaseTextbox.text == 'TARGETING':
-  #     print ("Robot is not yet in TARGETING workphase. Please enter TARGETING workphase before sending target or entry points.")
-  #   else:
-  #     # Print RAS coordinates of the target point fiducial into the Target point GUI
-  #     targetCoordinatesRAS = [0, 0, 0]
-  #     targetPointNode.GetNthFiducialPosition(0, targetCoordinatesRAS)
-
-  #     self.targetCoordinate_R = round(targetCoordinatesRAS[0],2)
-  #     self.targetCoordinate_A = round(targetCoordinatesRAS[1],2)
-  #     self.targetCoordinate_S = round(targetCoordinatesRAS[2],2)
-
-  #     self.targetPointTextbox_R.setText(str(self.targetCoordinate_R))
-  #     self.targetPointTextbox_A.setText(str(self.targetCoordinate_A))
-  #     self.targetPointTextbox_S.setText(str(self.targetCoordinate_S))
-
-  #     # Send target point via IGTLink as a 4x4 matrix transform called TGT_XXX
-  #     targetPointMatrix = vtk.vtkMatrix4x4()
-  #     targetPointMatrix.Identity()
-  #     targetPointMatrix.SetElement(0,3,self.targetCoordinate_R)
-  #     targetPointMatrix.SetElement(1,3,self.targetCoordinate_A)
-  #     targetPointMatrix.SetElement(2,3,self.targetCoordinate_S)
-  #     SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-  #     timestampIDname = self.generateTimestampNameID("TGT")
-  #     SendTransformNodeTemp.SetName(timestampIDname)
-  #     SendTransformNodeTemp.SetMatrixTransformToParent(targetPointMatrix)
-  #     slicer.mrmlScene.AddNode(SendTransformNodeTemp)
-  #     self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
-  #     self.openIGTNode.PushNode(SendTransformNodeTemp)
-  #     infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
-  #     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-  #     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-  #     self.appendTransformToCommandLog(targetPointMatrix)
-
-  # def onSendEntryPointButtonClicked(self):
-  #   entryPointNode = self.entryPointNodeSelector.currentNode()
-  #   if not entryPointNode:
-  #     print ("No ENTRY_POINT fiducial selected.")
-  #   elif not self.phaseTextbox.text == 'TARGETING':
-  #     print ("Robot is not yet in TARGETING workphase. Please enter TARGETING workphase before sending target or entry points.")
-  #   else:
-  #     if self.entryPointCheckbox.isChecked():
-      
-  #       # Print RAS coordinates of the RESTRICTED entry point fiducial
-  #       entryCoordinatesRAS = [0, 0, 0]
-  #       entryPointNode.GetNthFiducialPosition(0, entryCoordinatesRAS)
-
-  #       self.entryCoordinate_R = round(self.targetCoordinate_R,2)
-  #       self.entryCoordinate_A = round(entryCoordinatesRAS[1],2)
-  #       self.entryCoordinate_S = round(self.targetCoordinate_S,2)
-
-  #       self.entryPointTextbox_R.setText(str(self.entryCoordinate_R))
-  #       self.entryPointTextbox_A.setText(str(self.entryCoordinate_A))
-  #       self.entryPointTextbox_S.setText(str(self.entryCoordinate_S))
-
-  #       # Move the fiducial to the new point, on the same horizontal line as the Target Point
-  #       entryPointNode.SetNthFiducialPosition(0, self.entryCoordinate_R, self.entryCoordinate_A, self.entryCoordinate_S)
-
-  #     else: 
-  #       # Print RAS coordinates of the entry point fiducial into the Entry point GUI
-  #       entryCoordinatesRAS = [0, 0, 0]
-  #       entryPointNode.GetNthFiducialPosition(0, entryCoordinatesRAS)
-
-  #       self.entryCoordinate_R = round(entryCoordinatesRAS[0],2)
-  #       self.entryCoordinate_A = round(entryCoordinatesRAS[1],2)
-  #       self.entryCoordinate_S = round(entryCoordinatesRAS[2],2)
-
-  #       self.entryPointTextbox_R.setText(str(self.entryCoordinate_R))
-  #       self.entryPointTextbox_A.setText(str(self.entryCoordinate_A))
-  #       self.entryPointTextbox_S.setText(str(self.entryCoordinate_S))
-
-  #     # Send entry point via IGTLink as a 4x4 matrix transform called ENT_XXX
-  #     entryPointMatrix = vtk.vtkMatrix4x4()
-  #     entryPointMatrix.Identity()
-  #     entryPointMatrix.SetElement(0,3,self.entryCoordinate_R)
-  #     entryPointMatrix.SetElement(1,3,self.entryCoordinate_A)
-  #     entryPointMatrix.SetElement(2,3,self.entryCoordinate_S)
-  #     SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-  #     timestampIDname = self.generateTimestampNameID("ENT")
-  #     SendTransformNodeTemp.SetName(timestampIDname)
-  #     SendTransformNodeTemp.SetMatrixTransformToParent(entryPointMatrix)
-  #     slicer.mrmlScene.AddNode(SendTransformNodeTemp)
-  #     self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
-  #     self.openIGTNode.PushNode(SendTransformNodeTemp)
-  #     infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
-  #     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-  #     self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-  #     self.appendTransformToCommandLog(entryPointMatrix) 
-
-  #     # Create a 3D model of the needle between the target and entry points
-  #     self.createInitialNeedleModel()
-
   def getRobotPoseUntilTargetIsReached(self):
     # When Move button is clicked, request current pose from WPI every second
     print ("TODO - getRobotPoseUntilTargetIsReached()")
@@ -1835,18 +2001,13 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def clearOldCalculationNodes(self):
     #if self.openSourceRegistration.inputVolume:
     if self.inputVolume:
-      #slicer.mrmlScene.RemoveNode(self.openSourceRegistration.inputVolume)
-      #self.openSourceRegistration.inputVolume = None
-      slicer.mrmlScene.RemoveNode(self.inputVolume)
+      #slicer.mrmlScene.RemoveNode(self.inputVolume)
       self.inputVolume = None
     if self.zFrameModelNode:
-      slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
+      #slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
       self.zFrameModelNode = None
-    #if self.openSourceRegistration.outputTransform:
     if self.outputTransform:
-      #slicer.mrmlScene.RemoveNode(self.openSourceRegistration.outputTransform)
-      #self.openSourceRegistration.outputTransform = None
-      slicer.mrmlScene.RemoveNode(self.outputTransform)
+      #slicer.mrmlScene.RemoveNode(self.outputTransform)
       self.outputTransform = None
   
   def loadZFrameModel(self):
@@ -1856,6 +2017,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
     zFrameModelPath = os.path.join(currentFilePath, "Resources", "zframe", self.ZFRAME_MODEL_PATH)
     _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath, returnNode=True)
+    # _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath)
     self.zFrameModelNode.SetName(self.ZFRAME_MODEL_NAME)
     modelDisplayNode = self.zFrameModelNode.GetDisplayNode()
     #modelDisplayNode.SetColor(1, 1, 0)
