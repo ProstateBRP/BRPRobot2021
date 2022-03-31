@@ -113,6 +113,7 @@ int IGTControlBase::CheckAndReceiveStringMessage(igtl::MessageHeader *headerMsg,
         success = 1;
 
         // Print contents of the message 
+        std::cout << "\n (1) You are in IGTControlBase - CheckAndReceiveStringMessage" << std::endl;
         std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
 
         char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
@@ -152,6 +153,8 @@ int IGTControlBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
                                            const char *name, int code, int suffix,
                                            const char *errorName)
 {
+
+  std::cout << "Entered IGTControlBase::CheckAndReceiveStatusMessage" << std::endl;
 
   int success = 0;
 
@@ -484,6 +487,7 @@ int IGTControlBase::ReceiveString(igtl::MessageHeader *header)
   if (c & igtl::MessageHeader::UNPACK_BODY) // if CRC check is OK
   {
     // Print contents of the message 
+    std::cout << "\n (2) You are in IGTControlBase - ReceiveString" << std::endl;
     std::cout << "\n---> Received stringMessage from WPI: " << stringMsg->GetString() << std::endl;
 
     char *wpiDeviceName = (char *)header->GetDeviceName();

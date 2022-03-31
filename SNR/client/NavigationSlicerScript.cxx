@@ -86,6 +86,9 @@ void *receivingFunction()
     // Continuously running while loop to listen for messages from Slicer
     while (1)
     {
+        
+        std::cout << "Listening\n" << std::endl;
+
         // Initialize receive buffer
         headerMsg->InitPack();
 
@@ -108,15 +111,15 @@ void *receivingFunction()
 
         if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
         {
-            ReceiveString(socket, headerMsg);
+            ReceiveStringFromSlicer(socket, headerMsg);
         }
         else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
         {
-            ReceiveStatus(socket, headerMsg);
+            ReceiveStatusFromSlicer(socket, headerMsg);
         }
         else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0)
         {
-            ReceiveTransform(socket, headerMsg);
+            ReceiveTransformFromSlicer(socket, headerMsg);
         }
     } 
     return NULL;
@@ -248,7 +251,7 @@ void SendTransformToSlicer(char *argDeviceName, igtl::Matrix4x4 &matrix, char * 
     }
 }
 
-int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
+int ReceiveStringFromSlicer(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
     // Create a message buffer to receive transform data
     igtl::StringMessage::Pointer stringMsg;
@@ -269,10 +272,12 @@ int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
     Global::globalString = stringMsg->GetString();
     Global::globalDeviceName = header->GetDeviceName();
 
+    std::cout << "\n Set globalString and globalDeviceName to: " << Global::globalString << " and " << Global::globalDeviceName << std::endl; 
+
     return 1;
 }
 
-int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
+int ReceiveStatusFromSlicer(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
     // Create a message buffer to receive transform data
     igtl::StatusMessage::Pointer statusMsg;
@@ -336,7 +341,7 @@ int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
     // return 0;
 }
 
-int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
+int ReceiveTransformFromSlicer(igtl::Socket * socket, igtl::MessageHeader::Pointer& header)
 {
     std::cout << "\n---> Received transformMessage from Slicer." << std::endl;
 

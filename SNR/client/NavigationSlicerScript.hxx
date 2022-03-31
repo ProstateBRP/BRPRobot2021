@@ -16,9 +16,9 @@ void SendTransformToSlicer(char* argDeviceName, igtl::Matrix4x4& matrix, char *w
 // void GetStatusFromSlicer(const char* hostname, int port);
 // void GetTransformFromSlicer(const char* hostname, int port);
 
-int ReceiveTransform(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
-int ReceiveStatus(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
-int ReceiveString(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
+int ReceiveTransformFromSlicer(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
+int ReceiveStatusFromSlicer(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
+int ReceiveStringFromSlicer(igtl::Socket * socket, igtl::MessageHeader::Pointer& header);
 
 // Global Variables
 struct Global{
