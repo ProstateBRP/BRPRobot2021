@@ -453,7 +453,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Create new calibration matrix button
     self.createCalibrationMatrixButton = qt.QPushButton("Initiate Calibration")
-    self.createCalibrationMatrixButton.enabled = True
+    self.createCalibrationMatrixButton.enabled = False
     calibrationLayoutMiddle.addWidget(self.createCalibrationMatrixButton)
     self.createCalibrationMatrixButton.connect('clicked()', self.initiateZFrameCalibration)
 
@@ -857,7 +857,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.start = 0
     self.ack = 0
     self.last_prefix_sent = ""
-    self.to_compare = 0
+    self.transformType = ""
     self.last_randomIDname_transform = "SendTransform"
     self.loading_phase = 'STATUS_OK'
 
@@ -932,9 +932,14 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       elif last_string_sent.split(' ')[0] == "Received" or last_string_sent.split(' ')[0] == "TRANSFORM":
         f.write("   -- " + last_string_sent + '\n')
         self.infoTextbox.setText(currentInfoText + "\n   -- " + last_string_sent + "\n")
+      elif last_string_sent == "REACHABLE_TARGET":
+        f.write("   -- Received TRANSFORM from WPI: ( REACHABLE_TARGET )\n")
+        self.infoTextbox.setText(currentInfoText + "\n   -- Received TRANSFORM from WPI: ( REACHABLE_TARGET )\n")
+      elif last_string_sent == "CURRENT_POSITION":
+        f.write("   -- Received TRANSFORM from WPI: ( CURRENT_POSTION )\n")
+        self.infoTextbox.setText(currentInfoText + "\n   -- Received TRANSFORM from WPI: ( CURRENT_POSITION )\n")
       else:
-        # TODO
-        f.write("A message other than an acknowledgement or a status was received. Modify appendReceivedMessageToCommandLog function for last_string_sent: " + last_string_sent + "\n")
+        f.write("Unsupported message. Modify appendReceivedMessageToCommandLog accordingly.\n")
 
   def appendTransformToCommandLog(self, outputMatrix):
     with open(self.commandLogFilePath,"a") as f:
@@ -1336,16 +1341,22 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
       slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
 
-  def onReachableTargetTransformReceived(self):
+  def onReachableTargetTransformReceived(self, reachableTargetMatrix):
+    print("Inside onReachableTargetTransformReceived")
+    print("DEBUG 1")
+    self.appendTransformToCommandLog(reachableTargetMatrix)
+
     # Update self.reachableTargetTransform s.t. it contains the REACHABLE_TARGET message sent by WPI
     if self.reachableTargetTransform:
       slicer.mrmlScene.RemoveNode(self.reachableTargetTransform)
       self.reachableTargetTransform = None
     self.reachableTargetTransform = slicer.vtkMRMLLinearTransformNode()
     self.reachableTargetTransform.SetName("ReachableTargetTransform")
-    # TODO - update reachableTargetTransform s.t. it contains the REACHABLE_TARGET message sent by WPI
+    self.reachableTargetTransform.SetMatrixTransformToParent(reachableTargetMatrix)
     slicer.mrmlScene.AddNode(self.reachableTargetTransform)
 
+    print("reachableTargetTransform: ", self.reachableTargetTransform)
+    print("DEBUG 2")
     # Add reachable target model to Slicer GUI
     if slicer.mrmlScene.GetFirstNodeByName("ReachableTargetNeedle") is not None:
       PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("ReachableTargetNeedle")
@@ -1354,21 +1365,23 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("ReachableTargetTransform")
     locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("ReachableTargetNeedle")
     locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
-    # TODO - determine when to call this function 
 
-  # def onCurrentPositionTransformReceived_v2(self, currentPositionTransform):
-    # TODO?
+  def onCurrentPositionTransformReceived(self, currentPositionMatrix):
+    print("Inside onCurrentPositionTransformReceived")
+    print("DEBUG 1")
+    self.appendTransformToCommandLog(currentPositionMatrix)
 
-  def onCurrentPositionTransformReceived(self):
     # Update self.currentPositionTransform s.t. it contains the CURRENT_POSITION message sent by WPI
     if self.currentPositionTransform:
       slicer.mrmlScene.RemoveNode(self.currentPositionTransform)
       self.currentPositionTransform = None
     self.currentPositionTransform = slicer.vtkMRMLLinearTransformNode()
-    self.currentPositionTransform.SetName("ReachableTargetTransform")
-    # TODO - update currentPositionTransform s.t. it contains the CURRENT_POSITION message sent by WPI
+    self.currentPositionTransform.SetName("CurrentPositionTransform")
+    self.currentPositionTransform.SetMatrixTransformToParent(currentPositionMatrix)
     slicer.mrmlScene.AddNode(self.currentPositionTransform)
 
+    print("currentPositionTransform: ", self.currentPositionTransform)
+    print("DEBUG 2")
     # Add current position needle model to Slicer GUI
     if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle") is not None:
       PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle")
@@ -1377,7 +1390,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform")
     locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle")
     locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
-    # TODO - determine when to call this function
 
   def onTargetReferenceFrameButtonToggled(self):
     # If button is checked
@@ -1462,12 +1474,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     concatenateMsg = ReceivedStatusMsg.GetStatusString()
     if(concatenateMsg.find(":")!=-1): # found delimiter is in the string
       nameonly = concatenateMsg[0: concatenateMsg.index(":")]
-      # msgonly = concatenateMsg[concatenateMsg.index(":") + 2: len(concatenateMsg)]
     else:
-      # msgonly = concatenateMsg
       nameonly = concatenateMsg
-    # s = s1 + ':' + s2 + ':' + s3 + ':' + msgonly
-    # statusNode.statusTextbox.setText(s)
 
     # Status codes -- see igtl_status.h
     statusNode.status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANICK_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
@@ -1492,16 +1500,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       # Call function to send targeting transform 
       elif(statusNode.loading_phase == "TARGETING"):
         statusNode.sendTargetTransform()
-      # Call function to receive pose repeatedly from robot if the current phase is MOVE_TO_TARGET
-      elif(statusNode.loading_phase == "MOVE_TO_TARGET"):
-        statusNode.getRobotPoseUntilTargetIsReached()
+      # # Call function to receive pose repeatedly from robot if the current phase is MOVE_TO_TARGET
+      # elif(statusNode.loading_phase == "MOVE_TO_TARGET"):
+      #   statusNode.getRobotPoseUntilTargetIsReached()
       statusNode.ack = 0
     else:
       print("Error in changing phase")
-      # print("statusNode.status_codes[ReceivedStatusMsg.GetCode()]: ", statusNode.status_codes[ReceivedStatusMsg.GetCode()])
-      # print("statusNode.ack: ", statusNode.ack)
-      # print("statusNode.loading_phase: ", statusNode.loading_phase)
-      # print("nameonly: ", nameonly)
+      print("statusNode.status_codes[ReceivedStatusMsg.GetCode()]: ", statusNode.status_codes[ReceivedStatusMsg.GetCode()])
+      print("statusNode.ack: ", statusNode.ack)
+      print("statusNode.loading_phase: ", statusNode.loading_phase)
+      print("nameonly: ", nameonly)
 
   def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
     print("New transform received")
@@ -1509,6 +1517,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
 
+    # If the received transform is of type ACK_XXX, check if it matches the original transform sent to WPI
     refMatrix = vtk.vtkMatrix4x4()
     LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(transformNode.last_randomIDname_transform)
     LastTransformNode.GetMatrixTransformToParent(refMatrix)
@@ -1521,45 +1530,43 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         val = round(val,2)
         ref = refMatrix.GetElement(i,j)
         ref = round(val,2)
-        if(transformNode.to_compare == 1):
+        if(transformNode.transformType == "ACK"):
           if(val != ref):
             same_transforms = 0
         transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
-    infoMsg = ""
-    if ((transformNode.to_compare == 1) and (same_transforms == 0)):
-      infoMsg =  "TRANSFORM received from WPI doesn't match transform sent"
-    elif((transformNode.to_compare == 1) and (same_transforms == 1)):
+    if (transformNode.transformType == "ACK" and not same_transforms):
+      infoMsg =  "TRANSFORM received from WPI does NOT match transform sent"
+      transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
+    elif(transformNode.transformType == "ACK" and same_transforms):
       infoMsg =  "TRANSFORM received from WPI matches transform sent"
-    transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
+      transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
+    elif(transformNode.transformType == "REACHABLE_TARGET"):
+      transformNode.onReachableTargetTransformReceived(transformMatrix)
+    elif(transformNode.transformType == "CURRENT_POSITION"):
+      transformNode.onCurrentPositionTransformReceived(transformMatrix)
+    else: 
+      print("Invalid transform type")
 
   def onTransformInfoNodeModified(infoNode, unusedArg2=None, unusedArg3=None):
-    print("New transform info received")
     ReceivedTransformInfo = slicer.mrmlScene.GetFirstNodeByName("TransformInfo")
     info = ReceivedTransformInfo.GetText()
-    print("transform info: ", info)
-    # if (info == "CURRENT_POSITION") or (info == "TARGET"):
-    if info == "TARGET":
-      print("Transform received")
-    elif info == "REACHABLE_TARGET":
-      print("TODO - REACHABLE_TARGET RECEIVED - call onReachableTargetTransformReceived")
-      infoNode.onReachableTargetTransformReceived()
-      # TODO
-    elif info == "CURRENT_POSITION":
-      print("TODO - CURRENT_POSTION RECEIVED - call onCurrentPositionTransformReceived")
-      infoNode.onCurrentPositionTransformReceived()
-      # TODO
-    elif(info.find("_")!=-1): # Check for delimiter "_"
-      infoType = info[0: info.index("_")]
+
+    if(info.find("_")!=-1): # Check for delimiter "_"
+      infoType = info[0: info.index("_")] # Possible infoTypes: ACK, REACHABLE, CURRENT
       infoID = info[info.index("_") + 1: len(info)]
-      if(infoNode.last_name_sent.find("_")!=-1):
+      if(infoType == "ACK"):  
         last_name_sentID = infoNode.last_name_sent[infoNode.last_name_sent.index("_") + 1: len(infoNode.last_name_sent)]
-        infoMsg =  "Received TRANSFORM from WPI: ( " + info + " )"
-        re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-        infoNode.appendReceivedMessageToCommandLog(infoMsg, 0)
-      
-        if((last_name_sentID == infoID) and (infoType == 'ACK')):
+        if(last_name_sentID == infoID):
           print("Acknowledgment received for transform:", infoNode.last_name_sent)
-        infoNode.to_compare = 1
+          infoNode.transformType = infoType
+      elif(info == "REACHABLE_TARGET" or info == "CURRENT_POSITION"):
+        # Set transformType to either REACHABLE_TARGET or CURRENT_POSITION
+        infoNode.transformType = info
+      else:
+        print ("Unsupported transform info node received: ", info)
+
+    infoMsg =  "Received TRANSFORM from WPI: ( " + info + " )"
+    infoNode.appendReceivedMessageToCommandLog(infoMsg, 0)
 
   def AddPointerModel(self, pointerNodeName):   
     self.cyl = vtk.vtkCylinderSource()
@@ -1833,6 +1840,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     if (slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLIGTLConnectorNode') > 0): # AKA, if the IGTL connector is active
       SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
       timestampIDname = self.generateTimestampNameID("CLB")
+      self.last_name_sent = timestampIDname
       SendTransformNodeTemp.SetName(timestampIDname)
       SendTransformNodeTemp.SetMatrixTransformToParent(outputMatrix)
       slicer.mrmlScene.AddNode(SendTransformNodeTemp)
@@ -1943,6 +1951,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       if (slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLIGTLConnectorNode') > 0): # AKA, if the IGTL connector is active
         SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
         timestampIDname = self.generateTimestampNameID("TGT")
+        self.last_name_sent = timestampIDname
         SendTransformNodeTemp.SetName(timestampIDname)
         SendTransformNodeTemp.SetMatrixTransformToParent(plannedTargetMatrix)
         slicer.mrmlScene.AddNode(SendTransformNodeTemp)
@@ -1958,75 +1967,73 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     else:
       print("plannedTargetTransform has not been generated yet. Use the Planning GUI to plan the target location.")
   
-  def getRobotPoseUntilTargetIsReached(self):
-    # When Move button is clicked, request current pose from WPI every second
-    print ("TODO - getRobotPoseUntilTargetIsReached()")
+  # def getRobotPoseUntilTargetIsReached(self):
+  #   # When Move button is clicked, request current pose from WPI every second
+  #   print ("TODO - getRobotPoseUntilTargetIsReached()")
 
-    # TODO !
-
-    # Get the REACHABLE_TARGET transform
-    reachableTargetPositionNode = slicer.vtkMRMLLinearTransformNode()
-    transformNodes = slicer.util.getNodesByClass("vtkMRMLLinearTransformNode")
-    reachableTargetFound = False
-    for transformNode in transformNodes:
-      if transformNode.GetName().split("_")[0] == "REACHABLE":
-        reachableTargetPositionNode = transformNode
-        reachableTargetFound = True
+  #   # Get the REACHABLE_TARGET transform
+  #   reachableTargetPositionNode = slicer.vtkMRMLLinearTransformNode()
+  #   transformNodes = slicer.util.getNodesByClass("vtkMRMLLinearTransformNode")
+  #   reachableTargetFound = False
+  #   for transformNode in transformNodes:
+  #     if transformNode.GetName().split("_")[0] == "REACHABLE":
+  #       reachableTargetPositionNode = transformNode
+  #       reachableTargetFound = True
     
-    if not reachableTargetFound:
-      print ("No transform found that is named REACHABLE_TARGET.")
-      # FOR DEBUGGING PURPOSES ONLY - get matrix named TGT_XXX instead: TODO (delete)
-      for transformNode in transformNodes:
-        if transformNode.GetName().split("_")[0] == "TGT":
-          reachableTargetPositionNode = transformNode
+  #   if not reachableTargetFound:
+  #     print ("No transform found that is named REACHABLE_TARGET.")
+  #     # FOR DEBUGGING PURPOSES ONLY - get matrix named TGT_XXX instead: TODO (delete)
+  #     for transformNode in transformNodes:
+  #       if transformNode.GetName().split("_")[0] == "TGT":
+  #         reachableTargetPositionNode = transformNode
 
-    targetPositionMatrix = vtk.vtkMatrix4x4()
-    reachableTargetPositionNode.GetMatrixTransformToParent(targetPositionMatrix)
-    print("REACHABLE TARGET POSITION NODE: ", targetPositionMatrix)
+  #   targetPositionMatrix = vtk.vtkMatrix4x4()
+  #   reachableTargetPositionNode.GetMatrixTransformToParent(targetPositionMatrix)
+  #   print("REACHABLE TARGET POSITION NODE: ", targetPositionMatrix)
 
-    # Request the current position from the robot
-    # Robot will respond with a transform with the name CURRENT_POSITION
-    # self.onGetPoseButtonClicked()
-    # print("Send command to get current position of the robot")
-    getposeNode = slicer.vtkMRMLTextNode()
-    self.last_prefix_sent = "CMD"
-    timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
-    self.last_name_sent = self.generateTimestampNameID(self.last_prefix_sent)
-    getposeNode.SetName(timestampIDname)
-    getposeNode.SetText("GET_TRANSFORM")
-    getposeNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(getposeNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
-    self.openIGTNode.PushNode(getposeNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_TRANSFORM )"
-    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+  #   # Request the current position from the robot
+  #   # Robot will respond with a transform with the name CURRENT_POSITION
+  #   # self.onGetPoseButtonClicked()
+  #   # print("Send command to get current position of the robot")
+  #   getposeNode = slicer.vtkMRMLTextNode()
+  #   self.last_prefix_sent = "CMD"
+  #   timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
+  #   self.last_name_sent = self.generateTimestampNameID(self.last_prefix_sent)
+  #   getposeNode.SetName(timestampIDname)
+  #   getposeNode.SetText("GET_TRANSFORM")
+  #   getposeNode.SetEncoding(3)
+  #   slicer.mrmlScene.AddNode(getposeNode)
+  #   self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
+  #   self.openIGTNode.PushNode(getposeNode)
+  #   infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_TRANSFORM )"
+  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+  #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
-    time.sleep(0.1)
+  #   time.sleep(0.1)
 
-    # Get transform CURRENT_POSITION
-    self.currentPositionNode = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-    self.currentPositionMatrix = vtk.vtkMatrix4x4()
-    self.currentPositionNode.GetMatrixTransformToParent(self.currentPositionMatrix)
-    print("CURRENT POSITION NODE: ", self.currentPositionNode)
-    #self.onCurrentPositionTransformReceived_v2(self.currentPositionNode)
+  #   # Get transform CURRENT_POSITION
+  #   self.currentPositionNode = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+  #   self.currentPositionMatrix = vtk.vtkMatrix4x4()
+  #   self.currentPositionNode.GetMatrixTransformToParent(self.currentPositionMatrix)
+  #   print("CURRENT POSITION NODE: ", self.currentPositionNode)
+  #   #self.onCurrentPositionTransformReceived_v2(self.currentPositionNode)
 
-    # Update needle model in 3D Slicer pane
-    # TODO
+  #   # Update needle model in 3D Slicer pane
+  #   # TODO
 
-    positionsAreEqual = True
-    for i in range(4):
-      for j in range(4):
-        if not round(targetPositionMatrix.GetElement(i, j),1) == round(self.currentPositionMatrix.GetElement(i, j),1):
-          positionsAreEqual = False
-          break
+  #   positionsAreEqual = True
+  #   for i in range(4):
+  #     for j in range(4):
+  #       if not round(targetPositionMatrix.GetElement(i, j),1) == round(self.currentPositionMatrix.GetElement(i, j),1):
+  #         positionsAreEqual = False
+  #         break
 
-    if positionsAreEqual:
-      print("--------------- Robot has reached the target")
-    else:
-      print("--------------- Robot has NOT yet reached the target")
-      time.sleep(1)
-      #self.getRobotPoseUntilTargetIsReached()
+  #   if positionsAreEqual:
+  #     print("--------------- Robot has reached the target")
+  #   else:
+  #     print("--------------- Robot has NOT yet reached the target")
+  #     time.sleep(1)
+  #     #self.getRobotPoseUntilTargetIsReached()
 
 
 # # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
@@ -2053,6 +2060,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         self.removeZFrameROIAddedObserver()
         self.zFrameROI = node
         self.zFrameROI.SetName("Registration ROI")
+      # Enable createCalibrationMatrixButton when ROI is added
+      self.createCalibrationMatrixButton.enabled = True
 
     # Remove any previous node added observer
     self.removeZFrameROIAddedObserver()
