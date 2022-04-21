@@ -64,46 +64,78 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Server collapsible button
     serverCollapsibleButton = ctk.ctkCollapsibleButton()
-    serverCollapsibleButton.text = "Start IGTLink Server"
+    serverCollapsibleButton.text = "IGTLink Connections"
     self.layout.addWidget(serverCollapsibleButton)
 
     # Layout within the path collapsible button
     serverFormLayout = qt.QGridLayout(serverCollapsibleButton)
 
-    self.snrPortTextboxLabel = qt.QLabel('SNR server port:')
+    # Slicer<->Robot IGTLink connection interface
+    self.snrPortTextboxLabel = qt.QLabel('Robot server port:')
     self.snrPortTextbox = qt.QLineEdit("18944")
     self.snrPortTextbox.setReadOnly(False)
-    self.snrPortTextbox.setMaximumWidth(250)
+    self.snrPortTextbox.setMaximumWidth(75)
 
     serverFormLayout.addWidget(self.snrPortTextboxLabel, 0, 0)
     serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
 
-    self.snrHostnameTextboxLabel = qt.QLabel('SNR hostname:')
-    self.snrHostnameTextbox = qt.QLineEdit("localhost")
-    self.snrHostnameTextbox.setReadOnly(False)
-    self.snrHostnameTextbox.setMaximumWidth(250)
-    serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
-    serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
+    # self.snrHostnameTextboxLabel = qt.QLabel('Slicer<->Robot hostname:')
+    # self.snrHostnameTextbox = qt.QLineEdit("localhost")
+    # self.snrHostnameTextbox.setReadOnly(False)
+    # self.snrHostnameTextbox.setMaximumWidth(250)
+    # serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
+    # serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
     # Create server button
-    self.createServerButton = qt.QPushButton("Create server")
-    self.createServerButton.toolTip = "Create the IGTLink server connection with shell."
+    self.createServerButton = qt.QPushButton("Create robot server")
+    self.createServerButton.toolTip = "Create the IGTLink server connection with robot."
     self.createServerButton.enabled = True
     self.createServerButton.setFixedWidth(250)
     serverFormLayout.addWidget(self.createServerButton, 2, 0)
     self.createServerButton.connect('clicked()', self.onCreateServerButtonClicked)
 
     self.disconnectFromSocketButton = qt.QPushButton("Disconnect from socket")
-    self.disconnectFromSocketButton.toolTip = "Disconnect from the socket when you finish using audio"
+    self.disconnectFromSocketButton.toolTip = "Disconnect from the socket."
     self.disconnectFromSocketButton.enabled = False
     self.disconnectFromSocketButton.setFixedWidth(250)
     serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 1)
     self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
 
+    # Slicer<->Scanner OpenIGTLink connection interface
+    self.scannerPortTextboxLabel = qt.QLabel('Scanner server port:')
+    self.scannerPortTextbox = qt.QLineEdit("18940")
+    self.scannerPortTextbox.setReadOnly(False)
+    self.scannerPortTextbox.setMaximumWidth(75)
+
+    serverFormLayout.addWidget(self.scannerPortTextboxLabel, 3, 0)
+    serverFormLayout.addWidget(self.scannerPortTextbox, 3, 1)
+
+    # self.snrHostnameTextboxLabel = qt.QLabel('Slicer<->Scanner hostname:')
+    # self.snrHostnameTextbox = qt.QLineEdit("localhost")
+    # self.snrHostnameTextbox.setReadOnly(False)
+    # self.snrHostnameTextbox.setMaximumWidth(250)
+    # serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 4, 0)
+    # serverFormLayout.addWidget(self.snrHostnameTextbox, 4, 1)
+
+    # Create server button
+    self.createScannerServerButton = qt.QPushButton("Create MRI scanner server")
+    self.createScannerServerButton.toolTip = "Create the IGTLink server connection with scanner."
+    self.createScannerServerButton.enabled = True
+    self.createScannerServerButton.setFixedWidth(250)
+    serverFormLayout.addWidget(self.createScannerServerButton, 4, 0)
+    self.createScannerServerButton.connect('clicked()', self.onCreateScannerServerButtonClicked)
+
+    self.disconnectFromScannerSocketButton = qt.QPushButton("Disconnect from socket")
+    self.disconnectFromScannerSocketButton.toolTip = "Disconnect from the socket."
+    self.disconnectFromScannerSocketButton.enabled = False
+    self.disconnectFromScannerSocketButton.setFixedWidth(250)
+    serverFormLayout.addWidget(self.disconnectFromScannerSocketButton, 4, 1)
+    self.disconnectFromScannerSocketButton.connect('clicked()', self.onDisconnectFromScannerSocketButtonClicked)
+    
     # ----- MRI <--> Slicer connection GUI ------
     # Slicer <--> MRI collapsible button
     self.MRICommunicationCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.MRICommunicationCollapsibleButton.text = "Slicer <--> MRI"
+    self.MRICommunicationCollapsibleButton.text = "Slicer <--> MRI Scanner"
     self.MRICommunicationCollapsibleButton.collapsed = True
     self.layout.addWidget(self.MRICommunicationCollapsibleButton)
 
@@ -215,7 +247,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     updateScanPlaneLayoutMiddle.addWidget(self.scanPlaneSelectionBox)
 
     # MRI Update scan target button
-    self.MRIupdateTargetButton = qt.QPushButton("Update Scan Plane")
+    self.MRIupdateTargetButton = qt.QPushButton("Send Scan Plane Transform")
     self.MRIupdateTargetButton.toolTip = "Send a new scanning target transform to the MRI control."
     # self.MRIupdateTargetButton.enabled = False
     # self.MRIupdateTargetButton.setMaximumWidth(250)
@@ -229,42 +261,42 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Add 1 line of spacing
     MRIInboundCommunicationLayout.addWidget(qt.QLabel(" "), 0, 0)
 
-    self.MRImessageTextbox = qt.QLineEdit("No message received")
-    self.MRImessageTextbox.setReadOnly(True)
-    self.MRImessageTextbox.setFixedWidth(200)
-    MRImessageTextboxLabel = qt.QLabel("   Message received:")
-    MRIInboundCommunicationLayout.addWidget(MRImessageTextboxLabel, 1, 0)
-    MRIInboundCommunicationLayout.addWidget(self.MRImessageTextbox, 1, 1)
+    # self.MRImessageTextbox = qt.QLineEdit("No message received")
+    # self.MRImessageTextbox.setReadOnly(True)
+    # self.MRImessageTextbox.setFixedWidth(200)
+    # MRImessageTextboxLabel = qt.QLabel("   Message received:")
+    # MRIInboundCommunicationLayout.addWidget(MRImessageTextboxLabel, 1, 0)
+    # MRIInboundCommunicationLayout.addWidget(self.MRImessageTextbox, 1, 1)
 
-    self.MRIstatusCodeTextbox = qt.QLineEdit("No status code received")
-    self.MRIstatusCodeTextbox.setReadOnly(True)
-    self.MRIstatusCodeTextbox.setFixedWidth(200)
-    MRIstatusCodeTextboxLabel = qt.QLabel("   Status received:")
-    MRIInboundCommunicationLayout.addWidget(MRIstatusCodeTextboxLabel, 2, 0)
-    MRIInboundCommunicationLayout.addWidget(self.MRIstatusCodeTextbox, 2, 1)
+    # self.MRIstatusCodeTextbox = qt.QLineEdit("No status code received")
+    # self.MRIstatusCodeTextbox.setReadOnly(True)
+    # self.MRIstatusCodeTextbox.setFixedWidth(200)
+    # MRIstatusCodeTextboxLabel = qt.QLabel("   Status received:")
+    # MRIInboundCommunicationLayout.addWidget(MRIstatusCodeTextboxLabel, 2, 0)
+    # MRIInboundCommunicationLayout.addWidget(self.MRIstatusCodeTextbox, 2, 1)
 
-    row = 4
-    column = 4
-    self.MRItableWidget = qt.QTableWidget(row, column)
-    #self.MRItableWidget.setMaximumWidth(400)
-    self.MRItableWidget.setMinimumHeight(95)
-    self.MRItableWidget.verticalHeader().hide() # Remove line numbers
-    self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
-    self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.MRItableWidget.horizontalHeader()
-    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    # row = 4
+    # column = 4
+    # self.MRItableWidget = qt.QTableWidget(row, column)
+    # #self.MRItableWidget.setMaximumWidth(400)
+    # self.MRItableWidget.setMinimumHeight(95)
+    # self.MRItableWidget.verticalHeader().hide() # Remove line numbers
+    # self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
+    # self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    # horizontalheader = self.MRItableWidget.horizontalHeader()
+    # horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    # horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    # horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    # horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
 
-    verticalheader = self.MRItableWidget.verticalHeader()
-    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    MRItableWidgetLabel = qt.QLabel("   Transform received:")
-    MRIInboundCommunicationLayout.addWidget(MRItableWidgetLabel, 3, 0)
-    MRIInboundCommunicationLayout.addWidget(self.MRItableWidget, 3, 1)
+    # verticalheader = self.MRItableWidget.verticalHeader()
+    # verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    # verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    # verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    # verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    # MRItableWidgetLabel = qt.QLabel("   Transform received:")
+    # MRIInboundCommunicationLayout.addWidget(MRItableWidgetLabel, 3, 0)
+    # MRIInboundCommunicationLayout.addWidget(self.MRItableWidget, 3, 1)
 
     # -------- Slicer <--> WPI connection GUI ---------
 
@@ -793,7 +825,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       # Current location transform (PointerModel = currentLocation)
     self.treeView = slicer.qMRMLSubjectHierarchyTreeView()
     self.treeView.nodeTypes = ["vtkMRMLModelNode"]
-    # self.treeView.setMRMLScene(slicer.mrmlScene)
     # if just needle models are desired in the model view panel -- use setNameFilter()
     modelViewPanelLayout.addWidget(self.treeView, 0, 0)
 
@@ -830,15 +861,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.redSliceNode = slicer.util.getNode('vtkMRMLSliceNodeRed')
     self.greenSliceNode = slicer.util.getNode('vtkMRMLSliceNodeGreen')
     self.yellowSliceNode = slicer.util.getNode('vtkMRMLSliceNodeYellow')
-    # self.redSliceNode.SetOrientationToAxial()
-    # self.greenSliceNode.SetOrientationToSagittal()
-    # self.yellowSliceNode.SetOrientationToCoronal()
     self.axialController = slicer.app.layoutManager().sliceWidget('Red').sliceController()
     self.sagittalController = slicer.app.layoutManager().sliceWidget('Green').sliceController()
     self.coronalController = slicer.app.layoutManager().sliceWidget('Yellow').sliceController()
     self.planeLocationByCurrentPosition = True
     self.otsuFilter = sitk.OtsuThresholdImageFilter()
-    # self.openSourceRegistration = OpenSourceZFrameRegistration(slicer.mrmlScene)
     self.zFrameFidsString = '' # For manual selection of zframe fiducial locations
     self.manualRegistration = False
     self.templateVolume = None
@@ -850,31 +877,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.endIndex = None
     self.zFrameModelNode = None
 
-  def onCreateServerButtonClicked(self):
-    # GUI changes to enable/disable button functionality
-    self.createServerButton.enabled = False
-    self.disconnectFromSocketButton.enabled = True
-    self.snrPortTextbox.setReadOnly(True)
-    self.snrHostnameTextbox.setReadOnly(True)
-    self.RobotCommunicationCollapsibleButton.collapsed = False
-    # self.MRICommunicationCollapsibleButton.collapsed = False
-    self.infoCollapsibleButton.collapsed = False
-
-    snrPort = self.snrPortTextbox.text
-    snrHostname = self.snrHostnameTextbox.text
-    print("Slicer-side port number: ", snrPort)
-    #VisualFeedback: color in gray when server is created
-    self.snrPortTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
-    self.snrHostnameTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
-    self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
-    self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
-
-    # Initialize the IGTLink Slicer-side server component
-    self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
-    slicer.mrmlScene.AddNode(self.openIGTNode)
-    self.openIGTNode.SetTypeServer(int(snrPort))
-    self.openIGTNode.Start()
-    print("openIGTNode: ", self.openIGTNode)
+  def createServerInitializationStep(self):
+    # Prevent re-initialization
+    self.firstServer = False
 
     # Create a .txt document for the command log
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
@@ -920,14 +925,85 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_randomIDname_transform = "SendTransform"
     self.loading_phase = 'STATUS_OK'
 
+  def onCreateServerButtonClicked(self):
+    # GUI changes to enable/disable button functionality
+    self.createServerButton.enabled = False
+    self.disconnectFromSocketButton.enabled = True
+    self.snrPortTextbox.setReadOnly(True)
+    # self.snrHostnameTextbox.setReadOnly(True)
+    self.RobotCommunicationCollapsibleButton.collapsed = False
+    # self.MRICommunicationCollapsibleButton.collapsed = False
+    self.infoCollapsibleButton.collapsed = False
+
+    snrPort = self.snrPortTextbox.text
+    #snrHostname = self.snrHostnameTextbox.text
+    #VisualFeedback: color in gray when server is created
+    self.snrPortTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
+    # self.snrHostnameTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
+    self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
+    # self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
+
+    # Initialize the IGTLink Slicer-side server component
+    self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
+    slicer.mrmlScene.AddNode(self.openIGTNode)
+    self.openIGTNode.SetTypeServer(int(snrPort))
+    self.openIGTNode.Start()
+    print("openIGTNode: ", self.openIGTNode)
+
+    if self.firstServer:
+      self.createServerInitializationStep()
+
+    # # Create a .txt document for the command log
+    # currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    # self.commandLogFilePath = os.path.join(currentFilePath, "commandLogs.txt")
+    # with open(self.commandLogFilePath,"a") as f:
+    #   f.write('\n----------------- New session started on ' + datetime.datetime.now().strftime("%d/%m/%Y at %H:%M:%S:%f") + ' -----------------\n')
+
+    # # Make a node for each message type 
+    # # Create nodes to receive string, status, and transform messages
+    # ReceivedStringMsg = slicer.vtkMRMLTextNode()
+    # ReceivedStringMsg.SetName("StringMessage")
+    # slicer.mrmlScene.AddNode(ReceivedStringMsg)
+
+    # ReceivedStatusMsg = slicer.vtkMRMLIGTLStatusNode()
+    # ReceivedStatusMsg.SetName("StatusMessage")
+    # slicer.mrmlScene.AddNode(ReceivedStatusMsg)
+
+    # ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
+    # ReceivedTransformMsg.SetName("TransformMessage")
+    # slicer.mrmlScene.AddNode(ReceivedTransformMsg)
+
+    # ReceivedTransformInfo = slicer.vtkMRMLTextNode()
+    # ReceivedTransformInfo.SetName("TransformInfo")
+    # slicer.mrmlScene.AddNode(ReceivedTransformInfo)
+
+    # # Add observers on the 4 message type nodes
+    # ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+    # ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
+    # ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
+    # ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
+
+    # # Create a node for sending transforms
+    # SendTransformNode = slicer.vtkMRMLLinearTransformNode()
+    # SendTransformNode.SetName("SendTransform")
+    # slicer.mrmlScene.AddNode(SendTransformNode)
+
+    # # Initialize variables 
+    # self.last_string_sent = "nostring"
+    # self.start = 0
+    # self.ack = 0
+    # self.last_prefix_sent = ""
+    # self.transformType = ""
+    # self.last_randomIDname_transform = "SendTransform"
+    # self.loading_phase = 'STATUS_OK'
+
   def onDisconnectFromSocketButtonClicked(self):
     # GUI changes to enable/disable button functionality
     self.disconnectFromSocketButton.enabled = False
     self.createServerButton.enabled = True
     self.snrPortTextbox.setReadOnly(False)
-    self.snrHostnameTextbox.setReadOnly(False)
+    # self.snrHostnameTextbox.setReadOnly(False)
     self.RobotCommunicationCollapsibleButton.collapsed = True
-    self.MRICommunicationCollapsibleButton.collapsed = True
     self.infoCollapsibleButton.collapsed = True
     self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
@@ -935,18 +1011,18 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Close socket
     self.openIGTNode.Stop()
     self.snrPortTextboxLabel.setStyleSheet('color: black')
-    self.snrHostnameTextboxLabel.setStyleSheet('color: black')
+    # self.snrHostnameTextboxLabel.setStyleSheet('color: black')
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
-    self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
+    # self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
     # Clear textboxes
-    self.MRIphaseTextbox.setText("")
-    self.MRImessageTextbox.setText("No message received")
-    self.MRIstatusCodeTextbox.setText("No status code received")
+    # self.MRIphaseTextbox.setText("")
+    # self.MRImessageTextbox.setText("No message received")
+    # self.MRIstatusCodeTextbox.setText("No status code received")
     self.robotMessageTextbox.setText("No message received")
     self.robotStatusCodeTextbox.setText("No status code received")
     self.phaseTextbox.setText("")
-    self.infoTextbox.setText("")
+    # self.infoTextbox.setText("")
    
     # Clear tables
     for i in range(4):
@@ -960,6 +1036,57 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.RemoveNode(self.openIGTNode)
     slicer.mrmlScene.Clear(0) 
 
+  def onCreateScannerServerButtonClicked(self):
+    self.createScannerServerButton.enabled = False
+    self.disconnectFromScannerSocketButton.enabled = True
+    self.scannerPortTextbox.setReadOnly(True)
+    self.MRICommunicationCollapsibleButton.collapsed = False
+    self.infoCollapsibleButton.collapsed = False
+
+    scannerPort = self.scannerPortTextbox.text
+    #VisualFeedback: color in gray when server is created
+    self.scannerPortTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
+    self.scannerPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
+
+    # Initialize the IGTLink Slicer-side server component
+    self.openIGTNode_Scanner = slicer.vtkMRMLIGTLConnectorNode()
+    slicer.mrmlScene.AddNode(self.openIGTNode_Scanner)
+    self.openIGTNode_Scanner.SetTypeServer(int(scannerPort))
+    self.openIGTNode_Scanner.Start()
+    print("Scanner OpenIGT node: ", self.openIGTNode_Scanner)
+
+    if self.firstServer:
+      self.createServerInitializationStep()
+  
+  def onDisconnectFromScannerSocketButtonClicked(self):
+    self.createScannerServerButton.enabled = True
+    self.disconnectFromScannerSocketButton.enabled = False
+    self.scannerPortTextbox.setReadOnly(False)
+
+    # GUI changes to enable/disable button functionality
+    self.disconnectFromScannerSocketButton.enabled = False
+    self.createScannerServerButton.enabled = True
+    self.scannerPortTextbox.setReadOnly(False)
+    # self.RobotCommunicationCollapsibleButton.collapsed = True
+    self.MRICommunicationCollapsibleButton.collapsed = True
+    self.infoCollapsibleButton.collapsed = True
+    self.calibrationCollapsibleButton.collapsed = True
+    self.planningCollapsibleButton.collapsed = True
+
+    # Close socket
+    self.openIGTNode_Scanner.Stop()
+    self.scannerPortTextboxLabel.setStyleSheet('color: black')
+    self.scannerPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
+
+    # # Clear textboxes
+    # self.MRIphaseTextbox.setText("")
+    # self.MRImessageTextbox.setText("No message received")
+    # self.MRIstatusCodeTextbox.setText("No status code received")
+
+    # Delete all nodes from the scene
+    slicer.mrmlScene.RemoveNode(self.openIGTNode_Scanner)
+    slicer.mrmlScene.Clear(0) 
+  
   def generateTimestampNameID(self, last_prefix_sent):
     timestampID = [last_prefix_sent, "_"]
     currentTime = datetime.datetime.now()
@@ -968,7 +1095,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     return timestampIDname
 
   # Command logging
-  def appendSentMessageToCommandLog(self, timestampIDname, infoMsg):
+  def appendSentMessageToCommandLog(self, timestampIDname, infoMsg, receiver):
     if timestampIDname.split("_")[0] == "TARGET":
       tempTimestamp  = datetime.datetime.strptime(timestampIDname.split("_")[2], "%H%M%S%f")
     else: 
@@ -976,11 +1103,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     timestamp = tempTimestamp.strftime("%H:%M:%S:%f")
     # Append to commandLogs.txt
     with open(self.commandLogFilePath,"a") as f:
-      f.write(timestamp + " -- " + infoMsg + '\n')
+      f.write(timestamp + " -- " + infoMsg + " to " + receiver + '\n')
 
     # Append to Slicer module GUI command logging box
     currentInfoText = self.infoTextbox.toPlainText()
-    self.infoTextbox.setText(currentInfoText + '\n' + timestamp + " -- " + infoMsg + '\n')
+    self.infoTextbox.setText(currentInfoText + '\n' + timestamp + " -- " + infoMsg + " to " + receiver + '\n')
 
   def appendReceivedMessageToCommandLog(self, last_string_sent, elapsed_time):
     currentInfoText = self.infoTextbox.toPlainText()
@@ -1132,7 +1259,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.PushNode(getposeNode)
     infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_TRANSFORM )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onTargetingButtonClicked(self):
     # Send stringMessage containing the command "TARGETING" to the script via IGTLink
@@ -1151,7 +1278,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_string_sent = targetingNode.GetText()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  TARGETING )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
     
     # Hide calibration and planning GUIs
     self.calibrationCollapsibleButton.collapsed = True
@@ -1174,7 +1301,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_string_sent = moveNode.GetText()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  MOVE_TO_TARGET )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
     # TODO - DELETE THIS LINE - FOR DEBUGGING ONLY 
     # (function call to getRobotPoseUntilTargetIsReached should be executed once the MOVE_TO_TARGET acknowledgement is received)
@@ -1204,7 +1331,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_prefix_sent = "CLB"
     infoMsg =  "Sending STRING( " + timestampIDname + ",  CALIBRATION )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
     # Show Calibration matrix GUI in the module
     self.calibrationCollapsibleButton.collapsed = False
@@ -1229,7 +1356,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_string_sent = planningNode.GetText()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  PLANNING )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
     # Show planning GUI, hide calibration GUI and target point GUI
     self.planningCollapsibleButton.collapsed = False
@@ -1252,7 +1379,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_string_sent = unlockNode.GetText()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  UNLOCK )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onLockButtonClicked(self):
     print("Asking to Lock the robot")
@@ -1271,7 +1398,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_string_sent = lockNode.GetText()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  LOCK )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onStopButtonClicked(self):
     print("Sending Stop command")
@@ -1291,7 +1418,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.deactivateButtons()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  STOP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onEmergencyButtonClicked(self):
     # Send stringMessage containing the command "STOP" to the script via IGTLink
@@ -1310,7 +1437,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_string_sent = emergencyNode.GetText()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  EMERGENCY )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onStartupButtonClicked(self):
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
@@ -1329,7 +1456,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_string_sent = startupNode.GetText()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  START_UP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
     # TODO - get rid of this, for debugging only
     self.activateButtons()
@@ -1433,6 +1560,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.currentPositionTransform.SetName("CurrentPositionTransform")
     self.currentPositionTransform.SetMatrixTransformToParent(currentPositionMatrix)
     slicer.mrmlScene.AddNode(self.currentPositionTransform)
+    self.currentPositionTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.updateScanPlaneIn3DView)
 
     # Add current position needle model to Slicer GUI
     if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle") is not None:
@@ -1460,27 +1588,97 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def onMRIStartupButtonClicked(self):
     self.MRIdisconnectButton.enabled = True
     self.MRIstartupButton.enabled = False
-
     self.MRIstartScanButton.enabled = True
     self.MRIstopScanButton.enabled = True
-    # self.MRIupdateTargetButton.enabled = True
+    
+    # Send stringMessage containing the command "START_UP" to the MR Scanner via IGTLink
+    print("Sending start_up command to MR Scanner")
+    timestampIDname = self.generateTimestampNameID("CMD")
+    startUpNode = slicer.vtkMRMLTextNode()
+    startUpNode.SetName(timestampIDname)
+    startUpNode.SetText("START_UP")
+    startUpNode.SetEncoding(3)
+    slicer.mrmlScene.AddNode(startUpNode)
+    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(startUpNode)
+    self.openIGTNode_Scanner.PushNode(startUpNode)
+    # self.start = time.time()
+    # self.last_string_sent = startUpNode.GetText()
+    # self.last_prefix_sent = "CLB"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  START_UP )"
+    # re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
     
   def onMRIDisconnectButtonClicked(self):
     self.MRIstartupButton.enabled = True
     self.MRIdisconnectButton.enabled = False
-
     self.MRIstartScanButton.enabled = False
     self.MRIstopScanButton.enabled = False
-    # self.MRIupdateTargetButton.enabled = False
+
+    # Send stringMessage containing the command "DISCONNECT" to the MR Scanner via IGTLink
+    print("Sending disconnect command to MR Scanner")
+    timestampIDname = self.generateTimestampNameID("CMD")
+    disconnectNode = slicer.vtkMRMLTextNode()
+    disconnectNode.SetName(timestampIDname)
+    disconnectNode.SetText("DISCONNECT")
+    disconnectNode.SetEncoding(3)
+    slicer.mrmlScene.AddNode(disconnectNode)
+    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(disconnectNode)
+    self.openIGTNode_Scanner.PushNode(disconnectNode)
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  DISCONNECT )"
+    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
 
   def onMRIStartScanButtonClicked(self):
-    print("Start MRI scan.")
-
+    # Send stringMessage containing the command "START_SCAN" to the MR Scanner via IGTLink
+    print("Sending start_scan command to MR Scanner")
+    timestampIDname = self.generateTimestampNameID("CMD")
+    startScanNode = slicer.vtkMRMLTextNode()
+    startScanNode.SetName(timestampIDname)
+    startScanNode.SetText("START_SCAN")
+    startScanNode.SetEncoding(3)
+    slicer.mrmlScene.AddNode(startScanNode)
+    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(startScanNode)
+    self.openIGTNode_Scanner.PushNode(startScanNode)
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  START_SCAN )"
+    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
+    
   def onMRIStopScanButtonClicked(self):
-    print("Stop MRI scan.")
+    # Send stringMessage containing the command "STOP_SCAN" to the MR Scanner via IGTLink
+    print("Sending stop_scan command to MR Scanner")
+    timestampIDname = self.generateTimestampNameID("CMD")
+    stopScanNode = slicer.vtkMRMLTextNode()
+    stopScanNode.SetName(timestampIDname)
+    stopScanNode.SetText("STOP_SCAN")
+    stopScanNode.SetEncoding(3)
+    slicer.mrmlScene.AddNode(stopScanNode)
+    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(stopScanNode)
+    self.openIGTNode_Scanner.PushNode(stopScanNode)
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  STOP_SCAN )"
+    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
 
   def onMRIUpdateTargetButtonClicked(self):
-    print("Update MRI scanning target.")
+    # Get the current scan plane transform based on the orientation drop-down menu selection
+    planeOrientation = self.scanPlaneSelectionBox.currentText
+    if planeOrientation == "Axial":
+      sliceNode = slicer.app.layoutManager().sliceWidget("Red").mrmlSliceNode()
+    elif planeOrientation == "Sagittal":
+      sliceNode = slicer.app.layoutManager().sliceWidget("Green").mrmlSliceNode()
+    else: # planeOrientation == "Coronal":
+      sliceNode = slicer.app.layoutManager().sliceWidget("Yellow").mrmlSliceNode()
+    
+    # Send transform message containing new MRI scanning target with prefix "MRI_TGT"
+    sliceToRasMatrix = sliceNode.GetSliceToRAS()
+    self.scanPlaneTransform.SetMatrixTransformToParent(sliceToRasMatrix)
+    timestampIDname = self.generateTimestampNameID("MRI-TGT")
+    # self.last_name_sent = timestampIDname
+    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransform)
+    self.openIGTNode_Scanner.PushNode(self.scanPlaneTransform)
+    infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
+    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
+    self.appendTransformToCommandLog(sliceToRasMatrix)
 
   def onPlaneLocationCheckboxToggled(self):
     # if not self.planeLocationNodeSelector.enabled: self.planeLocationNodeSelector.enabled = True
@@ -1529,8 +1727,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # if self.planeLocationCheckbox.isChecked():
     if self.planeLocationByCurrentPosition:
       # Get CURRENT_POSITION transform to identify the location of the needle tip in space
-      if slicer.mrmlScene.GetFirstNodeByName("CURRENT_POSITION") is not None:
-        needleTipPosition = slicer.mrmlScene.GetFirstNodeByName("CURRENT_POSITION")
+      if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform") is not None:
+        needleTipPosition = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform")
         needleTipPosition.GetMatrixTransformToParent(scanPlaneMatrix)
         scanPlaneCoordinatesRAS = [scanPlaneMatrix.GetElement(0,3), scanPlaneMatrix.GetElement(1,3), scanPlaneMatrix.GetElement(2,3)]
         vtkTrans.Translate(scanPlaneCoordinatesRAS[0],scanPlaneCoordinatesRAS[1], scanPlaneCoordinatesRAS[2])
@@ -1987,7 +2185,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.openIGTNode.PushNode(SendTransformNodeTemp)
       infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-      self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+      self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
       self.appendTransformToCommandLog(outputMatrix)
 
     else:
@@ -2098,7 +2296,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         self.openIGTNode.PushNode(SendTransformNodeTemp)
         infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
         re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-        self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
+        self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
         self.appendTransformToCommandLog(plannedTargetMatrix)
 
       else:
