@@ -196,33 +196,45 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     MRIOutboundCommunicationLayout.addWidget(self.updateScanPlaneCollapsibleButton, 5, 0, 1, 2)
 
     # Layout within the path collapsible button
-    #updateScanPlaneLayout = qt.QFormLayout(self.updateScanPlaneCollapsibleButton)
     updateScanPlaneLayout = qt.QVBoxLayout(self.updateScanPlaneCollapsibleButton)
+
+    # Create a new QHBoxLayout() within updateScanPlaneLayout to format the file selection dropdown
+    updateScanPlaneLayoutMiddle1 = qt.QHBoxLayout()
+    updateScanPlaneLayout.addLayout(updateScanPlaneLayoutMiddle1)
+
+    # Input volume selector label
+    updateScanPlaneLayoutMiddle1.addWidget(qt.QLabel("Input image:"))
+    
+    # Input volume selector for scan plane selection
+    self.scanPlaneVolumeSelector = slicer.qMRMLNodeComboBox()
+    self.scanPlaneVolumeSelector.objectName = 'scanPlaneVolumeSelector'
+    self.scanPlaneVolumeSelector.toolTip = "Select the scan plane reference image."
+    self.scanPlaneVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
+    self.scanPlaneVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
+    self.scanPlaneVolumeSelector.noneEnabled = False
+    self.scanPlaneVolumeSelector.addEnabled = False
+    self.scanPlaneVolumeSelector.removeEnabled = False
+    self.scanPlaneVolumeSelector.setFixedWidth(230)
+    updateScanPlaneLayoutMiddle1.addWidget(self.scanPlaneVolumeSelector)
+    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)', self.scanPlaneVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
+    spacer = qt.QSpacerItem(100, 10, qt.QSizePolicy.Expanding)
+    updateScanPlaneLayoutMiddle1.addSpacerItem(spacer)
 
     # Select plane location -- manual (user selection) or automatic (CURRENT_POSITION)
     self.planeLocationCheckbox = qt.QCheckBox("Use current position of needle tip to define the plane")
-    self.planeLocationCheckbox.setChecked(True)
-    self.planeLocationCheckbox.toggled.connect(self.onPlaneLocationCheckboxToggled)
+    self.planeLocationCheckbox.setChecked(False)
+    # self.planeLocationCheckbox.toggled.connect(self.onPlaneLocationCheckboxToggled)
     updateScanPlaneLayout.addWidget(self.planeLocationCheckbox)
 
-    # # If the user un-checks the planeLocationCheckbox, allow them to manually select a point
-    # self.planeLocationNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
-    # self.planeLocationNodeSelector.objectName = 'planeLocationNodeSelector'
-    # self.planeLocationNodeSelector.toolTip = "Select a fiducial to place the MRI scan plane."
-    # self.planeLocationNodeSelector.enabled = False
-    # self.planeLocationNodeSelector.setNodeBaseName("SCANPLANE_NODE")
-    # self.planeLocationNodeSelector.defaultNodeColor = qt.QColor(63,63,95)
-    # self.planeLocationNodeSelector.tableWidget().hide()
-    # self.planeLocationNodeSelector.markupsSelectorComboBox().noneEnabled = False
-    # self.planeLocationNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    # updateScanPlaneLayout.addWidget(self.planeLocationNodeSelector)
-    # self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-    #                     self.planeLocationNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
-    # self.planeLocationNodeSelector.connect('updateFinished()', self.updateScanPlaneIn3DView)
+    # Select continuous vs. manual transfer of scan plane transform to MRI
+    self.planeTransferTypeCheckbox = qt.QCheckBox("Auto-send scan plane transform to MR scanner as it updates in Slicer")
+    self.planeTransferTypeCheckbox.setChecked(False)
+    self.planeTransferTypeCheckbox.toggled.connect(self.onplaneTransferTypeCheckboxToggled)
+    updateScanPlaneLayout.addWidget(self.planeTransferTypeCheckbox)
 
     # Create a new QHBoxLayout() within updateScanPlaneLayout to format the dropdown & Update Scan Plane button
-    updateScanPlaneLayoutMiddle = qt.QHBoxLayout()
-    updateScanPlaneLayout.addLayout(updateScanPlaneLayoutMiddle)
+    updateScanPlaneLayoutMiddle2 = qt.QHBoxLayout()
+    updateScanPlaneLayout.addLayout(updateScanPlaneLayoutMiddle2)
 
     # View scan plane button
     self.scanPlaneVisibleButton = qt.QPushButton()
@@ -231,27 +243,26 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.scanPlaneVisibleButton.setFixedWidth(25)
     self.scanPlaneVisibleButton.setFixedHeight(23)
     self.scanPlaneVisibleButton.setCheckable(True)
-    updateScanPlaneLayoutMiddle.addWidget(self.scanPlaneVisibleButton)
+    updateScanPlaneLayoutMiddle2.addWidget(self.scanPlaneVisibleButton)
     self.scanPlaneVisibleButton.connect('clicked()', self.onScanPlaneVisibleButtonClicked)
 
-    self.scanPlaneTransform = slicer.vtkMRMLTransformNode()
-    self.scanPlaneTransform.SetName("ScanPlaneTransform")
-    #self.scanPlaneTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
+    self.scanPlaneTransform = slicer.vtkMRMLLinearTransformNode()
+    self.scanPlaneTransform.SetName("PLANE_0")
     slicer.mrmlScene.AddNode(self.scanPlaneTransform)
 
     # Dropdown menu to select scan plane (Axial, sagittal, coronal)
     self.scanPlaneSelectionBox = qt.QComboBox()
     self.scanPlaneSelectionBox.addItems(["Axial", "Sagittal", "Coronal"])
     # self.scanPlaneSelectionBox.setFixedWidth(250)
-    self.scanPlaneSelectionBox.currentIndexChanged.connect(self.updateScanPlaneIn3DView)
-    updateScanPlaneLayoutMiddle.addWidget(self.scanPlaneSelectionBox)
+    self.scanPlaneSelectionBox.currentIndexChanged.connect(self.onplaneTransferTypeCheckboxToggled)
+    updateScanPlaneLayoutMiddle2.addWidget(self.scanPlaneSelectionBox)
 
     # MRI Update scan target button
     self.MRIupdateTargetButton = qt.QPushButton("Send Scan Plane Transform")
     self.MRIupdateTargetButton.toolTip = "Send a new scanning target transform to the MRI control."
-    # self.MRIupdateTargetButton.enabled = False
+    self.MRIupdateTargetButton.enabled = False
     # self.MRIupdateTargetButton.setMaximumWidth(250)
-    updateScanPlaneLayoutMiddle.addWidget(self.MRIupdateTargetButton)
+    updateScanPlaneLayoutMiddle2.addWidget(self.MRIupdateTargetButton)
     self.MRIupdateTargetButton.connect('clicked()', self.onMRIUpdateTargetButtonClicked)
 
     # Inbound layout within the path collapsible button
@@ -634,29 +645,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.retryRegistration.connect('clicked()', self.onRetryRegistrationButtonClicked)
 
 
-
-    # # TO SELECT AN EXISTING CALIBRATION MATRIX CALUCLATED BY HARMONUS (outside of the module):
-    # # Delete once Calibration step is testing and working
-    # self.calibrationMatrixSelector = slicer.qMRMLNodeComboBox()
-    # self.calibrationMatrixSelector.nodeTypes = ( ("vtkMRMLLinearTransformNode"), "" )
-    # self.calibrationMatrixSelector.selectNodeUponCreation = True
-    # self.calibrationMatrixSelector.addEnabled = False
-    # self.calibrationMatrixSelector.removeEnabled = False
-    # self.calibrationMatrixSelector.noneEnabled = False
-    # self.calibrationMatrixSelector.showHidden = False
-    # self.calibrationMatrixSelector.showChildNodeTypes = False
-    # self.calibrationMatrixSelector.setMRMLScene( slicer.mrmlScene )
-    # self.calibrationMatrixSelector.setToolTip( "Select the calibration matrix." )
-    # calibrationLayoutTop.addRow("   Calibration matrix:  ", self.calibrationMatrixSelector)
-
-    # # Send pre-calculated calibration matrix button
-    # self.sendCalibrationMatrixButton = qt.QPushButton("Send pre-existing calibration matrix")
-    # self.sendCalibrationMatrixButton.enabled = True
-    # # self.createCalibrationMatrixButton.setMaximumWidth(250)
-    # calibrationLayoutTop.addWidget(self.sendCalibrationMatrixButton)
-    # self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
-
-
     # Planning phase GUI ---------------------------------------
 
     # Planning phase collapsible button
@@ -858,13 +846,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.plannedTargetTransform = None
     self.reachableTargetTransform = None
     self.currentPositionTransform = None
-    self.redSliceNode = slicer.util.getNode('vtkMRMLSliceNodeRed')
-    self.greenSliceNode = slicer.util.getNode('vtkMRMLSliceNodeGreen')
-    self.yellowSliceNode = slicer.util.getNode('vtkMRMLSliceNodeYellow')
-    self.axialController = slicer.app.layoutManager().sliceWidget('Red').sliceController()
-    self.sagittalController = slicer.app.layoutManager().sliceWidget('Green').sliceController()
-    self.coronalController = slicer.app.layoutManager().sliceWidget('Yellow').sliceController()
-    self.planeLocationByCurrentPosition = True
     self.otsuFilter = sitk.OtsuThresholdImageFilter()
     self.zFrameFidsString = '' # For manual selection of zframe fiducial locations
     self.manualRegistration = False
@@ -876,6 +857,17 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.startIndex = None
     self.endIndex = None
     self.zFrameModelNode = None
+
+    # Slice view observers and controllers 
+    self.redSliceNode = slicer.util.getNode('vtkMRMLSliceNodeRed')
+    self.greenSliceNode = slicer.util.getNode('vtkMRMLSliceNodeGreen')
+    self.yellowSliceNode = slicer.util.getNode('vtkMRMLSliceNodeYellow')
+    self.axialController = slicer.app.layoutManager().sliceWidget('Red').sliceController()
+    self.sagittalController = slicer.app.layoutManager().sliceWidget('Yellow').sliceController()
+    self.coronalController = slicer.app.layoutManager().sliceWidget('Green').sliceController()
+    self.yellowObserver = False
+    self.redObserver = False
+    self.greenObserver = False
 
   def createServerInitializationStep(self):
     # Prevent re-initialization
@@ -1528,7 +1520,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
   def onReachableTargetTransformReceived(self, reachableTargetMatrix):
     self.appendTransformToCommandLog(reachableTargetMatrix)
-
     # Update self.reachableTargetTransform s.t. it contains the REACHABLE_TARGET message sent by WPI
     if self.reachableTargetTransform:
       slicer.mrmlScene.RemoveNode(self.reachableTargetTransform)
@@ -1658,21 +1649,22 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
 
-  def onMRIUpdateTargetButtonClicked(self):
+  def onMRIUpdateTargetButtonClicked(self, unusedArg2=None, unusedArg3=None):
     # Get the current scan plane transform based on the orientation drop-down menu selection
     planeOrientation = self.scanPlaneSelectionBox.currentText
     if planeOrientation == "Axial":
       sliceNode = slicer.app.layoutManager().sliceWidget("Red").mrmlSliceNode()
-    elif planeOrientation == "Sagittal":
+    elif planeOrientation == "Coronal":
       sliceNode = slicer.app.layoutManager().sliceWidget("Green").mrmlSliceNode()
-    else: # planeOrientation == "Coronal":
+    else: # planeOrientation == "Sagittal":
       sliceNode = slicer.app.layoutManager().sliceWidget("Yellow").mrmlSliceNode()
     
-    # Send transform message containing new MRI scanning target with prefix "MRI_TGT"
+    # Send transform message containing new MRI scanning target with prefix "PLANE"
     sliceToRasMatrix = sliceNode.GetSliceToRAS()
     self.scanPlaneTransform.SetMatrixTransformToParent(sliceToRasMatrix)
-    timestampIDname = self.generateTimestampNameID("MRI-TGT")
-    # self.last_name_sent = timestampIDname
+
+    timestampIDname = self.generateTimestampNameID("PLANE")
+    self.last_name_sent = timestampIDname
     self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransform)
     self.openIGTNode_Scanner.PushNode(self.scanPlaneTransform)
     infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
@@ -1680,18 +1672,43 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
     self.appendTransformToCommandLog(sliceToRasMatrix)
 
-  def onPlaneLocationCheckboxToggled(self):
-    # if not self.planeLocationNodeSelector.enabled: self.planeLocationNodeSelector.enabled = True
-    # else: self.planeLocationNodeSelector.enabled = False
-    if self.planeLocationCheckbox.isChecked():
-      self.planeLocationByCurrentPosition = True
+  def onplaneTransferTypeCheckboxToggled(self):
+    # Function to control observers for axial, sagittal, and coronal slice views 
+    # If the plane transfer type is auto-send, turn on the correct observer.
+    if self.planeTransferTypeCheckbox.isChecked():
+      self.MRIupdateTargetButton.enabled = False
+      planeOrientation = self.scanPlaneSelectionBox.currentText
+      if planeOrientation == "Axial":
+        self.redSliceNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onMRIUpdateTargetButtonClicked)
+        if self.yellowObserver: self.yellowSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+        if self.greenObserver: self.greenSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+        self.redObserver = True
+        self.yellowObserver = False
+        self.greenObserver = False
+      elif planeOrientation == "Coronal":
+        self.greenSliceNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onMRIUpdateTargetButtonClicked)
+        if self.redObserver: self.redSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+        if self.yellowObserver: self.yellowSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+        self.greenObserver = True
+        self.redObserver = False
+        self.yellowObserver = False
+      else: #Sagittal
+        self.yellowSliceNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onMRIUpdateTargetButtonClicked)
+        if self.redObserver: self.redSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+        if self.greenObserver: self.greenSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+        self.yellowObserver = True
+        self.redObserver = False
+        self.greenObserver = False
     else: 
-      self.planeLocationByCurrentPosition = False
+      self.MRIupdateTargetButton.enabled = True
+      if self.redObserver: self.redSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+      if self.greenObserver: self.greenSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
+      if self.yellowObserver: self.yellowSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
     self.updateScanPlaneIn3DView()
 
   def onScanPlaneVisibleButtonClicked(self):
     # If button is checked
-    if (self.scanPlaneVisibleButton.isChecked()):
+    if self.scanPlaneVisibleButton.isChecked():
       eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
       self.scanPlaneVisibleButton.setIcon(qt.QIcon(eyeIconVisible))
       self.updateScanPlaneIn3DView()
@@ -1715,62 +1732,26 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.sagittalController.showReformatWidget(0)
     self.coronalController.showReformatWidget(0)
 
-    # Reset current scan plane transform to Axial orientation -- AKA, reset the transform to the identity matrix
-    scanPlaneMatrix = vtk.vtkMatrix4x4()
-    scanPlaneMatrix.Identity()
-    vtkTrans = vtk.vtkTransform()
-    vtkTrans.Identity()
-
-    planeOrientation = self.scanPlaneSelectionBox.currentText
-  
     # Assemble the scan plane transform based on the point & orientation
-    # if self.planeLocationCheckbox.isChecked():
-    if self.planeLocationByCurrentPosition:
+    planeOrientation = self.scanPlaneSelectionBox.currentText
+    if self.planeLocationCheckbox.isChecked():
       # Get CURRENT_POSITION transform to identify the location of the needle tip in space
       if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform") is not None:
+        scanPlaneMatrix = vtk.vtkMatrix4x4()
+        scanPlaneMatrix.Identity()
         needleTipPosition = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform")
         needleTipPosition.GetMatrixTransformToParent(scanPlaneMatrix)
-        scanPlaneCoordinatesRAS = [scanPlaneMatrix.GetElement(0,3), scanPlaneMatrix.GetElement(1,3), scanPlaneMatrix.GetElement(2,3)]
-        vtkTrans.Translate(scanPlaneCoordinatesRAS[0],scanPlaneCoordinatesRAS[1], scanPlaneCoordinatesRAS[2])
         
-        planeOrientation = self.scanPlaneSelectionBox.currentText
-        if planeOrientation == "Sagittal":
-          vtkTrans.RotateY(90.0)
-          # scanPlaneMatrix.SetElement(1,1,0)
-          # scanPlaneMatrix.SetElement(2,2,0)
-          # scanPlaneMatrix.SetElement(2,1,-1)
-          # scanPlaneMatrix.SetElement(1,2,1)
-        elif planeOrientation == "Coronal":
-          vtkTrans.RotateZ(90.0)
-          # scanPlaneMatrix.SetElement(0,0,0)
-          # scanPlaneMatrix.SetElement(2,2,0)
-          # scanPlaneMatrix.SetElement(2,0,-1)
-          # scanPlaneMatrix.SetElement(0,2,1)
-        self.scanPlaneTransform.ApplyTransform(vtkTrans)
-        # self.scanPlaneTransform.SetMatrixTransformToParent(scanPlaneMatrix)
+        # TODO - calculate scanPlaneTransform based on the 4x4 CURRENT_POSITION matrix
+        # 2 cross products using R or L vector to get 2 perpendicular vectors
 
-        if self.scanPlaneVisibleButton.isChecked():
-          # Update scanPlane in 3D view according to location of CURRENT_POSITION and selected orientation
-          if planeOrientation == "Axial":
-            self.redSliceNode.SetSliceOrigin(scanPlaneCoordinatesRAS[0], scanPlaneCoordinatesRAS[1], scanPlaneCoordinatesRAS[2])
-            self.redSliceNode.SetSliceVisible(1)
-          elif planeOrientation == "Sagittal":
-            self.greenSliceNode.SetSliceOrigin(scanPlaneCoordinatesRAS[0], scanPlaneCoordinatesRAS[1], scanPlaneCoordinatesRAS[2])
-            self.greenSliceNode.SetSliceVisible(1)
-          elif planeOrientation == "Coronal":
-            self.yellowSliceNode.SetSliceOrigin(scanPlaneCoordinatesRAS[0], scanPlaneCoordinatesRAS[1], scanPlaneCoordinatesRAS[2])
-            self.yellowSliceNode.SetSliceVisible(1)
-
-      else: print("No CURRENT_POSITION transform found")
+      else: print("No CURRENT_POSITION transform found. Please manually select the scan plane.")
     
     else: # Allow the user to manually define the scan plane in the 3D view via the Reformat widget
       if self.scanPlaneVisibleButton.isChecked():
-        if planeOrientation == "Axial":
-          self.axialController.showReformatWidget(1)
-        elif planeOrientation == "Coronal":
-          self.coronalController.showReformatWidget(1)
-        else: #Sagittal
-          self.sagittalController.showReformatWidget(1)
+        if planeOrientation == "Axial": self.axialController.showReformatWidget(1)
+        elif planeOrientation == "Coronal": self.coronalController.showReformatWidget(1)
+        else: self.sagittalController.showReformatWidget(1)
 
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string received")
