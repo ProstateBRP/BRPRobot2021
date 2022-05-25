@@ -851,6 +851,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.otsuFilter = sitk.OtsuThresholdImageFilter()
     self.zFrameFidsString = '' # For manual selection of zframe fiducial locations
     self.manualRegistration = False
+    self.manuallySelectSlices = False
     self.templateVolume = None
     self.zFrameCroppedVolume = None
     self.zFrameLabelVolume = None
@@ -1955,43 +1956,47 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     modelDisplay.SetVisibility2D(1)
 
   def onRetryRegistrationButtonClicked(self):
-    self.manualRegistration = True
     # Get list of points & check that it is the correct number of points for the selected zframe (z001: 7 points, z002-z003: 9 points)
     pointListNode = self.manualZframeFiducialsSelector.currentNode()
-    zFrameConfig = self.configFileSelectionBox.currentText
-    numFids = pointListNode.GetNumberOfMarkups()
-    zFrameFids = []
-    validPointSelection = False
-
-    if numFids == 7 and zFrameConfig == "Z-frame z001": validPointSelection = True
-    elif numFids == 9 and zFrameConfig == "Z-frame z002": validPointSelection = True
-    elif numFids == 9 and zFrameConfig == "Z-frame z003": validPointSelection = True
-
-    if validPointSelection:
-      # Convert pointListNode to an array to use as an input parameter for registration
-      for i in range(numFids):
-        # First, convert RAS coordinates of the markups fiducials to IJK coordinates
-        point_Ras = [0, 0, 0, 1]
-        pointListNode.GetNthFiducialWorldCoordinates(i, point_Ras)
-
-        # If volume node is transformed, apply that transform to get volume's RAS coordinates
-        transformRasToVolumeRas = vtk.vtkGeneralTransform()
-        slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(None, self.inputVolume .GetParentTransformNode(), transformRasToVolumeRas)
-        point_VolumeRas = transformRasToVolumeRas.TransformPoint(point_Ras[0:3])
-
-        # Get voxel coordinates from physical coordinates
-        volumeRasToIjk = vtk.vtkMatrix4x4()
-        self.inputVolume.GetRASToIJKMatrix(volumeRasToIjk)
-        point_Ijk = [0, 0, 0, 1]
-        volumeRasToIjk.MultiplyPoint(np.append(point_VolumeRas,1.0), point_Ijk)
-        point_Ijk = [ int(round(c)) for c in point_Ijk[0:3] ]
-        zFrameFids.append([point_Ijk[0], point_Ijk[1]])
-
-      # Call initiateZFrameCalibration to re-run registration, this time with predefined zFrameFids list
-      self.zFrameFidsString = ' '.join([str(elem) for elem in zFrameFids]) # Convert to string
-      self.initiateZFrameCalibration()
+    if pointListNode is not None:
+      self.manualRegistration = True
+      zFrameConfig = self.configFileSelectionBox.currentText
+      numFids = pointListNode.GetNumberOfMarkups()
+      zFrameFids = []
+      validPointSelection = False
+  
+      if numFids == 7 and zFrameConfig == "Z-frame z001": validPointSelection = True
+      elif numFids == 9 and zFrameConfig == "Z-frame z002": validPointSelection = True
+      elif numFids == 9 and zFrameConfig == "Z-frame z003": validPointSelection = True
+  
+      if validPointSelection:
+        # Convert pointListNode to an array to use as an input parameter for registration
+        for i in range(numFids):
+          # First, convert RAS coordinates of the markups fiducials to IJK coordinates
+          point_Ras = [0, 0, 0, 1]
+          pointListNode.GetNthFiducialWorldCoordinates(i, point_Ras)
+  
+          # If volume node is transformed, apply that transform to get volume's RAS coordinates
+          transformRasToVolumeRas = vtk.vtkGeneralTransform()
+          slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(None, self.inputVolume .GetParentTransformNode(), transformRasToVolumeRas)
+          point_VolumeRas = transformRasToVolumeRas.TransformPoint(point_Ras[0:3])
+  
+          # Get voxel coordinates from physical coordinates
+          volumeRasToIjk = vtk.vtkMatrix4x4()
+          self.inputVolume.GetRASToIJKMatrix(volumeRasToIjk)
+          point_Ijk = [0, 0, 0, 1]
+          volumeRasToIjk.MultiplyPoint(np.append(point_VolumeRas,1.0), point_Ijk)
+          point_Ijk = [ int(round(c)) for c in point_Ijk[0:3] ]
+          zFrameFids.append([point_Ijk[0], point_Ijk[1]])
+  
+        # Call initiateZFrameCalibration to re-run registration, this time with predefined zFrameFids list
+        self.zFrameFidsString = ' '.join([str(elem) for elem in zFrameFids]) # Convert to string
+        self.initiateZFrameCalibration()
+        
     else:
-      print("Please select the correct number of points for the selected zFrame configuration and try again.") 
+      self.manuallySelectSlices = True
+      self.initiateZFrameCalibration()
+      # print("Please select the correct number of points for the selected zFrame configuration and try again.") 
 
   def initiateZFrameCalibration(self):
     # Begin by identifying the zframe dropdown selection & parsing the config file to package topological dimensions into a ZframeRegistration argument
@@ -2026,13 +2031,17 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         self.endSlice = maxSlice
         self.endSliceSliderWidget.value = float(self.endSlice)
 
+      if self.manuallySelectSlices:
+        self.startSlice = int(self.startSliceSliderWidget.text)
+        self.endSlice = int(self.endSliceSliderWidget.text)
+        
       # If the user manually selected a list of fiducials to use in registration (zFrameFids), set the start and end slices s.t. 
       # only the image frame with the fiducials on it is used in the calculation
       if self.manualRegistration:
         # Get volume voxel coordinates from markup control point RAS coordinates
         # to determine slice index for registration with manual fiducial selection
         # Get point coordinate in RAS
-        pointListNode = self.manualZframeFiducialsSelector.currentNode()
+        pointListNode= self.manualZframeFiducialsSelector.currentNode()
         markupsIndex = 0
         point_Ras = [0, 0, 0, 1]
         pointListNode.GetNthFiducialWorldCoordinates(markupsIndex, point_Ras)
@@ -2069,7 +2078,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
         # Only use the ZFrame ROI node to define the start and end slices if the user did NOT 
         # manually select zframe fiducials in Advanced Registration Options
-        if not self.manualRegistration:
+        if not self.manualRegistration and not self.manuallySelectSlices:
           self.startSlice = int(pos[2])
           rasToIJKMatrix.MultiplyPoint(pMax, pos)
           self.endSlice = int(pos[2])
