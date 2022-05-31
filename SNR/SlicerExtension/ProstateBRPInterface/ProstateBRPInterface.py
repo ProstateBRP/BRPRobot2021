@@ -228,7 +228,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Select continuous vs. manual transfer of scan plane transform to MRI
     self.planeTransferTypeCheckbox = qt.QCheckBox("Auto-send scan plane transform to MR scanner as it updates in Slicer")
-    self.planeTransferTypeCheckbox.setChecked(False)
+    self.planeTransferTypeCheckbox.setChecked(True)
     self.planeTransferTypeCheckbox.toggled.connect(self.onplaneTransferTypeCheckboxToggled)
     updateScanPlaneLayout.addWidget(self.planeTransferTypeCheckbox)
 
@@ -265,49 +265,44 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     updateScanPlaneLayoutMiddle2.addWidget(self.MRIupdateTargetButton)
     self.MRIupdateTargetButton.connect('clicked()', self.onMRIUpdateTargetButtonClicked)
 
-    # Inbound layout within the path collapsible button
-    MRIInboundCommunicationLayout = qt.QGridLayout()
-    MRICommunicationLayout.addLayout(MRIInboundCommunicationLayout)
+    # Create a new QHBoxLayout() within updateScanPlaneLayout to contain the 4x4 table
+    updateScanPlaneLayoutBottom = qt.QFormLayout()
+    updateScanPlaneLayout.addLayout(updateScanPlaneLayoutBottom)
 
     # Add 1 line of spacing
-    MRIInboundCommunicationLayout.addWidget(qt.QLabel(" "), 0, 0)
+    updateScanPlaneLayoutBottom.addRow(qt.QLabel(" "))
 
-    # self.MRImessageTextbox = qt.QLineEdit("No message received")
-    # self.MRImessageTextbox.setReadOnly(True)
-    # self.MRImessageTextbox.setFixedWidth(200)
-    # MRImessageTextboxLabel = qt.QLabel("   Message received:")
-    # MRIInboundCommunicationLayout.addWidget(MRImessageTextboxLabel, 1, 0)
-    # MRIInboundCommunicationLayout.addWidget(self.MRImessageTextbox, 1, 1)
+    row = 4
+    column = 4
+    self.MRItableWidget = qt.QTableWidget(row, column)
+    #self.MRItableWidget.setMaximumWidth(400)
+    self.MRItableWidget.setMinimumHeight(95)
+    self.MRItableWidget.verticalHeader().hide() # Remove line numbers
+    self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
+    #self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.MRItableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
 
-    # self.MRIstatusCodeTextbox = qt.QLineEdit("No status code received")
-    # self.MRIstatusCodeTextbox.setReadOnly(True)
-    # self.MRIstatusCodeTextbox.setFixedWidth(200)
-    # MRIstatusCodeTextboxLabel = qt.QLabel("   Status received:")
-    # MRIInboundCommunicationLayout.addWidget(MRIstatusCodeTextboxLabel, 2, 0)
-    # MRIInboundCommunicationLayout.addWidget(self.MRIstatusCodeTextbox, 2, 1)
+    verticalheader = self.MRItableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    # MRItableWidgetLabel = qt.QLabel("Scan plane transform:")
+    # updateScanPlaneLayoutBottom.addWidget(MRItableWidgetLabel)
+    # updateScanPlaneLayoutBottom.addWidget(self.MRItableWidget)
+    updateScanPlaneLayoutBottom.addRow("Scan plane transform: ", self.MRItableWidget)
 
-    # row = 4
-    # column = 4
-    # self.MRItableWidget = qt.QTableWidget(row, column)
-    # #self.MRItableWidget.setMaximumWidth(400)
-    # self.MRItableWidget.setMinimumHeight(95)
-    # self.MRItableWidget.verticalHeader().hide() # Remove line numbers
-    # self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
-    # self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    # horizontalheader = self.MRItableWidget.horizontalHeader()
-    # horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    # horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    # horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    # horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-
-    # verticalheader = self.MRItableWidget.verticalHeader()
-    # verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    # verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    # verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    # verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    # MRItableWidgetLabel = qt.QLabel("   Transform received:")
-    # MRIInboundCommunicationLayout.addWidget(MRItableWidgetLabel, 3, 0)
-    # MRIInboundCommunicationLayout.addWidget(self.MRItableWidget, 3, 1)
+    # MRI Update scan target button
+    self.MRIupdateManualTargetButton = qt.QPushButton("Send Scan Plane Transform")
+    self.MRIupdateManualTargetButton.toolTip = "Send a new scanning target transform to the MRI control."
+    self.MRIupdateManualTargetButton.enabled = True
+    # self.MRIupdateManualTargetButton.setMaximumWidth(250)
+    updateScanPlaneLayoutBottom.addRow("  ", self.MRIupdateManualTargetButton)
+    self.MRIupdateManualTargetButton.connect('clicked()', self.onMRIUpdateManualTargetButtonClicked)
 
     # -------- Slicer <--> WPI connection GUI ---------
 
@@ -1674,6 +1669,36 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
     self.appendTransformToCommandLog(sliceToRasMatrix)
+
+    # Input the current scan plane transform into the MRItableWidget
+    for i in range(4):
+      for j in range(4):
+        self.MRItableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(sliceToRasMatrix.GetElement(i, j),2))))
+
+  def onMRIUpdateManualTargetButtonClicked(self):
+    # Package the contents of the (manual) Scan Plane Matrix into a 4x4 matrix
+    outputMatrix = vtk.vtkMatrix4x4()
+    
+    for i in range(4):
+      for j in range(4):
+        outputMatrix.SetElement(i, j, float(self.MRItableWidget.item(i, j).text()))
+
+    # Send the manual scan plane transform matrix
+    if (slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLIGTLConnectorNode') > 0): # AKA, if the IGTL connector is active
+      timestampIDname = self.generateTimestampNameID("PLANE")
+      self.last_name_sent = timestampIDname
+      scanPlaneTransformManual = slicer.vtkMRMLLinearTransformNode()
+      scanPlaneTransformManual.SetName(timestampIDname)
+      scanPlaneTransformManual.SetMatrixTransformToParent(outputMatrix)
+      slicer.mrmlScene.AddNode(scanPlaneTransformManual)
+      self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(scanPlaneTransformManual)
+      self.openIGTNode_Scanner.PushNode(scanPlaneTransformManual)
+      infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
+      re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+      self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
+      self.appendTransformToCommandLog(outputMatrix)
+    else:
+      print("OpenIGTLink connector is not active. Cannot send the manual scan plane transform.")
 
   def onplaneTransferTypeCheckboxToggled(self):
     # Function to control observers for axial, sagittal, and coronal slice views 
