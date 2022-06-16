@@ -133,7 +133,8 @@ int main( int argc, char * argv[] )
     int numFids = 0;
     if (zframeConfig == "z001") { numFids = 7; }
     else if (zframeConfig == "z002" || zframeConfig == "z003") { numFids = 9; }
-    float zFrameFidsArr[numFids][2];
+    //float zFrameFidsArr[numFids][2];
+	auto zFrameFidsArr = new float[numFids][2];
 
     for (int i = 0; i <= 5; ++i)
     {
