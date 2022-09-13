@@ -9,44 +9,44 @@ sequenceDiagram
 
 title System Sequence Diagram
 
-participant "Robot"
-participant "Robot Listener"
-participant "3D Slicer GUI"
-participant "MR IGTL Bridge"
-participant "MRScanner"
+participant R as Robot
+participant RL as Robot Listener
+participant SGUI as 3D Slicer GUI
+participant MRIGTL  as MR IGTL Bridge
+participant MRS as MR Scanner
 
-"3D Slicer GUI"->>"MR IGTL Bridge":Command IGTL(STRING)
-activate "3D Slicer GUI"
-activate "MR IGTL Bridge"
-"MR IGTL Bridge"->>"MRScanner":Command
-activate "MRScanner"
-note right of "MRScanner":START UP SCANNER
-"MRScanner"->>"MR IGTL Bridge":Status
-deactivate "MRScanner"
-"MR IGTL Bridge"->>"3D Slicer GUI":Status IGTL(STATUS)
-deactivate "3D Slicer GUI"
-deactivate "MR IGTL Bridge"
+SGUI->>MRIGTL:Command IGTL(STRING)
+activate SGUI
+activate MRIGTL
+MRIGTL->>MRS:Command
+activate MRS
+note right of MRS:START UP SCANNER
+MRS->>MRIGTL:Status
+deactivate MRS
+MRIGTL->>SGUI:Status IGTL(STATUS)
+deactivate SGUI
+deactivate MRIGTL
 
-note over "MR IGTL Bridge","MRScanner":Transition to "Idle"
+note over MRIGTL,MRS:Transition to "Idle"
 alt Until status code is OK
-"3D Slicer GUI"->>"Robot Listener":Command IGTL(STRING)
-activate "3D Slicer GUI"
-activate "Robot Listener"
-"Robot Listener"->>"Robot":Command
-activate "Robot"
+SGUI->>RL:Command IGTL(STRING)
+activate SGUI
+activate RL
+RL->>R:Command
+activate R
 note left of Robot:START_UP
-"Robot"->>"Robot Listener":Acknowledgement
-"Robot Listener"->>"3D Slicer GUI":Acknowledgement IGTL(STRING)
-"Robot"->>"Robot Listener":Status
-deactivate "Robot"
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(CURRENT_STATUS)
+R->>RL:Acknowledgement
+RL->>SGUI:Acknowledgement IGTL(STRING)
+R->>RL:Status
+deactivate R
+RL->>SGUI:Status IGTL(CURRENT_STATUS)
 
 
-deactivate "Robot Listener"
-deactivate "3D Slicer GUI"
-note left of "Robot":STATUS CODE: OK\n               or\nSTATUS CODE: DNR
-"Robot"->>"Robot Listener":Status
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(START_UP)
+deactivate RL
+deactivate SGUI
+note left of R:STATUS CODE: OK\n               or\nSTATUS CODE: DNR
+R->>RL:Status
+RL->>SGUI:Status IGTL(START_UP)
 end
 
 ```
@@ -61,47 +61,48 @@ Calibration
 ```mermaid
 sequenceDiagram
 
-participant "Robot"
-participant "Robot Listener"
-participant "3D Slicer GUI"
-participant "MR IGTL Bridge"
-participant "MRScanner"
+participant R as Robot
+participant RL as Robot Listener
+participant SGUI as 3D Slicer GUI
+participant MRIGTL  as MR IGTL Bridge
+participant MRS as MR Scanner
+
 
 loop until status code is OK
-"3D Slicer GUI"->>"Robot Listener":Command IGTL(STRING)
-activate "3D Slicer GUI"
-activate "Robot Listener"
-"Robot Listener"->>"Robot":Command
-activate "Robot"
-note left of "Robot":CALIBRATION
-"Robot"->>"Robot Listener":Acknowledgement
-note left of "Robot":STATUS code: OK\n              or\nSTATUS code: DNR
-"Robot Listener"->>"3D Slicer GUI":Acknowledgement IGTL(STRING)
-"Robot"->>"Robot Listener":Status
-deactivate "Robot"
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(CURRENT_STATUS)
-deactivate "3D Slicer GUI"
-deactivate "Robot Listener"
+SGUI->>RL:Command IGTL(STRING)
+activate SGUI
+activate RL
+RL->>R:Command
+activate R
+note left of R:CALIBRATION
+R->>RL:Acknowledgement
+note left of R:STATUS code: OK\n              or\nSTATUS code: DNR
+RL->>SGUI:Acknowledgement IGTL(STRING)
+R->>RL:Status
+deactivate R
+RL->>SGUI:Status IGTL(CURRENT_STATUS)
+deactivate SGUI
+deactivate RL
 end
-note right of "3D Slicer GUI":Show that robot has \nentered Calibration phase
-note over "MRScanner":Zframe scan\nfor registration
-"MRScanner"->>"3D Slicer GUI":Zframe DICOM image
-note right of "3D Slicer GUI":Calculate calibration matrix\nin the Slicer GUI
+note right of SGUI:Show that robot has \nentered Calibration phase
+note over MRS:Zframe scan\nfor registration
+MRS->>SGUI:Zframe DICOM image
+note right of SGUI:Calculate calibration matrix\nin the Slicer GUI
 loop until status code is OK
-"3D Slicer GUI"->>"Robot Listener":Transform IGTL(TRANSFORM)
-activate "3D Slicer GUI"
-activate "Robot Listener"
-"Robot Listener"->>"Robot":Transform
-activate "Robot"
-note left of "Robot":CALIBRATION
-"Robot"->>"Robot Listener":Acknowledgement
-"Robot Listener"->>"3D Slicer GUI":Acknowledgement IGTL(TRANSFORM)
-note left of "Robot":STATUS code: OK \n              or \nSTATUS code: CE
-"Robot"->>"Robot Listener":Status
-deactivate "Robot"
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(CURRENT_STATUS)
-deactivate "3D Slicer GUI"
-deactivate "Robot Listener"
+SGUI->>RL:Transform IGTL(TRANSFORM)
+activate SGUI
+activate RL
+RL->>R:Transform
+activate R
+note left of R:CALIBRATION
+R->>RL:Acknowledgement
+RL->>SGUI:Acknowledgement IGTL(TRANSFORM)
+note left of R:STATUS code: OK \n              or \nSTATUS code: CE
+R->>RL:Status
+deactivate R
+RL->>SGUI:Status IGTL(CURRENT_STATUS)
+deactivate SGUI
+deactivate RL
 
 end
 ```
@@ -111,71 +112,71 @@ Target planning
 ```mermaid
 sequenceDiagram
 
-participant "Robot"
-participant "Robot Listener"
-participant "3D Slicer GUI"
-participant "MR IGTL Bridge"
-participant "MRScanner"
+participant R as Robot
+participant RL as Robot Listener
+participant SGUI as 3D Slicer GUI
+participant MRIGTL  as MR IGTL Bridge
+participant MRS as MR Scanner
 
 loop until status code is OK
-"3D Slicer GUI"->>"Robot Listener":Command IGTL(STRING)
-activate "3D Slicer GUI"
-activate "Robot Listener"
-"Robot Listener"->>"Robot":Command
-activate "Robot"
-note left of "Robot":TARGETING
-"Robot"->>"Robot Listener":Acknowledgement
-"Robot Listener"->>"3D Slicer GUI":Acknowledgement IGTL(STRING)
-note over "Robot":Confirm if robot is ready for targeting\nCheck if calibration was received
-note left of "Robot":STATUS code: OK\n              or\nSTATUS code: DNR
-"Robot"->>"Robot Listener":Status
-deactivate "Robot"
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(CURRENT_STATUS)
-deactivate "3D Slicer GUI"
-deactivate "Robot Listener"
+SGUI->>RL:Command IGTL(STRING)
+activate SGUI
+activate RL
+RL->>R:Command
+activate R
+note left of R:TARGETING
+R->>RL:Acknowledgement
+RL->>SGUI:Acknowledgement IGTL(STRING)
+note over R:Confirm if robot is ready for targeting\nCheck if calibration was received
+note left of R:STATUS code: OK\n              or\nSTATUS code: DNR
+R->>RL:Status
+deactivate R
+RL->>SGUI:Status IGTL(CURRENT_STATUS)
+deactivate SGUI
+deactivate RL
 end
 
-note over "MRScanner":Anatomical T2 scan \nfor targeting
-"MRScanner"->>"3D Slicer GUI":T2 DICOM image
-note over "3D Slicer GUI":Select target point and \nneedle position in GUI
+note over MRS:Anatomical T2 scan \nfor targeting
+MRS->>SGUI:T2 DICOM image
+note over SGUI:Select target point and \nneedle position in GUI
 
-activate "3D Slicer GUI"
-deactivate "3D Slicer GUI"
+activate SGUI
+deactivate SGUI
 loop until status code is OK
-"3D Slicer GUI"->>"Robot Listener":Transform IGTL(TRANSFORM)
-activate "3D Slicer GUI"
-activate "Robot Listener"
-"Robot Listener"->>"Robot":Transform
-activate "Robot"
-note left of "Robot":TARGETING
+SGUI->>RL:Transform IGTL(TRANSFORM)
+activate SGUI
+activate RL
+RL->>R:Transform
+activate R
+note left of R:TARGETING
 
-"Robot"->>"Robot Listener":Acknowledgement
-"Robot Listener"->>"3D Slicer GUI":Acknowledgement IGTL(TRANSFORM)
+R->>RL:Acknowledgement
+RL->>SGUI:Acknowledgement IGTL(TRANSFORM)
 
-note over "Robot":Calculate if planned\ntarget is reachable
+note over R:Calculate if planned\ntarget is reachable
 alt if the target point is reachable within some maximum error
-note left of "Robot":STATUS code: OK
-"Robot"->>"Robot Listener":Transform
-"Robot Listener"->>"3D Slicer GUI":Transform IGTL(TRANSFORM)
-"Robot"->>"Robot Listener":Status
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(STATUS)
-note over "3D Slicer GUI":REACHABLE_TARGET accepted
+note left of R:STATUS code: OK
+R->>RL:Transform
+RL->>SGUI:Transform IGTL(TRANSFORM)
+R->>RL:Status
+RL->>SGUI:Status IGTL(STATUS)
+note over SGUI:REACHABLE_TARGET accepted
 
 else if the target point is NOT reachable within some maximum error
-note left of "Robot":STATUS code: CE\nNot a valid target
-"Robot"->>"Robot Listener":Status
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(STATUS)
-note over "3D Slicer GUI":Target point NOT reachable
+note left of R:STATUS code: CE\nNot a valid target
+R->>RL:Status
+RL->>SGUI:Status IGTL(STATUS)
+note over SGUI:Target point NOT reachable
 
 else
-note left of "Robot":STATUS code: DNR\nNot in targeting mode
-"Robot"->>"Robot Listener":Status
-deactivate "Robot"
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(STATUS)
+note left of R:STATUS code: DNR\nNot in targeting mode
+R->>RL:Status
+deactivate R
+RL->>SGUI:Status IGTL(STATUS)
 
-deactivate "3D Slicer GUI"
-deactivate "Robot Listener"
-note over "3D Slicer GUI":"Robot" not in valid mode
+deactivate SGUI
+deactivate RL
+note over SGUI:R not in valid mode
 end
 end
 ```
@@ -187,25 +188,24 @@ Idle
 ```mermaid
 sequenceDiagram
 
-participant "Robot"
-participant "Robot Listener"
-participant "3D Slicer GUI"
-participant "MR IGTL Bridge"
-participant "MRScanner"
-
+participant R as Robot
+participant RL as Robot Listener
+participant SGUI as 3D Slicer GUI
+participant MRIGTL  as MR IGTL Bridge
+participant MRS as MR Scanner
 
 alt if the user subscribes parameters case
-"3D Slicer GUI"->>"MR IGTL Bridge":Command IGTL(STRING)
-activate "3D Slicer GUI"
-activate "MR IGTL Bridge"
-"MR IGTL Bridge"->>"MRScanner":Command
+SGUI->>MRIGTL:Command IGTL(STRING)
+activate SGUI
+activate MRIGTL
+MRIGTL->>MRS:Command
 
-activate "MRScanner"
-"MRScanner"->>"MR IGTL Bridge":Status
-deactivate "MRScanner"
-"MR IGTL Bridge"->>"3D Slicer GUI":Status IGTL(STATUS)
-deactivate "3D Slicer GUI"
-deactivate "MR IGTL Bridge"
+activate MRS
+MRS->>MRIGTL:Status
+deactivate MRS
+MRIGTL->>SGUI:Status IGTL(STATUS)
+deactivate SGUI
+deactivate MRIGTL
 end
 ```
 
@@ -215,37 +215,37 @@ Scan & Move
 ```mermaid
 sequenceDiagram
 
-participant "Robot"
-participant "Robot Listener"
-participant "3D Slicer GUI"
-participant "MR IGTL Bridge"
-participant "MRScanner"
+participant R as Robot
+participant RL as Robot Listener
+participant SGUI as 3D Slicer GUI
+participant MRIGTL  as MR IGTL Bridge
+participant MRS as MR Scanner
 
 loop Imaging loop
 alt if the user subscribes parameters case
-"3D Slicer GUI"->>"MR IGTL Bridge":Transform IGTL(TRANSFORM)
-"MR IGTL Bridge"->>"MRScanner":Transform
-note over "MRScanner":Updates the scan plane
+SGUI->>MRIGTL:Transform IGTL(TRANSFORM)
+MRIGTL->>MRS:Transform
+note over MRS:Updates the scan plane
 end
-note over "MRScanner":Acquires an image
-"MRScanner"->>"MR IGTL Bridge":Image
-"MR IGTL Bridge"->>"3D Slicer GUI":Image IGTL(IMAGE)
+note over MRS:Acquires an image
+MRS->>MRIGTL:Image
+MRIGTL->>SGUI:Image IGTL(IMAGE)
 end
 
-"3D Slicer GUI"->>"Robot Listener":Command IGTL(STRING)
-"Robot Listener"->>"Robot":Command
+SGUI->>RL:Command IGTL(STRING)
+RL->>R:Command
 
-note left of "Robot":MOVE_TO_TARGET
-"Robot"->>"Robot Listener":Acknowledgement
-"Robot Listener"->>"3D Slicer GUI":Acknowledgement IGTL(STRING)
+note left of R:MOVE_TO_TARGET
+R->>RL:Acknowledgement
+RL->>SGUI:Acknowledgement IGTL(STRING)
 loop Movement loop
-"Robot"->>"Robot Listener":Transform
-"Robot Listener"->>"3D Slicer GUI":Transform IGTL(TRANSFORM)
-note over "3D Slicer GUI":CURRENT_POSITION received
+R->>RL:Transform
+RL->>SGUI:Transform IGTL(TRANSFORM)
+note over SGUI:CURRENT_POSITION received
 end
 
-"Robot"->>"Robot Listener":Status
-"Robot Listener"->>"3D Slicer GUI":Status IGTL(STATUS)
+R->>RL:Status
+RL->>SGUI:Status IGTL(STATUS)
 ```
 
 
