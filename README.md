@@ -15,7 +15,7 @@ participant SGUI as 3D Slicer GUI
 participant MRIGTL  as MR IGTL Bridge
 participant MRS as MR Scanner
 
-SGUI->>MRIGTL:Command IGTL(STRING)
+SGUI->>MRIGTL:Command IGTL(STRING, START_UP)
 activate SGUI
 activate MRIGTL
 MRIGTL->>MRS:Command
@@ -23,30 +23,30 @@ activate MRS
 note right of MRS:START UP SCANNER
 MRS->>MRIGTL:Status
 deactivate MRS
-MRIGTL->>SGUI:Status IGTL(STATUS)
+MRIGTL->>SGUI:Status IGTL(STRING, STATUS)
 deactivate SGUI
 deactivate MRIGTL
 
 note over MRIGTL,MRS:Transition to "Idle"
 alt Until status code is OK
-SGUI->>RL:Command IGTL(STRING)
+SGUI->>RL:Command IGTL(STRING, START_UP)
 activate SGUI
 activate RL
 RL->>R:Command
 activate R
 note left of Robot:START_UP
 R->>RL:Acknowledgement
-RL->>SGUI:Acknowledgement IGTL(STRING)
+RL->>SGUI:Acknowledgement IGTL(STRING, START_UP)
 R->>RL:Status
 deactivate R
-RL->>SGUI:Status IGTL(CURRENT_STATUS)
+RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
 
 
 deactivate RL
 deactivate SGUI
 note left of R:STATUS CODE: OK\n               or\nSTATUS CODE: DNR
 R->>RL:Status
-RL->>SGUI:Status IGTL(START_UP)
+RL->>SGUI:Status IGTL(STRING, START_UP)
 end
 
 ```
@@ -69,7 +69,7 @@ participant MRS as MR Scanner
 
 
 loop until status code is OK
-SGUI->>RL:Command IGTL(STRING)
+SGUI->>RL:Command IGTL(STRING, CALIBRATION)
 activate SGUI
 activate RL
 RL->>R:Command
@@ -80,7 +80,7 @@ note left of R:STATUS code: OK\n              or\nSTATUS code: DNR
 RL->>SGUI:Acknowledgement IGTL(STRING)
 R->>RL:Status
 deactivate R
-RL->>SGUI:Status IGTL(CURRENT_STATUS)
+RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
 deactivate SGUI
 deactivate RL
 end
@@ -100,7 +100,7 @@ RL->>SGUI:Acknowledgement IGTL(TRANSFORM)
 note left of R:STATUS code: OK \n              or \nSTATUS code: CE
 R->>RL:Status
 deactivate R
-RL->>SGUI:Status IGTL(CURRENT_STATUS)
+RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
 deactivate SGUI
 deactivate RL
 
@@ -119,7 +119,7 @@ participant MRIGTL  as MR IGTL Bridge
 participant MRS as MR Scanner
 
 loop until status code is OK
-SGUI->>RL:Command IGTL(STRING)
+SGUI->>RL:Command IGTL(STRING, TARGETING)
 activate SGUI
 activate RL
 RL->>R:Command
@@ -131,7 +131,7 @@ note over R:Confirm if robot is ready for targeting\nCheck if calibration was re
 note left of R:STATUS code: OK\n              or\nSTATUS code: DNR
 R->>RL:Status
 deactivate R
-RL->>SGUI:Status IGTL(CURRENT_STATUS)
+RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
 deactivate SGUI
 deactivate RL
 end
@@ -159,20 +159,20 @@ note left of R:STATUS code: OK
 R->>RL:Transform
 RL->>SGUI:Transform IGTL(TRANSFORM)
 R->>RL:Status
-RL->>SGUI:Status IGTL(STATUS)
+RL->>SGUI:Status IGTL(STRING, STATUS)
 note over SGUI:REACHABLE_TARGET accepted
 
 else if the target point is NOT reachable within some maximum error
 note left of R:STATUS code: CE\nNot a valid target
 R->>RL:Status
-RL->>SGUI:Status IGTL(STATUS)
+RL->>SGUI:Status IGTL(STRING, STATUS)
 note over SGUI:Target point NOT reachable
 
 else
 note left of R:STATUS code: DNR\nNot in targeting mode
 R->>RL:Status
 deactivate R
-RL->>SGUI:Status IGTL(STATUS)
+RL->>SGUI:Status IGTL(STRING, STATUS)
 
 deactivate SGUI
 deactivate RL
@@ -203,7 +203,7 @@ MRIGTL->>MRS:Command
 activate MRS
 MRS->>MRIGTL:Status
 deactivate MRS
-MRIGTL->>SGUI:Status IGTL(STATUS)
+MRIGTL->>SGUI:Status IGTL(STRING, STATUS)
 deactivate SGUI
 deactivate MRIGTL
 end
@@ -232,7 +232,7 @@ MRS->>MRIGTL:Image
 MRIGTL->>SGUI:Image IGTL(IMAGE)
 end
 
-SGUI->>RL:Command IGTL(STRING)
+SGUI->>RL:Command IGTL(STRING, MOVE_TO_TARGET)
 RL->>R:Command
 
 note left of R:MOVE_TO_TARGET
@@ -245,7 +245,7 @@ note over SGUI:CURRENT_POSITION received
 end
 
 R->>RL:Status
-RL->>SGUI:Status IGTL(STATUS)
+RL->>SGUI:Status IGTL(STRING, STATUS)
 ```
 
 
