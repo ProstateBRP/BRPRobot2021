@@ -107,7 +107,60 @@ deactivate RL
 end
 ```
 
-Target planning
+
+Planning
+-----------
+
+```mermaid
+sequenceDiagram
+
+participant R as Robot
+participant RL as Robot Listener
+participant SGUI as 3D Slicer GUI
+participant MRIGTL  as MR IGTL Bridge
+participant MRS as MR Scanner
+
+
+loop until status code is OK
+SGUI->>RL:Command IGTL(STRING, PLANNING)
+activate SGUI
+activate RL
+RL->>R:Command
+activate R
+note left of R:PLANNING
+R->>RL:Acknowledgement
+note left of R:STATUS code: OK\n              or\nSTATUS code: DNR
+RL->>SGUI:Acknowledgement IGTL(STRING)
+R->>RL:Status
+deactivate R
+RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
+deactivate SGUI
+deactivate RL
+end
+note right of SGUI:Show that robot has \nentered Planning phase
+note over MRS:Scan for planning
+MRS->>SGUI:Planning DICOM image
+note right of SGUI:Calculate calibration matrix\nin the Slicer GUI
+loop until status code is OK
+SGUI->>RL:Transform IGTL(TRANSFORM, TARGET)
+activate SGUI
+activate RL
+RL->>R:Transform
+activate R
+note left of R:PLANNING
+R->>RL:Acknowledgement
+RL->>SGUI:Acknowledgement IGTL(TRANSFORM)
+note left of R:STATUS code: OK \n              or \nSTATUS code: CE
+R->>RL:Status
+deactivate R
+RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
+deactivate SGUI
+deactivate RL
+
+end
+```
+
+Targeting
 ---------------
 ```mermaid
 sequenceDiagram
