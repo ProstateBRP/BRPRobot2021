@@ -138,9 +138,9 @@ deactivate SGUI
 deactivate RL
 end
 note right of SGUI:Show that robot has \nentered Planning phase
-note over MRS:Scan for planning
-MRS->>SGUI:Planning DICOM image
-note right of SGUI:Calculate calibration matrix\nin the Slicer GUI
+note over MRS:Anatomical T2 scan \nfor planning
+MRS->>SGUI:T2 DICOM image
+note over SGUI:Select target point and \nneedle position in GUI
 loop until status code is OK
 SGUI->>RL:Transform IGTL(TRANSFORM, TARGET)
 activate SGUI
@@ -188,10 +188,6 @@ RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
 deactivate SGUI
 deactivate RL
 end
-
-note over MRS:Anatomical T2 scan \nfor targeting
-MRS->>SGUI:T2 DICOM image
-note over SGUI:Select target point and \nneedle position in GUI
 
 activate SGUI
 deactivate SGUI
