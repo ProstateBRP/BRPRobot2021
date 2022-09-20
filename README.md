@@ -15,26 +15,12 @@ participant SGUI as 3D Slicer GUI
 participant MRIGTL  as MR IGTL Bridge
 participant MRS as MR Scanner
 
-SGUI->>MRIGTL:Command IGTL(STRING, START_UP)
-activate SGUI
-activate MRIGTL
-MRIGTL->>MRS:Command
-activate MRS
-note right of MRS:START UP SCANNER
-MRS->>MRIGTL:Status
-deactivate MRS
-MRIGTL->>SGUI:Status IGTL(STRING, STATUS)
-deactivate SGUI
-deactivate MRIGTL
-
-note over MRIGTL,MRS:Transition to "Idle"
 alt Until status code is OK
 SGUI->>RL:Command IGTL(STRING, START_UP)
 activate SGUI
 activate RL
 RL->>R:Command
 activate R
-note left of Robot:START_UP
 R->>RL:Acknowledgement
 RL->>SGUI:Acknowledgement IGTL(STRING, START_UP)
 R->>RL:Status
