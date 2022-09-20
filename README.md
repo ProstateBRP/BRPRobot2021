@@ -87,7 +87,7 @@ end
 note right of SGUI:Show that robot has \nentered Calibration phase
 note over MRS:Zframe scan\nfor registration
 MRS->>SGUI:Zframe DICOM image
-note right of SGUI:Calculate calibration matrix\nin the Slicer GUI
+note right of SGUI:Select target in the Slicer GUI
 loop until status code is OK
 SGUI->>RL:Transform IGTL(TRANSFORM)
 activate SGUI
