@@ -65,11 +65,8 @@ int RobotPhaseBase::Process()
   // Get_transform will return current_position and get_status will get current_status
   // if the return value is zero then the code enters the if statement and initiates a specialized method
   // of the MessageHandder of the Workphase. i.e will listen to an incoming transform for the calibration step
-  if (!this->CheckCommonMessage(headerMsg))
-  {
-    MessageHandler(headerMsg);
-  }
-  std::cout << "Calibration flag is: " << this->GetRobotStatus()->GetCalibrationFlag() << std::endl;
+  this->CheckCommonMessage(headerMsg);
+
   return 0;
 }
 
@@ -141,36 +138,36 @@ int RobotPhaseBase::CheckWorkphaseChange(igtl::MessageHeader *headerMsg)
   }
 }
 
-// As of now Get_Transform Doesn not do anything and upon receiving the message the robot
-// commumnication software does not send anything back.
-// TODO: Add capability to send the current location of the robot's tip to the navigation.
+// Checks for general communication messages that can be triggered from Slicer regardless of the current state.
 int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
 {
-  /// Check if GET_TRANSFORM has been received
-  if (strcmp(headerMsg->GetDeviceType(), "GET_TRANSFORM") == 0 &&
-      strncmp(headerMsg->GetDeviceName(), "CURRENT_POSITION", 4) == 0)
+  // Check if the received message is string
+  if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
   {
-    igtl::Matrix4x4 currentPosition;
-    igtl::IdentityMatrix(currentPosition);
-    currentPosition[0][3] = 20; // 20 mm in R-L
-    currentPosition[1][3] = 40; // 40 mm in A-P
-    currentPosition[2][3] = 50; // 10 mm in S-I
-    // Send navigation about how the desired target will look like
-    SendTransformMessage("CURRENT_POSITION", currentPosition);
-    Logger &log = Logger::GetInstance();
-    log.Log("Info: Sent CURRENT_POSITIN to navigation", 1, 1);
+    string dev_name;
+    ReceiveString(headerMsg, dev_name);
 
-    return 1;
-  }
-  /// Check if GET_STATUS has been received
-  else if (strcmp(headerMsg->GetDeviceType(), "GET_STATUS") == 0 &&
-           strncmp(headerMsg->GetDeviceName(), "CURRENT_STATUS", 4) == 0)
-  {
-    this->SendStatusMessage(this->Name(), 1, 0);
-    Logger &log = Logger::GetInstance();
-    log.Log("Info: Sent CURRENT_STATUS to navigation", 1, 1);
-
-    return 1;
+    if (strcmp(dev_name.c_str(), "CURRENT_POSITION") == 0)
+    {
+      // Create a dummy 4x4 matrix to replicate the current pose of the robot and send to Slicer.
+      igtl::Matrix4x4 currentPosition;
+      igtl::IdentityMatrix(currentPosition);
+      currentPosition[0][3] = rand() % 100;
+      currentPosition[1][3] = rand() % 100;
+      currentPosition[2][3] = rand() % 100;
+      // Send navigation about how the desired target will look like
+      SendTransformMessage("CURRENT_POSITION", currentPosition);
+      Logger &log = Logger::GetInstance();
+      log.Log("Info: Sent CURRENT_POSITIN to navigation", 1, 1);
+      return 0;
+    }
+    else if (strcmp(dev_name.c_str(), "CURRENT_STATUS") == 0)
+    {
+      this->SendStatusMessage(this->Name(), 1, 0);
+      Logger &log = Logger::GetInstance();
+      log.Log("Info: Sent CURRENT_STATUS to navigation", 1, 1);
+      return 0;
+    }
   }
 
   /// Check if the navigation is sending the needle tip pose
@@ -192,8 +189,9 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
     {
       Logger &log = Logger::GetInstance();
       log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(6, std::string::npos), LOG_LEVEL_INFO, true);
+      // needle pose should be saved in a robot variable in the real robot sw.
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
-      return 1;
+      return 0;
     }
     else
     {

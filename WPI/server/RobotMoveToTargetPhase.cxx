@@ -19,11 +19,9 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotMoveToTargetPhase::RobotMoveToTargetPhase() :
-  RobotPhaseBase()
+RobotMoveToTargetPhase::RobotMoveToTargetPhase() : RobotPhaseBase()
 {
 }
-
 
 RobotMoveToTargetPhase::~RobotMoveToTargetPhase()
 {
@@ -34,49 +32,30 @@ int RobotMoveToTargetPhase::Initialize()
 
   igtl::Matrix4x4 matrix;
 
-  // TODO: Check if the robot is ready for move to target
-  // Currently it check if a target has been set.
-  if (this->RStatus&&!this->RStatus->GetTargetMatrix(matrix))
-    {
+  if (this->RStatus && !this->RStatus->GetTargetMatrix(matrix))
+  {
+    // Create a dummy 4x4 matrix to replicate the current pose of the robot and send to Slicer.
     igtl::Matrix4x4 matrix;
-    
+    igtl::IdentityMatrix(matrix);
+    matrix[0][3] = rand() % 100;
+    matrix[1][3] = rand() % 100;
+    matrix[2][3] = rand() % 100;
+
     // If the target has not been received, return error.
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_NOT_READY, 0);
     SendTransformMessage("CURRENT_POSITION", matrix);
-    }
-  else
-    {
-    igtl::Matrix4x4 matrix;
-    // Mimic actuator movement
-    for (int i = 0; i < 10; i ++)
-      {
-      SendTransformMessage("CURRENT_POSITION", matrix);
-      igtl::Sleep(100);
+  }
 
-      // Need to check STOP/EMERGENCY commands.
-      }
-    
-    // Notify that the actuator reaches to the target.
-    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
-    SendTransformMessage("CURRENT_POSITION", matrix);
-    }
-  
   return 1;
-
 }
 
-
-int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
 
   if (RobotPhaseBase::MessageHandler(headerMsg))
-    {
+  {
     return 1;
-    }
-  
-  
+  }
 
   return 0;
 }
-
-
