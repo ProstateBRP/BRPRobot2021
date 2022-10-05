@@ -65,7 +65,10 @@ int RobotPhaseBase::Process()
   // Get_transform will return current_position and get_status will get current_status
   // if the return value is zero then the code enters the if statement and initiates a specialized method
   // of the MessageHandder of the Workphase. i.e will listen to an incoming transform for the calibration step
-  this->CheckCommonMessage(headerMsg);
+  if (!this->CheckCommonMessage(headerMsg))
+  {
+    MessageHandler(headerMsg);
+  }
 
   return 0;
 }
@@ -159,14 +162,14 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
       SendTransformMessage("CURRENT_POSITION", currentPosition);
       Logger &log = Logger::GetInstance();
       log.Log("Info: Sent CURRENT_POSITIN to navigation", 1, 1);
-      return 0;
+      return 1;
     }
     else if (strcmp(dev_name.c_str(), "CURRENT_STATUS") == 0)
     {
       this->SendStatusMessage(this->Name(), 1, 0);
       Logger &log = Logger::GetInstance();
       log.Log("Info: Sent CURRENT_STATUS to navigation", 1, 1);
-      return 0;
+      return 1;
     }
   }
 
@@ -191,7 +194,6 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
       log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(6, std::string::npos), LOG_LEVEL_INFO, true);
       // needle pose should be saved in a robot variable in the real robot sw.
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
-      return 0;
     }
     else
     {
@@ -199,6 +201,7 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
       std::cerr << "ERROR: Invalid calibration matrix." << std::endl;
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
     }
+    return 1;
   }
 
   return 0;

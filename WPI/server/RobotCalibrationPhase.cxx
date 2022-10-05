@@ -28,11 +28,9 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotCalibrationPhase::RobotCalibrationPhase() :
-  RobotPhaseBase()
+RobotCalibrationPhase::RobotCalibrationPhase() : RobotPhaseBase()
 {
 }
-
 
 RobotCalibrationPhase::~RobotCalibrationPhase()
 {
@@ -43,59 +41,53 @@ int RobotCalibrationPhase::Initialize()
   return 1;
 }
 
-
 // TODO: this should return a 4x4 matrix and set the robot registration to it
 // The calibration matrix is set within the RStatus object
-int RobotCalibrationPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+int RobotCalibrationPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
 
   // As of now the MessageHandler in the PhaseBase always returns 0
   if (RobotPhaseBase::MessageHandler(headerMsg))
-    {
+  {
     return 1;
-    }
-  
+  }
+
   /// Check if Transform message for calibration has been received
   if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
       strncmp(headerMsg->GetDeviceName(), "CLB_", 4) == 0)
-      {
+  {
     igtl::Matrix4x4 matrix;
     this->ReceiveTransform(headerMsg, matrix);
-    
+
     // Show the matrix that I have received
-    PrintMatrix("",matrix);
-    
-    // Acknowledgement 
+    PrintMatrix("", matrix);
+
+    // Acknowledgement
     std::string devName = headerMsg->GetDeviceName();
     std::stringstream ss;
     ss << "ACK_" << devName.substr(4, std::string::npos);
 
     SendTransformMessage(ss.str().c_str(), matrix);
-  
-    //Mimic calibration process
+
+    // Mimic calibration process
     igtl::Sleep(1000);
 
     if (ValidateMatrix(matrix))
-      {
+    {
       if (this->RStatus)
-        {
-        std::cout <<"RobotStatus: "<< this->RStatus;
-        this->RStatus->SetCalibrationMatrix(matrix);
-        std::cout << "Calibration flag is: " <<  this->RStatus->GetCalibrationFlag() << std::endl;
-        }
-      SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_OK, 0);
-      }
-    else
       {
+        this->RStatus->SetCalibrationMatrix(matrix);
+      }
+      SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_OK, 0);
+    }
+    else
+    {
       std::cerr << "ERROR: Invalid calibration matrix." << std::endl;
       SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
-      }
-        
+    }
 
     return 1;
-    }
+  }
 
   return 0;
 }
-
-
