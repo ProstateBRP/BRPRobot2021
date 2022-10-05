@@ -154,34 +154,18 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     MRIOutboundCommunicationLayout.addWidget(MRIphaseTextboxLabel, 0, 0)
     MRIOutboundCommunicationLayout.addWidget(self.MRIphaseTextbox, 0, 1)
 
-    # MRI Start up button
-    self.MRIstartupButton = qt.QPushButton("START UP SCANNER")
-    self.MRIstartupButton.toolTip = "Send the MRI scanner startup command."
-    self.MRIstartupButton.enabled = True
-    self.MRIstartupButton.setMaximumWidth(250)
-    MRIOutboundCommunicationLayout.addWidget(self.MRIstartupButton, 2, 0)
-    self.MRIstartupButton.connect('clicked()', self.onMRIStartupButtonClicked)
-
-    # MRI Disconnect scanner button
-    self.MRIdisconnectButton = qt.QPushButton("DISCONNECT SCANNER")
-    self.MRIdisconnectButton.toolTip = "Disconnect the MRI scanner."
-    self.MRIdisconnectButton.enabled = False
-    self.MRIdisconnectButton.setMaximumWidth(250)
-    MRIOutboundCommunicationLayout.addWidget(self.MRIdisconnectButton, 2, 1)
-    self.MRIdisconnectButton.connect('clicked()', self.onMRIDisconnectButtonClicked)
-
     # MRI Start scan button
-    self.MRIstartScanButton = qt.QPushButton("START SCAN")
+    self.MRIstartScanButton = qt.QPushButton("START SEQUENCE")
     self.MRIstartScanButton.toolTip = "Begin scanning."
-    self.MRIstartScanButton.enabled = False
+    self.MRIstartScanButton.enabled = True
     self.MRIstartScanButton.setMaximumWidth(250)
     MRIOutboundCommunicationLayout.addWidget(self.MRIstartScanButton, 3, 0)
     self.MRIstartScanButton.connect('clicked()', self.onMRIStartScanButtonClicked)
 
     # MRI Stop scan button
-    self.MRIstopScanButton = qt.QPushButton("STOP SCAN")
+    self.MRIstopScanButton = qt.QPushButton("STOP SEQUENCE")
     self.MRIstopScanButton.toolTip = "Stop scanning."
-    self.MRIstopScanButton.enabled = False
+    self.MRIstopScanButton.enabled = True
     self.MRIstopScanButton.setMaximumWidth(250)
     MRIOutboundCommunicationLayout.addWidget(self.MRIstopScanButton, 3, 1)
     self.MRIstopScanButton.connect('clicked()', self.onMRIStopScanButtonClicked)
@@ -199,111 +183,97 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     updateScanPlaneLayout = qt.QVBoxLayout(self.updateScanPlaneCollapsibleButton)
 
     # Create a new QHBoxLayout() within updateScanPlaneLayout to format the file selection dropdown
-    updateScanPlaneLayoutMiddle1 = qt.QHBoxLayout()
+    updateScanPlaneLayoutMiddle1 = qt.QFormLayout()
     updateScanPlaneLayout.addLayout(updateScanPlaneLayoutMiddle1)
 
-    # Input volume selector label
-    updateScanPlaneLayoutMiddle1.addWidget(qt.QLabel("Input image:"))
-    
-    # Input volume selector for scan plane selection
-    self.scanPlaneVolumeSelector = slicer.qMRMLNodeComboBox()
-    self.scanPlaneVolumeSelector.objectName = 'scanPlaneVolumeSelector'
-    self.scanPlaneVolumeSelector.toolTip = "Select the scan plane reference image."
-    self.scanPlaneVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
-    self.scanPlaneVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
-    self.scanPlaneVolumeSelector.noneEnabled = False
-    self.scanPlaneVolumeSelector.addEnabled = False
-    self.scanPlaneVolumeSelector.removeEnabled = False
-    self.scanPlaneVolumeSelector.setFixedWidth(230)
-    updateScanPlaneLayoutMiddle1.addWidget(self.scanPlaneVolumeSelector)
-    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)', self.scanPlaneVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
-    spacer = qt.QSpacerItem(100, 10, qt.QSizePolicy.Expanding)
-    updateScanPlaneLayoutMiddle1.addSpacerItem(spacer)
-
-    # Select plane location -- manual (user selection) or automatic (CURRENT_POSITION)
-    self.planeLocationCheckbox = qt.QCheckBox("Use current position of needle tip to define the plane")
-    self.planeLocationCheckbox.setChecked(False)
-    # self.planeLocationCheckbox.toggled.connect(self.onPlaneLocationCheckboxToggled)
-    updateScanPlaneLayout.addWidget(self.planeLocationCheckbox)
-
-    # Select continuous vs. manual transfer of scan plane transform to MRI
-    self.planeTransferTypeCheckbox = qt.QCheckBox("Auto-send scan plane transform to MR scanner as it updates in Slicer")
-    self.planeTransferTypeCheckbox.setChecked(True)
-    self.planeTransferTypeCheckbox.toggled.connect(self.onplaneTransferTypeCheckboxToggled)
-    updateScanPlaneLayout.addWidget(self.planeTransferTypeCheckbox)
+    # Input scan plane transform
+    self.scanPlaneTransformSelector = slicer.qMRMLNodeComboBox()
+    self.scanPlaneTransformSelector.nodeTypes = ["vtkMRMLLinearTransformNode"]
+    self.scanPlaneTransformSelector.selectNodeUponCreation = False
+    self.scanPlaneTransformSelector.noneEnabled = False
+    self.scanPlaneTransformSelector.addEnabled = True
+    self.scanPlaneTransformSelector.removeEnabled = True
+    self.scanPlaneTransformSelector.setMRMLScene(slicer.mrmlScene)
+    updateScanPlaneLayoutMiddle1.addRow("Scan Plane Transform: ", self.scanPlaneTransformSelector)
 
     # Create a new QHBoxLayout() within updateScanPlaneLayout to format the dropdown & Update Scan Plane button
-    updateScanPlaneLayoutMiddle2 = qt.QHBoxLayout()
+    updateScanPlaneLayoutMiddle2 = qt.QFormLayout()
     updateScanPlaneLayout.addLayout(updateScanPlaneLayoutMiddle2)
-
-    # View scan plane button
-    self.scanPlaneVisibleButton = qt.QPushButton()
-    eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
-    self.scanPlaneVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
-    self.scanPlaneVisibleButton.setFixedWidth(25)
-    self.scanPlaneVisibleButton.setFixedHeight(23)
-    self.scanPlaneVisibleButton.setCheckable(True)
-    updateScanPlaneLayoutMiddle2.addWidget(self.scanPlaneVisibleButton)
-    self.scanPlaneVisibleButton.connect('clicked()', self.onScanPlaneVisibleButtonClicked)
 
     self.scanPlaneTransform = slicer.vtkMRMLLinearTransformNode()
     self.scanPlaneTransform.SetName("PLANE_0")
     slicer.mrmlScene.AddNode(self.scanPlaneTransform)
+    self.scanPlaneTransformSelector.setCurrentNode(self.scanPlaneTransform)
 
-    # Dropdown menu to select scan plane (Axial, sagittal, coronal)
-    self.scanPlaneSelectionBox = qt.QComboBox()
-    self.scanPlaneSelectionBox.addItems(["Axial", "Sagittal", "Coronal"])
-    # self.scanPlaneSelectionBox.setFixedWidth(250)
-    self.scanPlaneSelectionBox.currentIndexChanged.connect(self.onplaneTransferTypeCheckboxToggled)
-    updateScanPlaneLayoutMiddle2.addWidget(self.scanPlaneSelectionBox)
+    # self.scanPlaneTransformOrientation = slicer.vtkMRMLLinearTransformNode()
+    # self.scanPlaneTransformOrientation.SetName("PLANE_0_Orientation")
+    # slicer.mrmlScene.AddNode(self.scanPlaneTransformOrientation)
 
-    # MRI Update scan target button
-    self.MRIupdateTargetButton = qt.QPushButton("Send Scan Plane Transform")
-    self.MRIupdateTargetButton.toolTip = "Send a new scanning target transform to the MRI control."
-    self.MRIupdateTargetButton.enabled = False
-    # self.MRIupdateTargetButton.setMaximumWidth(250)
+    self.scanPlaneRobotPositionCheckbox = qt.QCheckBox("Follow current robot position with scan plane")
+    self.scanPlaneRobotPositionCheckbox.setChecked(False)
+    updateScanPlaneLayout.addWidget(self.scanPlaneRobotPositionCheckbox)
+
+
+    # MRI Start Updating scan target button
+    self.MRIupdateTargetButton = qt.QPushButton("Start Observing Transform")
+    self.MRIupdateTargetButton.toolTip = "Start sending transform to scanner"
+    self.MRIupdateTargetButton.enabled = True
     updateScanPlaneLayoutMiddle2.addWidget(self.MRIupdateTargetButton)
     self.MRIupdateTargetButton.connect('clicked()', self.onMRIUpdateTargetButtonClicked)
 
-    # Create a new QHBoxLayout() within updateScanPlaneLayout to contain the 4x4 table
-    updateScanPlaneLayoutBottom = qt.QFormLayout()
-    updateScanPlaneLayout.addLayout(updateScanPlaneLayoutBottom)
+    # MRI Stop Updating scan target button
+    self.MRIStopupdateTargetButton = qt.QPushButton("Stop Observing Transform")
+    self.MRIStopupdateTargetButton.toolTip = "Stop sending transform to scanner"
+    self.MRIStopupdateTargetButton.enabled = True
+    updateScanPlaneLayoutMiddle2.addWidget(self.MRIStopupdateTargetButton)
+    self.MRIStopupdateTargetButton.connect('clicked()', self.onMRIStopUpdateTargetButtonClicked)
 
-    # Add 1 line of spacing
-    updateScanPlaneLayoutBottom.addRow(qt.QLabel(" "))
+    self.MRIfpsBox = qt.QSpinBox()
+    self.MRIfpsBox.setSingleStep(1)
+    self.MRIfpsBox.setMaximum(144)
+    self.MRIfpsBox.setMinimum(1)
+    self.MRIfpsBox.setSuffix(" FPS")
+    self.MRIfpsBox.value = 2
+    updateScanPlaneLayoutMiddle2.addRow("Update Transform Rate:", self.MRIfpsBox)
 
-    row = 4
-    column = 4
-    self.MRItableWidget = qt.QTableWidget(row, column)
-    #self.MRItableWidget.setMaximumWidth(400)
-    self.MRItableWidget.setMinimumHeight(95)
-    self.MRItableWidget.verticalHeader().hide() # Remove line numbers
-    self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
-    #self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.MRItableWidget.horizontalHeader()
-    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    self.lastTransformMatrix = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix.SetElement(0,0,0)
+    self.lastTransformMatrix.SetElement(1,1,0)
+    self.lastTransformMatrix.SetElement(2,2,0)    
 
-    verticalheader = self.MRItableWidget.verticalHeader()
-    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    # MRItableWidgetLabel = qt.QLabel("Scan plane transform:")
-    # updateScanPlaneLayoutBottom.addWidget(MRItableWidgetLabel)
-    # updateScanPlaneLayoutBottom.addWidget(self.MRItableWidget)
-    updateScanPlaneLayoutBottom.addRow("Scan plane transform: ", self.MRItableWidget)
+    self.MRIUpdateTimer = qt.QTimer()
+    self.MRIUpdateTimer.timeout.connect(self.updateMRITransformToScanner)
 
-    # MRI Update scan target button
-    self.MRIupdateManualTargetButton = qt.QPushButton("Send Scan Plane Transform")
-    self.MRIupdateManualTargetButton.toolTip = "Send a new scanning target transform to the MRI control."
-    self.MRIupdateManualTargetButton.enabled = True
-    # self.MRIupdateManualTargetButton.setMaximumWidth(250)
-    updateScanPlaneLayoutBottom.addRow("  ", self.MRIupdateManualTargetButton)
-    self.MRIupdateManualTargetButton.connect('clicked()', self.onMRIUpdateManualTargetButtonClicked)
+    # # Create a new QHBoxLayout() within updateScanPlaneLayout to contain the 4x4 table
+    # updateScanPlaneLayoutBottom = qt.QFormLayout()
+    # updateScanPlaneLayout.addLayout(updateScanPlaneLayoutBottom)
 
+    # # Add 1 line of spacing
+    # updateScanPlaneLayoutBottom.addRow(qt.QLabel(" "))
+
+    # row = 4
+    # column = 4
+    # self.MRItableWidget = qt.QTableWidget(row, column)
+    # #self.MRItableWidget.setMaximumWidth(400)
+    # self.MRItableWidget.setMinimumHeight(95)
+    # self.MRItableWidget.verticalHeader().hide() # Remove line numbers
+    # self.MRItableWidget.horizontalHeader().hide() # Remove column numbers
+    # #self.MRItableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    # horizontalheader = self.MRItableWidget.horizontalHeader()
+    # horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    # horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    # horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    # horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+
+    # verticalheader = self.MRItableWidget.verticalHeader()
+    # verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    # verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    # verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    # verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    # # MRItableWidgetLabel = qt.QLabel("Scan plane transform:")
+    # # updateScanPlaneLayoutBottom.addWidget(MRItableWidgetLabel)
+    # # updateScanPlaneLayoutBottom.addWidget(self.MRItableWidget)
+    # updateScanPlaneLayoutBottom.addRow("Scan plane transform: ", self.MRItableWidget)
     # -------- Slicer <--> WPI connection GUI ---------
 
     # Slicer <--> MRI collapsible button
@@ -336,12 +306,28 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     RobotOutboundCommunicationLayout.addWidget(self.startupButton, 2, 0)
     self.startupButton.connect('clicked()', self.onStartupButtonClicked)
 
+    # currentPosition On Button
+    self.currentPositionOnButton = qt.QPushButton("CURRENT POSITION ON")
+    self.currentPositionOnButton.toolTip = "Continuously query robot for position."
+    self.currentPositionOnButton.enabled = False
+    self.currentPositionOnButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.currentPositionOnButton, 3, 0)
+    self.currentPositionOnButton.connect('clicked()', self.onCurrentPositionOnClicked)
+
+    # currentPosition Off Button
+    self.currentPositionOffButton = qt.QPushButton("CURRENT POSITION OFF")
+    self.currentPositionOffButton.toolTip = "Turn off continuously querying robot for position."
+    self.currentPositionOffButton.enabled = False
+    self.currentPositionOffButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.currentPositionOffButton, 3, 1)
+    self.currentPositionOffButton.connect('clicked()', self.onCurrentPositionOffClicked)
+
     # calibrationButton Button
     self.calibrationButton = qt.QPushButton("CALIBRATION")
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
     self.calibrationButton.enabled = False
     self.calibrationButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.calibrationButton, 3, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.calibrationButton, 4, 0)
     self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
 
     # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
@@ -349,7 +335,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.planningButton.toolTip = "Send the planning command to the WPI robot."
     self.planningButton.enabled = False
     self.planningButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.planningButton, 3, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.planningButton, 4, 1)
     self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
 
     # targetingButton Button
@@ -357,7 +343,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
     self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.targetingButton, 4 , 0)
+    RobotOutboundCommunicationLayout.addWidget(self.targetingButton, 5 , 0)
     self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
 
     # moveButton Button
@@ -365,40 +351,48 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.moveButton.toolTip = "Send the move to target command to the WPI robot."
     self.moveButton.enabled = False
     self.moveButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.moveButton, 4, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.moveButton, 5, 1)
     self.moveButton.connect('clicked()', self.onMoveButtonClicked)
 
-    # Lock Button to ask WPI to lock robot
-    self.LockButton = qt.QPushButton("LOCK")
-    self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
-    self.LockButton.enabled = False
-    self.LockButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.LockButton, 5, 0)
-    self.LockButton.connect('clicked()', self.onLockButtonClicked)
+    # # Lock Button to ask WPI to lock robot
+    # self.LockButton = qt.QPushButton("LOCK")
+    # self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
+    # self.LockButton.enabled = False
+    # self.LockButton.setMaximumWidth(250)
+    # RobotOutboundCommunicationLayout.addWidget(self.LockButton, 5, 0)
+    # self.LockButton.connect('clicked()', self.onLockButtonClicked)
 
-    # Unlock Button to ask WPI to unlock robot
-    self.UnlockButton = qt.QPushButton("UNLOCK")
-    self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
-    self.UnlockButton.enabled = False
-    self.UnlockButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.UnlockButton, 5, 1)
-    self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
+    # # Unlock Button to ask WPI to unlock robot
+    # self.UnlockButton = qt.QPushButton("UNLOCK")
+    # self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
+    # self.UnlockButton.enabled = False
+    # self.UnlockButton.setMaximumWidth(250)
+    # RobotOutboundCommunicationLayout.addWidget(self.UnlockButton, 5, 1)
+    # self.UnlockButton.connect('clicked()', self.onUnlockButtonClicked)
 
-    # Get robot pose Button to ask WPI to send the current robot position
-    self.GetPoseButton = qt.QPushButton("GET POSE")
-    self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
-    self.GetPoseButton.enabled = False
-    self.GetPoseButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.GetPoseButton, 6, 0)
-    self.GetPoseButton.connect('clicked()', self.onGetPoseButtonClicked)
+    # # Get robot pose Button to ask WPI to send the current robot position
+    # self.GetPoseButton = qt.QPushButton("GET POSE")
+    # self.GetPoseButton.toolTip = "Send the command to ask WPI to send the current robot position."
+    # self.GetPoseButton.enabled = False
+    # self.GetPoseButton.setMaximumWidth(250)
+    # RobotOutboundCommunicationLayout.addWidget(self.GetPoseButton, 6, 0)
+    # self.GetPoseButton.connect('clicked()', self.updateGetTransform)
 
     # Get robot status Button to ask WPI to send the current status position
     self.GetStatusButton = qt.QPushButton("GET STATUS")
     self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
     self.GetStatusButton.enabled = False
     self.GetStatusButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.GetStatusButton, 6, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.GetStatusButton, 6, 0)
     self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
+
+    # Retract needle button
+    self.RetractNeedleButton = qt.QPushButton("RETRACT NEEDLE")
+    self.RetractNeedleButton.toolTip = "Send the command to ask WPI to retract the needle."
+    self.RetractNeedleButton.enabled = False
+    self.RetractNeedleButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.RetractNeedleButton, 6, 1)
+    self.RetractNeedleButton.connect('clicked()', self.onRetractNeedleButtonClicked)    
 
     # STOP Button 
     self.StopButton = qt.QPushButton("STOP")
@@ -415,6 +409,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.EmergencyButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.EmergencyButton, 7, 1)
     self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
+
+    self.getTransformFPSBox = qt.QSpinBox()
+    self.getTransformFPSBox.setSingleStep(1)
+    self.getTransformFPSBox.setMaximum(144)
+    self.getTransformFPSBox.setMinimum(1)
+    self.getTransformFPSBox.setSuffix(" FPS")
+    self.getTransformFPSBox.value = 1
+    getTransformFPSLabel = qt.QLabel('Position query rate:')
+    RobotOutboundCommunicationLayout.addWidget(getTransformFPSLabel, 8, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.getTransformFPSBox, 8, 1)
+
+    self.getTransformNode = None
+    self.getTransformTimer = qt.QTimer()
+    self.getTransformTimer.timeout.connect(self.updateGetTransform)
+    self.retractNeedleNode = None
 
     # Inbound layout within the path collapsible button
     RobotInboundCommunicationLayout = qt.QGridLayout()
@@ -486,7 +495,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Z-frame configuration file selection box
     self.configFileSelectionBox = qt.QComboBox()
-    self.configFileSelectionBox.addItems(["Z-frame z001", "Z-frame z002", "Z-frame z003"])
+    self.configFileSelectionBox.addItems(["Z-frame z003", "Z-frame z002", "Z-frame z001"])
     self.configFileSelectionBox.setFixedWidth(250)
     #self.configFileSelectionBox.setPlaceholderText(qt.QStringLiteral("Select ZFrame Configuration"))
     self.configFileSelectionBox.currentIndexChanged.connect(self.onConfigFileSelectionChanged)
@@ -856,16 +865,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.endIndex = None
     self.zFrameModelNode = None
 
-    # Slice view observers and controllers 
-    self.redSliceNode = slicer.util.getNode('vtkMRMLSliceNodeRed')
-    self.greenSliceNode = slicer.util.getNode('vtkMRMLSliceNodeGreen')
-    self.yellowSliceNode = slicer.util.getNode('vtkMRMLSliceNodeYellow')
-    self.axialController = slicer.app.layoutManager().sliceWidget('Red').sliceController()
-    self.sagittalController = slicer.app.layoutManager().sliceWidget('Yellow').sliceController()
-    self.coronalController = slicer.app.layoutManager().sliceWidget('Green').sliceController()
-    self.yellowObserver = False
-    self.redObserver = False
-    self.greenObserver = False
+    # # Slice view observers and controllers 
+    # self.redSliceNode = slicer.util.getNode('vtkMRMLSliceNodeRed')
+    # self.greenSliceNode = slicer.util.getNode('vtkMRMLSliceNodeGreen')
+    # self.yellowSliceNode = slicer.util.getNode('vtkMRMLSliceNodeYellow')
+    # self.axialController = slicer.app.layoutManager().sliceWidget('Red').sliceController()
+    # self.sagittalController = slicer.app.layoutManager().sliceWidget('Yellow').sliceController()
+    # self.coronalController = slicer.app.layoutManager().sliceWidget('Green').sliceController()
+    # self.yellowObserver = False
+    # self.redObserver = False
+    # self.greenObserver = False
 
   def createServerInitializationStep(self):
     # Prevent re-initialization
@@ -998,6 +1007,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
 
+    # Stop querying robot position
+    self.getTransformTimer.stop()
+    self.getTransformFPSBox.enabled = True
+    
     # Close socket
     self.openIGTNode.Stop()
     self.snrPortTextboxLabel.setStyleSheet('color: black')
@@ -1019,7 +1032,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       for j in range(4):
         self.calibrationTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         self.robotTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
-        self.MRItableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
+        #self.MRItableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         self.targetTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
    
     # Delete all nodes from the scene
@@ -1062,6 +1075,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.infoCollapsibleButton.collapsed = True
     self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
+
+    # Stop MRI Update timer if running
+    self.onMRIStopUpdateTargetButtonClicked()
 
     # Close socket
     self.openIGTNode_Scanner.Stop()
@@ -1135,25 +1151,31 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.planningButton.enabled = True
     self.EmergencyButton.enabled = True
     self.StopButton.enabled = True
-    self.GetStatusButton.enabled = True
-    self.GetPoseButton.enabled = True
-    self.UnlockButton.enabled = True
-    self.LockButton.enabled = True
+    #self.GetStatusButton.enabled = True
+    #self.GetPoseButton.enabled = True
+    #self.UnlockButton.enabled = True
+    #self.LockButton.enabled = True
     self.moveButton.enabled = True
     self.targetingButton.enabled = True
     self.calibrationButton.enabled = True
+    self.RetractNeedleButton.enabled = False
+    self.currentPositionOnButton.enabled = True
+    self.currentPositionOffButton.enabled = False
 
   def deactivateButtons(self):
     self.planningButton.enabled = False
     self.EmergencyButton.enabled = False
     self.StopButton.enabled = False
-    self.GetStatusButton.enabled = False
-    self.GetPoseButton.enabled = False
-    self.UnlockButton.enabled = False
-    self.LockButton.enabled = False
+    #self.GetStatusButton.enabled = False
+    #self.GetPoseButton.enabled = False
+    #self.UnlockButton.enabled = False
+    #self.LockButton.enabled = False
     self.moveButton.enabled = False
     self.targetingButton.enabled = False
     self.calibrationButton.enabled = False
+    self.RetractNeedleButton.enabled = False
+    self.currentPositionOnButton.enabled = False
+    self.currentPositionOffButton.enabled = False
    
   def onConfigFileSelectionChanged(self):
     configFileSelection = self.configFileSelectionBox.currentText
@@ -1221,33 +1243,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
 
 
-    # PYTHON CONSOLE TEST
-    # openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
-    # slicer.mrmlScene.AddNode(openIGTNode)
-    # openIGTNode.SetTypeServer(18946)
-    # getStatusNode = slicer.vtkMRMLIGTLQueryNode()
-    # slicer.mrmlScene.AddNode(getStatusNode)
-    # getStatusNode.SetIGTLDeviceName("STATUS")
-    # getStatusNode.SetIGTLName("GET")
-    # getStatusNode.SetQueryType(1)
-    # openIGTNode.RegisterOutgoingMRMLNode(getStatusNode)
-    # openIGTNode.PushNode(getStatusNode)
-
-
-  def onGetPoseButtonClicked(self):
+  def updateGetTransform(self):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
-    print("Send command to get current position of the robot")
-    getposeNode = slicer.vtkMRMLTextNode()
+    if self.getTransformNode is None:
+      self.getTransformNode = slicer.vtkMRMLTextNode()
+      self.getTransformNode.SetName("CURRENT_POSITION")
+      self.getTransformNode.SetText("CURRENT_POSITION")
+      self.getTransformNode.SetEncoding(3)
+      slicer.mrmlScene.AddNode(self.getTransformNode)
+      self.openIGTNode.RegisterOutgoingMRMLNode(self.getTransformNode)
+    # print("Send command to get current position of the robot")
     self.last_prefix_sent = "CMD"
     timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
     self.last_name_sent = timestampIDname
-    getposeNode.SetName(timestampIDname)
-    getposeNode.SetText("GET_TRANSFORM")
-    getposeNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(getposeNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
-    self.openIGTNode.PushNode(getposeNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_TRANSFORM )"
+    self.openIGTNode.PushNode(self.getTransformNode)
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  CURRENT_POSITION )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
@@ -1273,6 +1283,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Hide calibration and planning GUIs
     self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
+    self.RetractNeedleButton.enabled = False
 
   def onMoveButtonClicked(self):
     # Send stringMessage containing the command "MOVE" to the script via IGTLink
@@ -1302,6 +1313,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.outboundTargetCollapsibleButton.collapsed = True
     self.calibrationCollapsibleButton.collapsed = True
     self.planningCollapsibleButton.collapsed = True
+    self.RetractNeedleButton.enabled = True
   
   def onCalibrationButtonClicked(self):
     # Send stringMessage containing the command "CALIBRATION" to the script via IGTLink
@@ -1325,6 +1337,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Show Calibration matrix GUI in the module
     self.calibrationCollapsibleButton.collapsed = False
+    self.RetractNeedleButton.enabled = False
 
     # Initate ROI selection automatically
     self.onAddROI()
@@ -1351,42 +1364,61 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Show planning GUI, hide calibration GUI and target point GUI
     self.planningCollapsibleButton.collapsed = False
     self.calibrationCollapsibleButton.collapsed = True
+    self.RetractNeedleButton.enabled = False
 
-  def onUnlockButtonClicked(self):
-    print("Asking to Unlock the robot")
-    # Send stringMessage containing the command "UNLOCK" to the script via IGTLink
-    unlockNode = slicer.vtkMRMLTextNode()
+  # def onUnlockButtonClicked(self):
+  #   print("Asking to Unlock the robot")
+  #   # Send stringMessage containing the command "UNLOCK" to the script via IGTLink
+  #   unlockNode = slicer.vtkMRMLTextNode()
+  #   self.last_prefix_sent = "CMD"
+  #   timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
+  #   self.last_name_sent = timestampIDname
+  #   unlockNode.SetName(timestampIDname)
+  #   unlockNode.SetText("UNLOCK")
+  #   unlockNode.SetEncoding(3)
+  #   slicer.mrmlScene.AddNode(unlockNode)
+  #   self.openIGTNode.RegisterOutgoingMRMLNode(unlockNode)
+  #   self.openIGTNode.PushNode(unlockNode)
+  #   self.start = time.time()
+  #   self.last_string_sent = unlockNode.GetText()
+  #   infoMsg =  "Sending STRING( " + timestampIDname + ",  UNLOCK )"
+  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+  #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
+
+  # def onLockButtonClicked(self):
+  #   print("Asking to Lock the robot")
+  #   # Send stringMessage containing the command "LOCK" to the script via IGTLink
+  #   lockNode = slicer.vtkMRMLTextNode()
+  #   self.last_prefix_sent = "CMD"
+  #   timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
+  #   self.last_name_sent = timestampIDname
+  #   lockNode.SetName(timestampIDname)
+  #   lockNode.SetText("LOCK")
+  #   lockNode.SetEncoding(3)
+  #   slicer.mrmlScene.AddNode(lockNode)
+  #   self.openIGTNode.RegisterOutgoingMRMLNode(lockNode)
+  #   self.openIGTNode.PushNode(lockNode)
+  #   self.start = time.time()
+  #   self.last_string_sent = lockNode.GetText()
+  #   infoMsg =  "Sending STRING( " + timestampIDname + ",  LOCK )"
+  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+  #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
+
+  def onRetractNeedleButtonClicked(self):
+    # Send stringMessage containing the command "GET POSE" to the script via IGTLink
+    if self.retractNeedleNode is None:
+      self.retractNeedleNode = slicer.vtkMRMLTextNode()
+      self.retractNeedleNode.SetName("RETRACT_NEEDLE")
+      self.retractNeedleNode.SetText("RETRACT_NEEDLE")
+      self.retractNeedleNode.SetEncoding(3)
+      slicer.mrmlScene.AddNode(self.retractNeedleNode)
+      self.openIGTNode.RegisterOutgoingMRMLNode(self.retractNeedleNode)
+    # print("Send command to get current position of the robot")
     self.last_prefix_sent = "CMD"
     timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
     self.last_name_sent = timestampIDname
-    unlockNode.SetName(timestampIDname)
-    unlockNode.SetText("UNLOCK")
-    unlockNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(unlockNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(unlockNode)
-    self.openIGTNode.PushNode(unlockNode)
-    self.start = time.time()
-    self.last_string_sent = unlockNode.GetText()
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  UNLOCK )"
-    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
-
-  def onLockButtonClicked(self):
-    print("Asking to Lock the robot")
-    # Send stringMessage containing the command "LOCK" to the script via IGTLink
-    lockNode = slicer.vtkMRMLTextNode()
-    self.last_prefix_sent = "CMD"
-    timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
-    self.last_name_sent = timestampIDname
-    lockNode.SetName(timestampIDname)
-    lockNode.SetText("LOCK")
-    lockNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(lockNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(lockNode)
-    self.openIGTNode.PushNode(lockNode)
-    self.start = time.time()
-    self.last_string_sent = lockNode.GetText()
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  LOCK )"
+    self.openIGTNode.PushNode(self.retractNeedleNode)
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  RETRACT_NEEDLE )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
@@ -1405,12 +1437,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.PushNode(stopNode);
     self.start = time.time()
     self.last_string_sent = stopNode.GetText()
-    self.deactivateButtons()
+    #self.deactivateButtons()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  STOP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onEmergencyButtonClicked(self):
+    # Stop querying robot position
+    self.getTransformTimer.stop()
+    self.getTransformFPSBox.enabled = True
+
     # Send stringMessage containing the command "STOP" to the script via IGTLink
     print("Sending Emergency command")
     emergencyNode = slicer.vtkMRMLTextNode()
@@ -1425,11 +1461,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.openIGTNode.PushNode(emergencyNode)
     self.start = time.time()
     self.last_string_sent = emergencyNode.GetText()
+    self.deactivateButtons()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  EMERGENCY )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onStartupButtonClicked(self):
+    # Stop querying robot position
+    self.getTransformTimer.stop()
+    self.getTransformFPSBox.enabled = True
+
     # Send stringMessage containing the command "START_UP" to the script via IGTLink
     print("Sending Start up command")
     startupNode = slicer.vtkMRMLTextNode()
@@ -1448,8 +1489,30 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
-    # TODO - get rid of this, for debugging only
     self.activateButtons()
+    self.RetractNeedleButton.enabled = False
+
+  def onCurrentPositionOnClicked(self):
+    # Start querying robot position
+    self.getTransformNode = slicer.vtkMRMLTextNode()
+    self.getTransformNode.SetName("CURRENT_POSITION")
+    self.getTransformNode.SetText("CURRENT_POSITION")
+    self.getTransformNode.SetEncoding(3)
+    slicer.mrmlScene.AddNode(self.getTransformNode)
+    self.openIGTNode.RegisterOutgoingMRMLNode(self.getTransformNode)
+    self.getTransformTimer.start(int(1000/int(self.getTransformFPSBox.value)))
+    self.getTransformFPSBox.enabled = False
+
+    self.currentPositionOffButton.enabled = True
+    self.currentPositionOnButton.enabled = False
+
+  def onCurrentPositionOffClicked(self):
+    # Stop querying robot position
+    self.getTransformTimer.stop()
+    self.getTransformFPSBox.enabled = True
+
+    self.currentPositionOffButton.enabled = False
+    self.currentPositionOnButton.enabled = True    
 
   # def onVisibleButtonClicked(self):
   #   # If button is checked
@@ -1536,10 +1599,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("ReachableTargetNeedle")
     locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
 
+  # TODO: Can be done without removing and adding again
   def onCurrentPositionTransformReceived(self, currentPositionMatrix):
     self.appendTransformToCommandLog(currentPositionMatrix)
     # Update scan plane in 3D panel
-    self.updateScanPlaneIn3DView()
+    #self.updateScanPlaneIn3DView()
 
     # Update self.currentPositionTransform s.t. it contains the CURRENT_POSITION message sent by WPI
     if self.currentPositionTransform:
@@ -1549,7 +1613,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.currentPositionTransform.SetName("CurrentPositionTransform")
     self.currentPositionTransform.SetMatrixTransformToParent(currentPositionMatrix)
     slicer.mrmlScene.AddNode(self.currentPositionTransform)
-    self.currentPositionTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.updateScanPlaneIn3DView)
+    #self.currentPositionTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.updateScanPlaneIn3DView)
 
     # Add current position needle model to Slicer GUI
     if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle") is not None:
@@ -1574,61 +1638,18 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.orientationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
       self.translationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
 
-  def onMRIStartupButtonClicked(self):
-    self.MRIdisconnectButton.enabled = True
-    self.MRIstartupButton.enabled = False
-    self.MRIstartScanButton.enabled = True
-    self.MRIstopScanButton.enabled = True
-    
-    # Send stringMessage containing the command "START_UP" to the MR Scanner via IGTLink
-    print("Sending start_up command to MR Scanner")
-    timestampIDname = self.generateTimestampNameID("CMD")
-    startUpNode = slicer.vtkMRMLTextNode()
-    startUpNode.SetName(timestampIDname)
-    startUpNode.SetText("START_UP")
-    startUpNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(startUpNode)
-    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(startUpNode)
-    self.openIGTNode_Scanner.PushNode(startUpNode)
-    # self.start = time.time()
-    # self.last_string_sent = startUpNode.GetText()
-    # self.last_prefix_sent = "CLB"
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  START_UP )"
-    # re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
-    
-  def onMRIDisconnectButtonClicked(self):
-    self.MRIstartupButton.enabled = True
-    self.MRIdisconnectButton.enabled = False
-    self.MRIstartScanButton.enabled = False
-    self.MRIstopScanButton.enabled = False
-
-    # Send stringMessage containing the command "DISCONNECT" to the MR Scanner via IGTLink
-    print("Sending disconnect command to MR Scanner")
-    timestampIDname = self.generateTimestampNameID("CMD")
-    disconnectNode = slicer.vtkMRMLTextNode()
-    disconnectNode.SetName(timestampIDname)
-    disconnectNode.SetText("DISCONNECT")
-    disconnectNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(disconnectNode)
-    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(disconnectNode)
-    self.openIGTNode_Scanner.PushNode(disconnectNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  DISCONNECT )"
-    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
-
   def onMRIStartScanButtonClicked(self):
     # Send stringMessage containing the command "START_SCAN" to the MR Scanner via IGTLink
     print("Sending start_scan command to MR Scanner")
     timestampIDname = self.generateTimestampNameID("CMD")
     startScanNode = slicer.vtkMRMLTextNode()
     startScanNode.SetName(timestampIDname)
-    startScanNode.SetText("START_SCAN")
+    startScanNode.SetText("START_SEQUENCE")
     startScanNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(startScanNode)
     self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(startScanNode)
     self.openIGTNode_Scanner.PushNode(startScanNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  START_SCAN )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  START_SEQUENCE )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
     
@@ -1638,148 +1659,67 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     timestampIDname = self.generateTimestampNameID("CMD")
     stopScanNode = slicer.vtkMRMLTextNode()
     stopScanNode.SetName(timestampIDname)
-    stopScanNode.SetText("STOP_SCAN")
+    stopScanNode.SetText("STOP_SEQUENCE")
     stopScanNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(stopScanNode)
     self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(stopScanNode)
     self.openIGTNode_Scanner.PushNode(stopScanNode)
-    infoMsg =  "Sending STRING( " + timestampIDname + ",  STOP_SCAN )"
+    infoMsg =  "Sending STRING( " + timestampIDname + ",  STOP_SEQUENCE )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
 
   def onMRIUpdateTargetButtonClicked(self, unusedArg2=None, unusedArg3=None):
-    # Get the current scan plane transform based on the orientation drop-down menu selection
-    planeOrientation = self.scanPlaneSelectionBox.currentText
-    if planeOrientation == "Axial":
-      sliceNode = slicer.app.layoutManager().sliceWidget("Red").mrmlSliceNode()
-    elif planeOrientation == "Coronal":
-      sliceNode = slicer.app.layoutManager().sliceWidget("Green").mrmlSliceNode()
-    else: # planeOrientation == "Sagittal":
-      sliceNode = slicer.app.layoutManager().sliceWidget("Yellow").mrmlSliceNode()
+    #self.scanPlaneTransformSelector.currentNode().DisableModifiedEventOn()
+    #self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransformSelector.currentNode())
+    self.MRIUpdateTimer.start(int(1000/int(self.MRIfpsBox.value)))
+
+  def onMRIStopUpdateTargetButtonClicked(self, unusedArg2=None, unusedArg3=None):
+    self.MRIUpdateTimer.stop()
+    self.lastTransformMatrix = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix.SetElement(0,0,0)
+    self.lastTransformMatrix.SetElement(1,1,0)
+    self.lastTransformMatrix.SetElement(2,2,0)
+  
+  def updateMRITransformToScanner(self, unusedArg2=None, unusedArg3=None):
+    if self.lastTransformMatrix is None:
+      self.lastTransformMatrix = vtk.vtkMatrix4x4()
+      self.lastTransformMatrix.SetElement(0,0,0)
+      self.lastTransformMatrix.SetElement(1,1,0)
+      self.lastTransformMatrix.SetElement(2,2,0)
+
+    m = vtk.vtkMatrix4x4()
+    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
     
-    # Send transform message containing new MRI scanning target with prefix "PLANE"
-    sliceToRasMatrix = sliceNode.GetSliceToRAS()
-    self.scanPlaneTransform.SetMatrixTransformToParent(sliceToRasMatrix)
-
-    timestampIDname = self.generateTimestampNameID("PLANE")
-    self.last_name_sent = timestampIDname
-    self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransform)
-    self.openIGTNode_Scanner.PushNode(self.scanPlaneTransform)
-    infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
-    re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
-    self.appendTransformToCommandLog(sliceToRasMatrix)
-
-    # Input the current scan plane transform into the MRItableWidget
-    for i in range(4):
-      for j in range(4):
-        self.MRItableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(sliceToRasMatrix.GetElement(i, j),2))))
-
-  def onMRIUpdateManualTargetButtonClicked(self):
-    # Package the contents of the (manual) Scan Plane Matrix into a 4x4 matrix
-    outputMatrix = vtk.vtkMatrix4x4()
-    
-    for i in range(4):
-      for j in range(4):
-        outputMatrix.SetElement(i, j, float(self.MRItableWidget.item(i, j).text()))
-
-    # Send the manual scan plane transform matrix
-    if (slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLIGTLConnectorNode') > 0): # AKA, if the IGTL connector is active
+    if self.scanPlaneRobotPositionCheckbox.isChecked() and self.currentPositionTransform:
+      currentPositionMatrix = vtk.vtkMatrix4x4()
+      # or to world? Is current position under registration?
+      self.currentPositionTransform.GetMatrixTransformToParent(currentPositionMatrix)
+      m.SetElement(0, 3, currentPositionMatrix.GetElement(0, 3))
+      m.SetElement(1, 3, currentPositionMatrix.GetElement(1, 3))
+      m.SetElement(2, 3, currentPositionMatrix.GetElement(2, 3))
+      self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
+    if not self.CompareMatrices(self.lastTransformMatrix, m):
+      # Send transform message containing new MRI scanning target with prefix "PLANE"
       timestampIDname = self.generateTimestampNameID("PLANE")
       self.last_name_sent = timestampIDname
-      scanPlaneTransformManual = slicer.vtkMRMLLinearTransformNode()
-      scanPlaneTransformManual.SetName(timestampIDname)
-      scanPlaneTransformManual.SetMatrixTransformToParent(outputMatrix)
-      slicer.mrmlScene.AddNode(scanPlaneTransformManual)
-      self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(scanPlaneTransformManual)
-      self.openIGTNode_Scanner.PushNode(scanPlaneTransformManual)
+      self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransformSelector.currentNode())
+      self.openIGTNode_Scanner.PushNode(self.scanPlaneTransformSelector.currentNode())
+      self.openIGTNode_Scanner.UnregisterOutgoingMRMLNode(self.scanPlaneTransformSelector.currentNode())
       infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
-      self.appendTransformToCommandLog(outputMatrix)
-    else:
-      print("OpenIGTLink connector is not active. Cannot send the manual scan plane transform.")
+      self.lastTransformMatrix.DeepCopy(m)
+    # # Input the current scan plane transform into the MRItableWidget
+    # for i in range(4):
+    #   for j in range(4):
+    #     self.MRItableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(self.scanPlaneTransform.GetMatrix.GetElement(i, j),2))))
 
-  def onplaneTransferTypeCheckboxToggled(self):
-    # Function to control observers for axial, sagittal, and coronal slice views 
-    # If the plane transfer type is auto-send, turn on the correct observer.
-    if self.planeTransferTypeCheckbox.isChecked():
-      self.MRIupdateTargetButton.enabled = False
-      planeOrientation = self.scanPlaneSelectionBox.currentText
-      if planeOrientation == "Axial":
-        self.redSliceNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onMRIUpdateTargetButtonClicked)
-        if self.yellowObserver: self.yellowSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-        if self.greenObserver: self.greenSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-        self.redObserver = True
-        self.yellowObserver = False
-        self.greenObserver = False
-      elif planeOrientation == "Coronal":
-        self.greenSliceNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onMRIUpdateTargetButtonClicked)
-        if self.redObserver: self.redSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-        if self.yellowObserver: self.yellowSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-        self.greenObserver = True
-        self.redObserver = False
-        self.yellowObserver = False
-      else: #Sagittal
-        self.yellowSliceNode.AddObserver(vtk.vtkCommand.ModifiedEvent, self.onMRIUpdateTargetButtonClicked)
-        if self.redObserver: self.redSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-        if self.greenObserver: self.greenSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-        self.yellowObserver = True
-        self.redObserver = False
-        self.greenObserver = False
-    else: 
-      self.MRIupdateTargetButton.enabled = True
-      if self.redObserver: self.redSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-      if self.greenObserver: self.greenSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-      if self.yellowObserver: self.yellowSliceNode.RemoveObserver(vtk.vtkCommand.ModifiedEvent)
-    self.updateScanPlaneIn3DView()
-
-  def onScanPlaneVisibleButtonClicked(self):
-    # If button is checked
-    if self.scanPlaneVisibleButton.isChecked():
-      eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
-      self.scanPlaneVisibleButton.setIcon(qt.QIcon(eyeIconVisible))
-      self.updateScanPlaneIn3DView()
-    # If it is unchecked
-    else:
-      eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
-      self.scanPlaneVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
-      self.greenSliceNode.SetSliceVisible(0)
-      self.redSliceNode.SetSliceVisible(0)
-      self.yellowSliceNode.SetSliceVisible(0)
-      self.axialController.showReformatWidget(0)
-      self.sagittalController.showReformatWidget(0)
-      self.coronalController.showReformatWidget(0)
-
-  def updateScanPlaneIn3DView(self):
-    # Reset slice views to clear scene
-    self.greenSliceNode.SetSliceVisible(0)
-    self.redSliceNode.SetSliceVisible(0)
-    self.yellowSliceNode.SetSliceVisible(0)
-    self.axialController.showReformatWidget(0)
-    self.sagittalController.showReformatWidget(0)
-    self.coronalController.showReformatWidget(0)
-
-    # Assemble the scan plane transform based on the point & orientation
-    planeOrientation = self.scanPlaneSelectionBox.currentText
-    if self.planeLocationCheckbox.isChecked():
-      # Get CURRENT_POSITION transform to identify the location of the needle tip in space
-      if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform") is not None:
-        scanPlaneMatrix = vtk.vtkMatrix4x4()
-        scanPlaneMatrix.Identity()
-        needleTipPosition = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform")
-        needleTipPosition.GetMatrixTransformToParent(scanPlaneMatrix)
-        
-        # TODO - calculate scanPlaneTransform based on the 4x4 CURRENT_POSITION matrix
-        # 2 cross products using R or L vector to get 2 perpendicular vectors
-
-      else: print("No CURRENT_POSITION transform found. Please manually select the scan plane.")
-    
-    else: # Allow the user to manually define the scan plane in the 3D view via the Reformat widget
-      if self.scanPlaneVisibleButton.isChecked():
-        if planeOrientation == "Axial": self.axialController.showReformatWidget(1)
-        elif planeOrientation == "Coronal": self.coronalController.showReformatWidget(1)
-        else: self.sagittalController.showReformatWidget(1)
+  def CompareMatrices(self, m, n):
+    for i in range(0,4):
+      for j in range(0,4):
+        if m.GetElement(i,j) != n.GetElement(i,j):
+          return False
+    return True
 
   def onTextNodeModified(textNode, unusedArg2=None, unusedArg3=None):
     print("New string received")
@@ -2327,75 +2267,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         print("OpenIGTLink connector is not active. Cannot send the registration transform.")
     else:
       print("plannedTargetTransform has not been generated yet. Use the Planning GUI to plan the target location.")
-  
-  # def getRobotPoseUntilTargetIsReached(self):
-  #   # When Move button is clicked, request current pose from WPI every second
-  #   print ("TODO - getRobotPoseUntilTargetIsReached()")
-
-  #   # Get the REACHABLE_TARGET transform
-  #   reachableTargetPositionNode = slicer.vtkMRMLLinearTransformNode()
-  #   transformNodes = slicer.util.getNodesByClass("vtkMRMLLinearTransformNode")
-  #   reachableTargetFound = False
-  #   for transformNode in transformNodes:
-  #     if transformNode.GetName().split("_")[0] == "REACHABLE":
-  #       reachableTargetPositionNode = transformNode
-  #       reachableTargetFound = True
-    
-  #   if not reachableTargetFound:
-  #     print ("No transform found that is named REACHABLE_TARGET.")
-  #     # FOR DEBUGGING PURPOSES ONLY - get matrix named TGT_XXX instead: TODO (delete)
-  #     for transformNode in transformNodes:
-  #       if transformNode.GetName().split("_")[0] == "TGT":
-  #         reachableTargetPositionNode = transformNode
-
-  #   targetPositionMatrix = vtk.vtkMatrix4x4()
-  #   reachableTargetPositionNode.GetMatrixTransformToParent(targetPositionMatrix)
-  #   print("REACHABLE TARGET POSITION NODE: ", targetPositionMatrix)
-
-  #   # Request the current position from the robot
-  #   # Robot will respond with a transform with the name CURRENT_POSITION
-  #   # self.onGetPoseButtonClicked()
-  #   # print("Send command to get current position of the robot")
-  #   getposeNode = slicer.vtkMRMLTextNode()
-  #   self.last_prefix_sent = "CMD"
-  #   timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
-  #   self.last_name_sent = self.generateTimestampNameID(self.last_prefix_sent)
-  #   getposeNode.SetName(timestampIDname)
-  #   getposeNode.SetText("GET_TRANSFORM")
-  #   getposeNode.SetEncoding(3)
-  #   slicer.mrmlScene.AddNode(getposeNode)
-  #   self.openIGTNode.RegisterOutgoingMRMLNode(getposeNode)
-  #   self.openIGTNode.PushNode(getposeNode)
-  #   infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_TRANSFORM )"
-  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-  #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-
-  #   time.sleep(0.1)
-
-  #   # Get transform CURRENT_POSITION
-  #   self.currentPositionNode = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-  #   self.currentPositionMatrix = vtk.vtkMatrix4x4()
-  #   self.currentPositionNode.GetMatrixTransformToParent(self.currentPositionMatrix)
-  #   print("CURRENT POSITION NODE: ", self.currentPositionNode)
-  #   #self.onCurrentPositionTransformReceived_v2(self.currentPositionNode)
-
-  #   # Update needle model in 3D Slicer pane
-  #   # TODO
-
-  #   positionsAreEqual = True
-  #   for i in range(4):
-  #     for j in range(4):
-  #       if not round(targetPositionMatrix.GetElement(i, j),1) == round(self.currentPositionMatrix.GetElement(i, j),1):
-  #         positionsAreEqual = False
-  #         break
-
-  #   if positionsAreEqual:
-  #     print("--------------- Robot has reached the target")
-  #   else:
-  #     print("--------------- Robot has NOT yet reached the target")
-  #     time.sleep(1)
-  #     #self.getRobotPoseUntilTargetIsReached()
-
 
 # # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
 

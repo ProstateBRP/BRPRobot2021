@@ -14,11 +14,13 @@ Timer::Timer() {
 void Timer::tic(){
 	clock_gettime(CLOCK_MONOTONIC, &_clockStart);
 	_usStart = _clockStart.tv_sec*1000000 + _clockStart.tv_nsec/1000;
+	//_usStart = 0;
 }
 
 void Timer::toc(){
 	clock_gettime(CLOCK_MONOTONIC, &_clockFinish);
 	_usFinish = _clockFinish.tv_sec*1000000 + _clockFinish.tv_nsec/1000;
+	//_usFinish = 0;
 }
 
 unsigned long long Timer::time(){

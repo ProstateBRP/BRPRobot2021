@@ -157,7 +157,7 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
       // Send navigation about how the desired target will look like
       SendTransformMessage("CURRENT_POSITION", currentPosition);
       Logger &log = Logger::GetInstance();
-      log.Log("Info: Sent CURRENT_POSITIN to navigation", 1, 1);
+      log.Log("Info: Sent CURRENT_POSITION to navigation", 1, 1);
       return 1;
     }
     else if (strcmp(dev_name.c_str(), "CURRENT_STATUS") == 0)
