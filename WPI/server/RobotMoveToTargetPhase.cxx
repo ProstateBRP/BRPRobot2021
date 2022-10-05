@@ -29,10 +29,18 @@ RobotMoveToTargetPhase::~RobotMoveToTargetPhase()
 
 int RobotMoveToTargetPhase::Initialize()
 {
-
-  igtl::Matrix4x4 matrix;
-
-  if (this->RStatus && !this->RStatus->GetTargetMatrix(matrix))
+  if (RStatus->GetTargetFlag())
+  {
+    // Create a dummy 4x4 matrix to replicate the current pose of the robot and send to Slicer.
+    igtl::Matrix4x4 matrix;
+    igtl::IdentityMatrix(matrix);
+    matrix[0][3] = rand() % 100;
+    matrix[1][3] = rand() % 100;
+    matrix[2][3] = rand() % 100;
+    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
+    SendTransformMessage("CURRENT_POSITION", matrix);
+  }
+  else
   {
     // Create a dummy 4x4 matrix to replicate the current pose of the robot and send to Slicer.
     igtl::Matrix4x4 matrix;

@@ -61,10 +61,7 @@ int RobotPhaseBase::Process()
   this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
   std::cout << this->Name() << ": is the current state\n"; // Added it for test
 
-  // This checks if the navigation is asking for Robot's Status or current tip position.
-  // Get_transform will return current_position and get_status will get current_status
-  // if the return value is zero then the code enters the if statement and initiates a specialized method
-  // of the MessageHandder of the Workphase. i.e will listen to an incoming transform for the calibration step
+  // Common messages are handled here.
   if (!this->CheckCommonMessage(headerMsg))
   {
     MessageHandler(headerMsg);
@@ -75,7 +72,6 @@ int RobotPhaseBase::Process()
 
 int RobotPhaseBase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
-  // TODO: Implement Message handling for GetTransform returns 1 as of now
   return 0;
 }
 
