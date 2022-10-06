@@ -11,8 +11,8 @@
 
 RobotStatus::RobotStatus()
 {
-  igtl::IdentityMatrix(this->CalibrationMatrix);
-  igtl::IdentityMatrix(this->TargetMatrix);
+  igtl::IdentityMatrix(this->robot.calibration);
+  igtl::IdentityMatrix(this->robot.target_position);
   this->FlagCalibration = 0;
   this->FlagTarget = 0;
 }
@@ -21,69 +21,65 @@ RobotStatus::~RobotStatus()
 {
 }
 
-void RobotStatus::SetCalibrationMatrix(igtl::Matrix4x4& matrix)
+void RobotStatus::SetCalibrationMatrix(igtl::Matrix4x4 &matrix)
 {
   this->FlagCalibration = 1;
-  for (int i = 0; i < 4; i ++)
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 4; j++)
     {
-    for (int j = 0; j < 4; j ++)
-      {
-      this->CalibrationMatrix[i][j] = matrix[i][j];
-      }
+      this->robot.calibration[i][j] = matrix[i][j];
     }
+  }
 }
 
-int RobotStatus::GetCalibrationMatrix(igtl::Matrix4x4& matrix)
+int RobotStatus::GetCalibrationMatrix(igtl::Matrix4x4 &matrix)
 {
   if (this->FlagCalibration)
+  {
+    for (int i = 0; i < 4; i++)
     {
-    for (int i = 0; i < 4; i ++)
+      for (int j = 0; j < 4; j++)
       {
-      for (int j = 0; j < 4; j ++)
-        {
-        matrix[i][j] = this->CalibrationMatrix[i][j];
-        }
+        matrix[i][j] = this->robot.calibration[i][j];
       }
+    }
     return 1;
-    }
+  }
   else
-    {
+  {
     return 0;
-    }
+  }
 }
 
-
-void RobotStatus::SetTargetMatrix(igtl::Matrix4x4& matrix)
+void RobotStatus::SetTargetMatrix(igtl::Matrix4x4 &matrix)
 {
   this->FlagTarget = 1;
 
-  for (int i = 0; i < 4; i ++)
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 4; j++)
     {
-    for (int j = 0; j < 4; j ++)
-      {
-      this->TargetMatrix[i][j] = matrix[i][j];
-      }
+      this->robot.target_position[i][j] = matrix[i][j];
     }
-
+  }
 }
 
-
-int RobotStatus::GetTargetMatrix(igtl::Matrix4x4& matrix)
+int RobotStatus::GetTargetMatrix(igtl::Matrix4x4 &matrix)
 {
   if (this->FlagTarget)
+  {
+    for (int i = 0; i < 4; i++)
     {
-    for (int i = 0; i < 4; i ++)
+      for (int j = 0; j < 4; j++)
       {
-      for (int j = 0; j < 4; j ++)
-        {
-        matrix[i][j] = this->TargetMatrix[i][j];
-        }
+        matrix[i][j] = this->robot.target_position[i][j];
       }
+    }
     return 1;
-    }
+  }
   else
-    {
+  {
     return 0;
-    }
+  }
 }
-
