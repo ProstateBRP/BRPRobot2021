@@ -7,7 +7,7 @@
 #ifndef TIMER_HPP_
 #define TIMER_HPP_
 
-#include <time.h>
+#include <chrono>
 #include <stdio.h>
 
 class Timer {
@@ -17,7 +17,8 @@ public:
 
 	//================ Parameters =================
 	// Parameters are declared in constructor
-	struct timespec _clockStart, _clockFinish;
+	//struct timespec _clockStart, _clockFinish;
+	std::chrono::steady_clock::time_point _clockStart, _clockFinish;
 	unsigned long long _usStart, _usFinish; //microseconds
 
 	//================ Public Methods ==============
