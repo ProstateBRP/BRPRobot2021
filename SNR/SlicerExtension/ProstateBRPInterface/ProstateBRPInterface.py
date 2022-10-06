@@ -244,6 +244,30 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.MRIUpdateTimer = qt.QTimer()
     self.MRIUpdateTimer.timeout.connect(self.updateMRITransformToScanner)
 
+    updateScanPlaneLayoutOrientationLayout = qt.QGridLayout()
+    updateScanPlaneLayout.addLayout(updateScanPlaneLayoutOrientationLayout)
+
+    self.axialScanPlaneButton = qt.QPushButton("AXIAL")
+    self.axialScanPlaneButton.toolTip = "Update scan plane for Axial orientation."
+    self.axialScanPlaneButton.enabled = True
+    self.axialScanPlaneButton.setMaximumWidth(250)
+    updateScanPlaneLayoutOrientationLayout.addWidget(self.axialScanPlaneButton, 0, 0)
+    self.axialScanPlaneButton.connect('clicked()', self.onAxialScanPlaneButtonClicked)
+
+    self.coronalScanPlaneButton = qt.QPushButton("CORONAL")
+    self.coronalScanPlaneButton.toolTip = "Update scan plane for Coronal orientation."
+    self.coronalScanPlaneButton.enabled = True
+    self.coronalScanPlaneButton.setMaximumWidth(250)
+    updateScanPlaneLayoutOrientationLayout.addWidget(self.coronalScanPlaneButton, 0, 1)
+    self.coronalScanPlaneButton.connect('clicked()', self.onCoronalScanPlaneButtonClicked)
+
+    self.sagittalScanPlaneButton = qt.QPushButton("SAGITTAL")
+    self.sagittalScanPlaneButton.toolTip = "Update scan plane for Sagittal orientation."
+    self.sagittalScanPlaneButton.enabled = True
+    self.sagittalScanPlaneButton.setMaximumWidth(250)
+    updateScanPlaneLayoutOrientationLayout.addWidget(self.sagittalScanPlaneButton, 0, 2)
+    self.sagittalScanPlaneButton.connect('clicked()', self.onSagittalScanPlaneButtonClicked)
+
     # # Create a new QHBoxLayout() within updateScanPlaneLayout to contain the 4x4 table
     # updateScanPlaneLayoutBottom = qt.QFormLayout()
     # updateScanPlaneLayout.addLayout(updateScanPlaneLayoutBottom)
@@ -323,6 +347,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.currentPositionOffButton.connect('clicked()', self.onCurrentPositionOffClicked)
 
     self.currentPositionTransform = None
+    self.currentPositionBaseTransform = None
 
     # calibrationButton Button
     self.calibrationButton = qt.QPushButton("CALIBRATION")
@@ -1632,17 +1657,31 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     if self.currentPositionTransform is None:
       self.currentPositionTransform = slicer.vtkMRMLLinearTransformNode()
       self.currentPositionTransform.SetName("CurrentPositionTransform")
-      slicer.mrmlScene.AddNode(self.currentPositionTransform)
+      slicer.mrmlScene.AddNode(self.currentPositionTransform)  
     self.currentPositionTransform.SetMatrixTransformToParent(currentPositionMatrix)
     #self.currentPositionTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.updateScanPlaneIn3DView)
 
+    if self.currentPositionBaseTransform is None:
+      self.currentPositionBaseTransform = slicer.vtkMRMLLinearTransformNode()
+      self.currentPositionBaseTransform.SetName("CurrentPositionBaseTransform")
+      slicer.mrmlScene.AddNode(self.currentPositionBaseTransform)
+    currentPositionBaseMatrix = vtk.vtkMatrix4x4()
+    currentPositionBaseMatrix.DeepCopy(currentPositionMatrix)
+    if self.outputTransform:
+      registrationMatrix = vtk.vtkMatrix4x4()
+      self.outputTransform.GetMatrixTransformToParent(registrationMatrix)
+      currentPositionBaseMatrix.SetElement(2,3,registrationMatrix.GetElement(2,3))
+    self.currentPositionBaseTransform.SetMatrixTransformToParent(currentPositionBaseMatrix)
+
     # Add current position needle model to Slicer GUI
     if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle") is None:
-      #self.AddPointerModel("CurrentPositionNeedle")
-      self.LoadCurrentPositionModel("CurrentPositionNeedle")
+      self.LoadCurrentPositionModel("CurrentPositionNeedle", "CurrentPositionBase")
     TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform")
+    BaseTransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionBaseTransform")
     locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle")
     locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
+    locatorBaseModelNode = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionBase")
+    locatorBaseModelNode.SetAndObserveTransformNodeID(BaseTransformNodeToDisplay.GetID())
 
   def onTargetReferenceFrameButtonToggled(self):
     # If button is checked
@@ -1733,6 +1772,30 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # for i in range(4):
     #   for j in range(4):
     #     self.MRItableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(self.scanPlaneTransform.GetMatrix.GetElement(i, j),2))))
+
+  def onAxialScanPlaneButtonClicked(self):
+    m = vtk.vtkMatrix4x4()
+    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
+    m.SetElement(0, 0, 1); m.SetElement(0, 1, 0); m.SetElement(0, 2, 0)
+    m.SetElement(1, 0, 0); m.SetElement(1, 1, 1); m.SetElement(1, 2, 0)
+    m.SetElement(2, 0, 0); m.SetElement(2, 1, 0); m.SetElement(2, 2, 1)
+    self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
+
+  def onCoronalScanPlaneButtonClicked(self):
+    m = vtk.vtkMatrix4x4()
+    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
+    m.SetElement(0, 0, 1); m.SetElement(0, 1, 0); m.SetElement(0, 2, 0)
+    m.SetElement(1, 0, 0); m.SetElement(1, 1, 0); m.SetElement(1, 2, -1)
+    m.SetElement(2, 0, 0); m.SetElement(2, 1, 1); m.SetElement(2, 2, 0)
+    self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
+
+  def onSagittalScanPlaneButtonClicked(self):
+    m = vtk.vtkMatrix4x4()
+    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
+    m.SetElement(0, 0, 0); m.SetElement(0, 1, 0); m.SetElement(0, 2, 1)
+    m.SetElement(1, 0, 0); m.SetElement(1, 1, 1); m.SetElement(1, 2, 0)
+    m.SetElement(2, 0, -1); m.SetElement(2, 1, 0); m.SetElement(2, 2, 0)
+    self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)        
 
   def CompareMatrices(self, m, n):
     for i in range(0,4):
@@ -1933,15 +1996,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
     self.treeView.setMRMLScene(slicer.mrmlScene)
 
-  def LoadCurrentPositionModel(self, pointerModelName):
+  def LoadCurrentPositionModel(self, pointerModelName, pointerModelBaseName):
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
     currentPositionPath = os.path.join(currentFilePath, "Resources", "robot", "needle.vtk")
     _, currentPositionModelNode = slicer.util.loadModel(currentPositionPath, returnNode=True)
+    currentPositionBasePath = os.path.join(currentFilePath, "Resources", "robot", "needleBase.vtk")
+    _, currentPositionBaseModelNode = slicer.util.loadModel(currentPositionBasePath, returnNode=True)    
     currentPositionModelNode.SetName(pointerModelName)
+    currentPositionBaseModelNode.SetName(pointerModelBaseName)
     modelDisplayNode = currentPositionModelNode.GetDisplayNode()
-    modelDisplayNode.SetOpacity(0.6)
-    modelDisplayNode.SetColor(0.74, 0.76, 1.00)
+    modelDisplayNode.SetOpacity(1.0)
+    modelDisplayNode.SetColor(0.0, 1.0, 1.0)
     modelDisplayNode.SliceIntersectionVisibilityOn()
+    baseModelDisplayNode = currentPositionBaseModelNode.GetDisplayNode()
+    baseModelDisplayNode.SetOpacity(0.6)
+    baseModelDisplayNode.SetColor(0.0, 0.5, 0.5)
 
   def AddNeedleTrajectoryLine(self, modelNodeName):
     points = vtk.vtkPoints()
@@ -2202,37 +2271,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     else:
       print("OpenIGTLink connector is not active. Cannot send the registration transform.")
     
-    # If there is a calibration matrix already defined in the Slicer scene (pre-calculated outside of the module for testing/development purposes)
-    # inputVolume = self.zFrameVolumeSelector.currentNode()
-    # predefinedCalibrationMatrixNode = self.calibrationMatrixSelector.currentNode()
-
-    # if predefinedCalibrationMatrixNode is not None:
-    #   # Send the pre-determined calibration matrix to WPI as the CLB matrix
-    #   calibrationMatrix = vtk.vtkMatrix4x4()
-    #   predefinedCalibrationMatrixNode.GetMatrixTransformToParent(calibrationMatrix)
-    #   SendTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
-    #   timestampIDname = self.generateTimestampNameID("CLB")
-    #   SendTransformNodeTemp.SetName(timestampIDname)
-    #   SendTransformNodeTemp.SetMatrixTransformToParent(calibrationMatrix)
-    #   slicer.mrmlScene.AddNode(SendTransformNodeTemp)
-    #   self.openIGTNode.RegisterOutgoingMRMLNode(SendTransformNodeTemp)
-    #   self.openIGTNode.PushNode(SendTransformNodeTemp)
-    #   infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
-    #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-    
-    #   # Update the calibration matrix table with the calculated matrix (currently just dummy code)
-    #   for i in range(4):
-    #     for j in range(4):
-    #       self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(calibrationMatrix.GetElement(i, j),2))))
-    #   self.appendTransformToCommandLog(calibrationMatrix)
-
-    # elif inputVolume is not None:
-    #   self.initiateZFrameCalibration()
-
-    # else:
-    #   print("No zFrame image or pre-defined calibration matrix found. Cannot calculate the calibration matrix.")
-
   # Function to reset the 4x4 target transform to an identity matrix at the position of the new fiducial when the target point fiducial is updated
   def onTargetPointFiducialChanged(self):
     targetPointNode = self.targetPointNodeSelector.currentNode()

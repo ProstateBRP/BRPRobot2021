@@ -15,8 +15,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#define HAVE_STRUCT_TIMESPEC
-#pragma comment(lib,"pthreadVC2.lib")
+//#define HAVE_STRUCT_TIMESPEC
+//#pragma comment(lib,"pthreadVC2.lib")
 #include <pthread.h>
 #include "../Timer/Timer.hpp"
 
