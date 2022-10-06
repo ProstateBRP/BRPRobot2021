@@ -35,6 +35,12 @@ R->>RL:Status
 RL->>SGUI:Status IGTL(STRING, START_UP)
 end
 
+loop Current Position loop
+SGUI->>RL:Command IGTL(STRING, GET_TRANSFORM)
+R->>RL:Transform
+RL->>SGUI:Transform IGTL(TRANSFORM)
+note over SGUI:CURRENT_POSITION received
+end
 ```
 
 Patient set up in bore
@@ -91,6 +97,13 @@ deactivate SGUI
 deactivate RL
 
 end
+
+loop Current Position loop
+SGUI->>RL:Command IGTL(STRING, GET_TRANSFORM)
+R->>RL:Transform
+RL->>SGUI:Transform IGTL(TRANSFORM)
+note over SGUI:CURRENT_POSITION received
+end
 ```
 
 
@@ -143,6 +156,13 @@ RL->>SGUI:Status IGTL(STRING, CURRENT_STATUS)
 deactivate SGUI
 deactivate RL
 
+end
+
+loop Current Position loop
+SGUI->>RL:Command IGTL(STRING, GET_TRANSFORM)
+R->>RL:Transform
+RL->>SGUI:Transform IGTL(TRANSFORM)
+note over SGUI:CURRENT_POSITION received
 end
 ```
 
@@ -214,6 +234,13 @@ deactivate RL
 note over SGUI:R not in valid mode
 end
 end
+
+loop Current Position loop
+SGUI->>RL:Command IGTL(STRING, GET_TRANSFORM)
+R->>RL:Transform
+RL->>SGUI:Transform IGTL(TRANSFORM)
+note over SGUI:CURRENT_POSITION received
+end
 ```
 
 
@@ -241,6 +268,13 @@ deactivate MRS
 MRIGTL->>SGUI:Status IGTL(STRING, STATUS)
 deactivate SGUI
 deactivate MRIGTL
+end
+
+loop Current Position loop
+SGUI->>RL:Command IGTL(STRING, GET_TRANSFORM)
+R->>RL:Transform
+RL->>SGUI:Transform IGTL(TRANSFORM)
+note over SGUI:CURRENT_POSITION received
 end
 ```
 
@@ -273,14 +307,16 @@ RL->>R:Command
 note left of R:MOVE_TO_TARGET
 R->>RL:Acknowledgement
 RL->>SGUI:Acknowledgement IGTL(STRING)
-loop Movement loop
+
+R->>RL:Status
+RL->>SGUI:Status IGTL(STRING, STATUS)
+
+loop Current Position loop
+SGUI->>RL:Command IGTL(STRING, GET_TRANSFORM)
 R->>RL:Transform
 RL->>SGUI:Transform IGTL(TRANSFORM)
 note over SGUI:CURRENT_POSITION received
 end
-
-R->>RL:Status
-RL->>SGUI:Status IGTL(STRING, STATUS)
 ```
 
 
