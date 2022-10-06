@@ -322,6 +322,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     RobotOutboundCommunicationLayout.addWidget(self.currentPositionOffButton, 3, 1)
     self.currentPositionOffButton.connect('clicked()', self.onCurrentPositionOffClicked)
 
+    self.currentPositionTransform = None
+
     # calibrationButton Button
     self.calibrationButton = qt.QPushButton("CALIBRATION")
     self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
@@ -415,7 +417,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.getTransformFPSBox.setMaximum(144)
     self.getTransformFPSBox.setMinimum(1)
     self.getTransformFPSBox.setSuffix(" FPS")
-    self.getTransformFPSBox.value = 1
+    self.getTransformFPSBox.value = 2
     getTransformFPSLabel = qt.QLabel('Position query rate:')
     RobotOutboundCommunicationLayout.addWidget(getTransformFPSLabel, 8, 0)
     RobotOutboundCommunicationLayout.addWidget(self.getTransformFPSBox, 8, 1)
@@ -459,15 +461,34 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-
     verticalheader = self.robotTableWidget.verticalHeader()
     verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
     verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    robotTableWidgetLabel = qt.QLabel("   Transform received:")
+    robotTableWidgetLabel = qt.QLabel("   Target received:")
     RobotInboundCommunicationLayout.addWidget(robotTableWidgetLabel, 3, 0)
     RobotInboundCommunicationLayout.addWidget(self.robotTableWidget, 3, 1)
+
+    self.robotPositionTableWidget = qt.QTableWidget(row, column)
+    #self.robotPositionTableWidget.setMaximumWidth(400)
+    self.robotPositionTableWidget.setMinimumHeight(95)
+    self.robotPositionTableWidget.verticalHeader().hide() # Remove line numbers
+    self.robotPositionTableWidget.horizontalHeader().hide() # Remove column numbers
+    self.robotPositionTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.robotPositionTableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    verticalheader = self.robotPositionTableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    robotPositionTableLabel = qt.QLabel("   Position received:")
+    RobotInboundCommunicationLayout.addWidget(robotPositionTableLabel, 4, 0)
+    RobotInboundCommunicationLayout.addWidget(self.robotPositionTableWidget, 4, 1)
 
     # # Visibility icon
     # self.VisibleButton = qt.QPushButton()
@@ -864,6 +885,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.startIndex = None
     self.endIndex = None
     self.zFrameModelNode = None
+    self.robotModelNode = None
 
     # # Slice view observers and controllers 
     # self.redSliceNode = slicer.util.getNode('vtkMRMLSliceNodeRed')
@@ -1032,6 +1054,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       for j in range(4):
         self.calibrationTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         self.robotTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
+        self.robotPositionTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         #self.MRItableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         self.targetTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
    
@@ -1606,20 +1629,17 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     #self.updateScanPlaneIn3DView()
 
     # Update self.currentPositionTransform s.t. it contains the CURRENT_POSITION message sent by WPI
-    if self.currentPositionTransform:
-      slicer.mrmlScene.RemoveNode(self.currentPositionTransform)
-      self.currentPositionTransform = None
-    self.currentPositionTransform = slicer.vtkMRMLLinearTransformNode()
-    self.currentPositionTransform.SetName("CurrentPositionTransform")
+    if self.currentPositionTransform is None:
+      self.currentPositionTransform = slicer.vtkMRMLLinearTransformNode()
+      self.currentPositionTransform.SetName("CurrentPositionTransform")
+      slicer.mrmlScene.AddNode(self.currentPositionTransform)
     self.currentPositionTransform.SetMatrixTransformToParent(currentPositionMatrix)
-    slicer.mrmlScene.AddNode(self.currentPositionTransform)
     #self.currentPositionTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.updateScanPlaneIn3DView)
 
     # Add current position needle model to Slicer GUI
-    if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle") is not None:
-      PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle")
-      slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
-    self.AddPointerModel("CurrentPositionNeedle")
+    if slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle") is None:
+      #self.AddPointerModel("CurrentPositionNeedle")
+      self.LoadCurrentPositionModel("CurrentPositionNeedle")
     TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionTransform")
     locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("CurrentPositionNeedle")
     locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
@@ -1807,28 +1827,39 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     refMatrix = vtk.vtkMatrix4x4()
     LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(transformNode.last_randomIDname_transform)
     LastTransformNode.GetMatrixTransformToParent(refMatrix)
-    nbRows = transformNode.robotTableWidget.rowCount
-    nbColumns = transformNode.robotTableWidget.columnCount
-    same_transforms = 1
-    for i in range(nbRows):
-      for j in range(nbColumns):
-        val = transformMatrix.GetElement(i,j)
-        val = round(val,2)
-        ref = refMatrix.GetElement(i,j)
-        ref = round(val,2)
-        if(transformNode.transformType == "ACK"):
-          if(val != ref):
-            same_transforms = 0
-        transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
-    if (transformNode.transformType == "ACK" and not same_transforms):
-      infoMsg =  "TRANSFORM received from WPI does NOT match transform sent"
-      transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
-    elif(transformNode.transformType == "ACK" and same_transforms):
-      infoMsg =  "TRANSFORM received from WPI matches transform sent"
-      transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
+    if (transformNode.transformType == "ACK"):
+      nbRows = transformNode.robotTableWidget.rowCount
+      nbColumns = transformNode.robotTableWidget.columnCount
+      same_transforms = 1
+      for i in range(nbRows):
+        for j in range(nbColumns):
+          val = transformMatrix.GetElement(i,j)
+          val = round(val,2)
+          ref = refMatrix.GetElement(i,j)
+          ref = round(val,2)
+          if(transformNode.transformType == "ACK"):
+            if(val != ref):
+              same_transforms = 0
+          transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
+      if not same_transforms:
+        infoMsg =  "TRANSFORM received from WPI does NOT match transform sent"
+        transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
+      else:
+        infoMsg =  "TRANSFORM received from WPI matches transform sent"
+        transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
     elif(transformNode.transformType == "REACHABLE_TARGET"):
+      nbRows = transformNode.robotTableWidget.rowCount
+      nbColumns = transformNode.robotTableWidget.columnCount
+      for i in range(nbRows):
+        for j in range(nbColumns):
+          transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(transformMatrix.GetElement(i,j))))      
       transformNode.onReachableTargetTransformReceived(transformMatrix)
     elif(transformNode.transformType == "CURRENT_POSITION"):
+      nbRows = transformNode.robotPositionTableWidget.rowCount
+      nbColumns = transformNode.robotPositionTableWidget.columnCount
+      for i in range(nbRows):
+        for j in range(nbColumns):
+          transformNode.robotPositionTableWidget.setItem(i , j, qt.QTableWidgetItem(str(transformMatrix.GetElement(i,j))))           
       transformNode.onCurrentPositionTransformReceived(transformMatrix)
     else: 
       print("Invalid transform type")
@@ -1901,6 +1932,16 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
     self.treeView.setMRMLScene(slicer.mrmlScene)
+
+  def LoadCurrentPositionModel(self, pointerModelName):
+    currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    currentPositionPath = os.path.join(currentFilePath, "Resources", "robot", "needle.vtk")
+    _, currentPositionModelNode = slicer.util.loadModel(currentPositionPath, returnNode=True)
+    currentPositionModelNode.SetName(pointerModelName)
+    modelDisplayNode = currentPositionModelNode.GetDisplayNode()
+    modelDisplayNode.SetOpacity(0.6)
+    modelDisplayNode.SetColor(0.74, 0.76, 1.00)
+    modelDisplayNode.SliceIntersectionVisibilityOn()
 
   def AddNeedleTrajectoryLine(self, modelNodeName):
     points = vtk.vtkPoints()
@@ -2030,6 +2071,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       # Check for the ZFrame ROI node and if it exists, use it for the start and end slices
       if self.zFrameROI is not None:
         print ("Found zFrame ROI: ", self.zFrameROI.GetID())
+        self.zFrameROI.SetDisplayVisibility(1)
         center = [0.0, 0.0, 0.0]
         self.zFrameROI.GetXYZ(center)
         bounds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -2076,6 +2118,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         
         # Run ZFrame Open Source Registration
         self.loadZFrameModel()
+        self.loadRobotModel()
 
         # Begin zFrameRegistrationWithROI logic
         zFrameTemplateVolume = self.inputVolume
@@ -2100,8 +2143,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
 
         self.zFrameModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
+        self.robotModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
         self.zFrameModelNode.GetDisplayNode().SetVisibility2D(True)
         self.zFrameModelNode.SetDisplayVisibility(True)
+        self.robotModelNode.SetDisplayVisibility(True)
 
         # Update the calibration matrix table with the calculated matrix 
         outputMatrix = vtk.vtkMatrix4x4()
@@ -2152,6 +2197,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
       self.appendTransformToCommandLog(outputMatrix)
 
+      if self.zFrameROI:
+        self.zFrameROI.SetDisplayVisibility(0)
     else:
       print("OpenIGTLink connector is not active. Cannot send the registration transform.")
     
@@ -2327,6 +2374,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     if self.zFrameModelNode:
       #slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
       self.zFrameModelNode = None
+    if self.zFrameModelNode:
+      #slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
+      self.robotModelNode = None      
     if self.outputTransform:
       #slicer.mrmlScene.RemoveNode(self.outputTransform)
       self.outputTransform = None
@@ -2341,9 +2391,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath)
     self.zFrameModelNode.SetName(self.ZFRAME_MODEL_NAME)
     modelDisplayNode = self.zFrameModelNode.GetDisplayNode()
-    #modelDisplayNode.SetColor(1, 1, 0)
     modelDisplayNode.SetColor(0.9,0.9,0.4)
     self.zFrameModelNode.SetDisplayVisibility(False)
+
+  def loadRobotModel(self):
+    if self.robotModelNode:
+      slicer.mrmlScene.RemoveNode(self.robotModelNode)
+      self.robotModelNode = None
+    currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    robotModelPath = os.path.join(currentFilePath, "Resources", "robot", "robot.vtk")
+    _, self.robotModelNode = slicer.util.loadModel(robotModelPath, returnNode=True)
+    self.robotModelNode.SetName("RobotModel")
+    modelDisplayNode = self.robotModelNode.GetDisplayNode()
+    modelDisplayNode.SetColor(0.7, 0.7, 0.85)
+    modelDisplayNode.SetOpacity(0.4)
+    self.robotModelNode.SetDisplayVisibility(False)    
 
   def applyITKOtsuFilter(self, volume):
     inputVolume = sitk.Cast(sitkUtils.PullVolumeFromSlicer(volume.GetID()), sitk.sitkInt16)

@@ -32,6 +32,7 @@ struct Global{
    static int globalArgSubcode;
    static std::string globalArgErrorName;
    static std::string globalArgStatusStringMessage;
+   static bool globalNewSlicerMessage;
    // Transform variables
    static igtl::Matrix4x4 globalMatrix;
 };

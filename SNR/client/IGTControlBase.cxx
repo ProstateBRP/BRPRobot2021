@@ -200,7 +200,7 @@ int IGTControlBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
             char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
             // Print contents of the message 
-            std::cout << "\n---> Received statusMessage from WPI: " << std::endl;
+            std::cout << "\n---> Received statusMessage from WPI: " << statusMsg->GetStatusString() << std::endl;
 
             char *wpiDeviceName = (char *)headerMsg->GetDeviceName();
             char *addedmsg = strcat(wpiDeviceName, ": ");
@@ -227,7 +227,7 @@ int IGTControlBase::CheckAndReceiveStatusMessage(igtl::MessageHeader *headerMsg,
           char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
           // Print contents of the message 
-          std::cout << "\n---> Received statusMessage from WPI: " << std::endl;
+          std::cout << "\n---> Received statusMessage from WPI: " << statusMsg->GetStatusString() << std::endl;
           char *deviceName = (char *)("StatusMessage");
           SendStatusToSlicer(deviceName, argCode, argSubcode, argErrorName, argStatusStringMessage);
         }
@@ -526,7 +526,7 @@ int IGTControlBase::ReceiveStatus(igtl::MessageHeader *header)
     char *argStatusStringMessage = (char *)(statusMsg->GetStatusString());
 
     // Print contents of the message 
-    std::cout << "\n---> Received statusMessage from WPI: " << statusMsg->GetStatusString() << std::endl;
+    std::cout << "\n---> Received statusMessage from WPI: " << std::endl;
 
     char *wpiDeviceName = (char *)header->GetDeviceName();
     char *addedmsg = strcat(wpiDeviceName, ": ");

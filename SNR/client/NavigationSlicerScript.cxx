@@ -37,6 +37,7 @@ std::string Global::globalDeviceName = "DefaultGlobalDeviceName";
 std::string Global::globalString = "DefaultGlobalString";
 int Global::globalArgCode = 0;
 int Global::globalArgSubcode = 0;
+bool Global::globalNewSlicerMessage = false;
 std::string Global::globalArgErrorName = "DefaultGlobalArgErrorName";
 std::string Global::globalArgStatusStringMessage = "DefaultArgStatusStringMessage";
 igtl::Matrix4x4 Global::globalMatrix = {{0,0,0,0},
@@ -87,7 +88,7 @@ void *receivingFunction()
     while (1)
     {
         
-        std::cout << "Listening\n" << std::endl;
+        //std::cout << "Listening" << std::endl;
 
         // Initialize receive buffer
         headerMsg->InitPack();
@@ -272,7 +273,9 @@ int ReceiveStringFromSlicer(igtl::Socket * socket, igtl::MessageHeader::Pointer&
     Global::globalString = stringMsg->GetString();
     Global::globalDeviceName = header->GetDeviceName();
 
-    std::cout << "\n Set globalString and globalDeviceName to: " << Global::globalString << " and " << Global::globalDeviceName << std::endl; 
+    Global::globalNewSlicerMessage = true;
+
+    //std::cout << "\n Set globalString and globalDeviceName to: " << Global::globalString << " and " << Global::globalDeviceName << std::endl; 
 
     return 1;
 }
