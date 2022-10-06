@@ -11,7 +11,7 @@
 
 #include <string>
 #include <map>
-
+#include "Robot.hpp"
 #include "igtlSocket.h"
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
@@ -35,12 +35,11 @@ public:
 
   // Return 0 if a target matrix has not been set.
   int GetTargetMatrix(igtl::Matrix4x4 &matrix);
+  Robot robot;
 
 protected:
   int FlagCalibration;
   int FlagTarget;
-  igtl::Matrix4x4 CalibrationMatrix;
-  igtl::Matrix4x4 TargetMatrix;
 };
 
 #endif //__RobotStatus_h

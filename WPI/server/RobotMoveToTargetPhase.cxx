@@ -64,6 +64,8 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
   if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0 &&
       strncmp(headerMsg->GetDeviceName(), "RETRACT_NEEDLE", 4) == 0)
   {
+    string text;
+    ReceiveString(headerMsg, text);
     SendStatusMessage("ACK_RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
     // The dummy robot is now activated
     igtl::Sleep(2000);
