@@ -57,9 +57,14 @@ int RobotPhaseBase::Process()
     return 1;
   }
 
-  // Otherwise, the current workphase is the next workphase.
-  this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
-  std::cout << this->Name() << ": is the current state\n"; // Added it for test
+  //Not when message is empty
+  if (strcmp(headerMsg->GetDeviceName(), "") != 0)
+  {
+      // Otherwise, the current workphase is the next workphase.
+      this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
+      std::cout << this->Name() << ": is the current state\n"; // Added it for test
+  }
+
 
   // Common messages are handled here.
   if (!this->CheckCommonMessage(headerMsg))
@@ -71,7 +76,7 @@ int RobotPhaseBase::Process()
 }
 
 int RobotPhaseBase::MessageHandler(igtl::MessageHeader *headerMsg)
-{
+{   
   return 0;
 }
 
@@ -198,6 +203,16 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
     }
     return 1;
+  }
+  else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
+  {
+    bool timeout(false);
+    int cc = headerMsg->Unpack(1);
+    igtl::StatusMessage::Pointer statusMsg;
+    statusMsg = igtl::StatusMessage::New();
+    statusMsg->SetMessageHeader(headerMsg);
+    statusMsg->AllocatePack();
+    int r = this->Socket->Receive(statusMsg->GetPackBodyPointer(), statusMsg->GetPackBodySize(), timeout);
   }
 
   return 0;

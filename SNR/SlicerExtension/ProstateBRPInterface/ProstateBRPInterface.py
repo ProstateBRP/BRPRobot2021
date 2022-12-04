@@ -24,6 +24,7 @@ import vtk, qt, ctk, slicer
 from slicer.ScriptedLoadableModule import *
 import logging
 import SimpleITK as sitk
+from slicer.util import NodeModify
 import sitkUtils
 import numpy as np
 import time
@@ -72,27 +73,27 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Slicer<->Robot IGTLink connection interface
     self.snrPortTextboxLabel = qt.QLabel('Robot server port:')
-    self.snrPortTextbox = qt.QLineEdit("18944")
+    self.snrPortTextbox = qt.QLineEdit("18936")
     self.snrPortTextbox.setReadOnly(False)
     self.snrPortTextbox.setMaximumWidth(75)
 
     serverFormLayout.addWidget(self.snrPortTextboxLabel, 0, 0)
     serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
 
-    # self.snrHostnameTextboxLabel = qt.QLabel('Slicer<->Robot hostname:')
-    # self.snrHostnameTextbox = qt.QLineEdit("localhost")
-    # self.snrHostnameTextbox.setReadOnly(False)
-    # self.snrHostnameTextbox.setMaximumWidth(250)
-    # serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
-    # serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
+    self.snrHostnameTextboxLabel = qt.QLabel('Robot server hostname:')
+    self.snrHostnameTextbox = qt.QLineEdit("127.0.0.1")
+    self.snrHostnameTextbox.setReadOnly(False)
+    self.snrHostnameTextbox.setMaximumWidth(250)
+    serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
+    serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
     # Create server button
-    self.createServerButton = qt.QPushButton("Create robot server")
-    self.createServerButton.toolTip = "Create the IGTLink server connection with robot."
+    self.createServerButton = qt.QPushButton("Create robot client")
+    self.createServerButton.toolTip = "Create the IGTLink client connection with robot."
     self.createServerButton.enabled = True
     self.createServerButton.setFixedWidth(250)
     serverFormLayout.addWidget(self.createServerButton, 2, 0)
-    self.createServerButton.connect('clicked()', self.onCreateServerButtonClicked)
+    self.createServerButton.connect('clicked()', self.onCreateRobotClientButtonClicked)
 
     self.disconnectFromSocketButton = qt.QPushButton("Disconnect from socket")
     self.disconnectFromSocketButton.toolTip = "Disconnect from the socket."
@@ -109,13 +110,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     serverFormLayout.addWidget(self.scannerPortTextboxLabel, 3, 0)
     serverFormLayout.addWidget(self.scannerPortTextbox, 3, 1)
-
-    # self.snrHostnameTextboxLabel = qt.QLabel('Slicer<->Scanner hostname:')
-    # self.snrHostnameTextbox = qt.QLineEdit("localhost")
-    # self.snrHostnameTextbox.setReadOnly(False)
-    # self.snrHostnameTextbox.setMaximumWidth(250)
-    # serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 4, 0)
-    # serverFormLayout.addWidget(self.snrHostnameTextbox, 4, 1)
 
     # Create server button
     self.createScannerServerButton = qt.QPushButton("Create MRI scanner server")
@@ -442,7 +436,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.getTransformFPSBox.setMaximum(144)
     self.getTransformFPSBox.setMinimum(1)
     self.getTransformFPSBox.setSuffix(" FPS")
-    self.getTransformFPSBox.value = 2
+    self.getTransformFPSBox.value = 30
     getTransformFPSLabel = qt.QLabel('Position query rate:')
     RobotOutboundCommunicationLayout.addWidget(getTransformFPSLabel, 8, 0)
     RobotOutboundCommunicationLayout.addWidget(self.getTransformFPSBox, 8, 1)
@@ -943,19 +937,25 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     ReceivedStatusMsg.SetName("StatusMessage")
     slicer.mrmlScene.AddNode(ReceivedStatusMsg)
 
-    ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
-    ReceivedTransformMsg.SetName("TransformMessage")
-    slicer.mrmlScene.AddNode(ReceivedTransformMsg)
+    ReceivedACKTransformMsg = slicer.vtkMRMLLinearTransformNode()
+    ReceivedACKTransformMsg.SetName("ACK_Transform")
+    slicer.mrmlScene.AddNode(ReceivedACKTransformMsg)
 
-    ReceivedTransformInfo = slicer.vtkMRMLTextNode()
-    ReceivedTransformInfo.SetName("TransformInfo")
-    slicer.mrmlScene.AddNode(ReceivedTransformInfo)
+    ReceivedTargetTransformMsg = slicer.vtkMRMLLinearTransformNode()
+    ReceivedTargetTransformMsg.SetName("REACHABLE_TARGET")
+    slicer.mrmlScene.AddNode(ReceivedTargetTransformMsg)
 
-    # Add observers on the 4 message type nodes
+    ReceivedPositionTransformMsg = slicer.vtkMRMLLinearTransformNode()
+    ReceivedPositionTransformMsg.SetName("CURRENT_POSITION")
+    slicer.mrmlScene.AddNode(ReceivedPositionTransformMsg)    
+
+    # Add observers on the message type nodes
     ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
+    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onMRMLNodeAdded) # Check newly added MRML nodes from OpenIGTLink to modify StringMsg
     ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
-    ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-    ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
+    ReceivedACKTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onACKTransformNodeModified)
+    ReceivedTargetTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
+    ReceivedPositionTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onPositionTransformNodeModified)
 
     # Create a node for sending transforms
     SendTransformNode = slicer.vtkMRMLLinearTransformNode()
@@ -971,84 +971,70 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.last_randomIDname_transform = "SendTransform"
     self.loading_phase = 'STATUS_OK'
 
-  def onCreateServerButtonClicked(self):
+  @vtk.calldata_type(vtk.VTK_OBJECT)
+  def onMRMLNodeAdded(self, caller, event, calldata):
+    calledNode = calldata
+    if isinstance(calledNode, slicer.vtkMRMLTextNode):
+      if calledNode.GetName()[:3] == "ACK":
+        qt.QTimer.singleShot(5, lambda: self.updateStringMessage(calledNode)) # Allow node to fully load
+    elif isinstance(calledNode, slicer.vtkMRMLIGTLStatusNode):
+      qt.QTimer.singleShot(100, lambda: self.updateStatusMessage(calledNode)) # Allow node to fully load
+    elif isinstance(calledNode, slicer.vtkMRMLLinearTransformNode) and calledNode.GetName().startswith("ACK"):
+      qt.QTimer.singleShot(100, lambda: self.updateACKTransformMessage(calledNode))      
+        
+  def updateStringMessage(self, calledNode):
+    ReceivedStringMsg = slicer.mrmlScene.GetFirstNodeByName("StringMessage")
+    ReceivedStringMsg.SetText(f'{calledNode.GetName()}: {calledNode.GetText()}')
+
+  def updateStatusMessage(self, calledNode):
+    ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
+    ReceivedStatusMsg.SetStatusString(calledNode.GetName())
+    ReceivedStatusMsg.SetErrorName(calledNode.GetErrorName())
+    ReceivedStatusMsg.SetCode(calledNode.GetCode())
+    slicer.mrmlScene.RemoveNode(calledNode)
+
+  def updateACKTransformMessage(self, calledNode):
+    ReceivedACKTransformMsg = slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")
+    matrix = vtk.vtkMatrix4x4()
+    calledNode.GetMatrixTransformToParent(matrix)
+    ReceivedACKTransformMsg.SetAndObserveMatrixTransformToParent(matrix)
+    slicer.mrmlScene.RemoveNode(calledNode)    
+
+  def onCreateRobotClientButtonClicked(self):
     # GUI changes to enable/disable button functionality
     self.createServerButton.enabled = False
     self.disconnectFromSocketButton.enabled = True
     self.snrPortTextbox.setReadOnly(True)
-    # self.snrHostnameTextbox.setReadOnly(True)
+    self.snrHostnameTextbox.setReadOnly(True)
     self.RobotCommunicationCollapsibleButton.collapsed = False
     # self.MRICommunicationCollapsibleButton.collapsed = False
     self.infoCollapsibleButton.collapsed = False
 
     snrPort = self.snrPortTextbox.text
-    #snrHostname = self.snrHostnameTextbox.text
+    snrHostname = self.snrHostnameTextbox.text
     #VisualFeedback: color in gray when server is created
     self.snrPortTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
-    # self.snrHostnameTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
+    self.snrHostnameTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
-    # self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
+    self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
 
     # Initialize the IGTLink Slicer-side server component
     self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
     slicer.mrmlScene.AddNode(self.openIGTNode)
-    self.openIGTNode.SetTypeServer(int(snrPort))
+    #self.openIGTNode.SetTypeServer(int(snrPort))
+    self.openIGTNode.SetTypeClient(snrHostname, int(snrPort))
     self.openIGTNode.Start()
     print("openIGTNode: ", self.openIGTNode)
 
     if self.firstServer:
       self.createServerInitializationStep()
 
-    # # Create a .txt document for the command log
-    # currentFilePath = os.path.dirname(os.path.realpath(__file__))
-    # self.commandLogFilePath = os.path.join(currentFilePath, "commandLogs.txt")
-    # with open(self.commandLogFilePath,"a") as f:
-    #   f.write('\n----------------- New session started on ' + datetime.datetime.now().strftime("%d/%m/%Y at %H:%M:%S:%f") + ' -----------------\n')
-
-    # # Make a node for each message type 
-    # # Create nodes to receive string, status, and transform messages
-    # ReceivedStringMsg = slicer.vtkMRMLTextNode()
-    # ReceivedStringMsg.SetName("StringMessage")
-    # slicer.mrmlScene.AddNode(ReceivedStringMsg)
-
-    # ReceivedStatusMsg = slicer.vtkMRMLIGTLStatusNode()
-    # ReceivedStatusMsg.SetName("StatusMessage")
-    # slicer.mrmlScene.AddNode(ReceivedStatusMsg)
-
-    # ReceivedTransformMsg = slicer.vtkMRMLLinearTransformNode()
-    # ReceivedTransformMsg.SetName("TransformMessage")
-    # slicer.mrmlScene.AddNode(ReceivedTransformMsg)
-
-    # ReceivedTransformInfo = slicer.vtkMRMLTextNode()
-    # ReceivedTransformInfo.SetName("TransformInfo")
-    # slicer.mrmlScene.AddNode(ReceivedTransformInfo)
-
-    # # Add observers on the 4 message type nodes
-    # ReceivedStringMsg.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTextNodeModified)
-    # ReceivedStatusMsg.AddObserver(slicer.vtkMRMLIGTLStatusNode.StatusModifiedEvent, self.onStatusNodeModified)
-    # ReceivedTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTransformNodeModified)
-    # ReceivedTransformInfo.AddObserver(slicer.vtkMRMLTextNode.TextModifiedEvent, self.onTransformInfoNodeModified)
-
-    # # Create a node for sending transforms
-    # SendTransformNode = slicer.vtkMRMLLinearTransformNode()
-    # SendTransformNode.SetName("SendTransform")
-    # slicer.mrmlScene.AddNode(SendTransformNode)
-
-    # # Initialize variables 
-    # self.last_string_sent = "nostring"
-    # self.start = 0
-    # self.ack = 0
-    # self.last_prefix_sent = ""
-    # self.transformType = ""
-    # self.last_randomIDname_transform = "SendTransform"
-    # self.loading_phase = 'STATUS_OK'
-
   def onDisconnectFromSocketButtonClicked(self):
     # GUI changes to enable/disable button functionality
     self.disconnectFromSocketButton.enabled = False
     self.createServerButton.enabled = True
     self.snrPortTextbox.setReadOnly(False)
-    # self.snrHostnameTextbox.setReadOnly(False)
+    self.snrHostnameTextbox.setReadOnly(False)
     self.RobotCommunicationCollapsibleButton.collapsed = True
     self.infoCollapsibleButton.collapsed = True
     self.calibrationCollapsibleButton.collapsed = True
@@ -1061,9 +1047,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Close socket
     self.openIGTNode.Stop()
     self.snrPortTextboxLabel.setStyleSheet('color: black')
-    # self.snrHostnameTextboxLabel.setStyleSheet('color: black')
+    self.snrHostnameTextboxLabel.setStyleSheet('color: black')
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
-    # self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
+    self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
     # Clear textboxes
     # self.MRIphaseTextbox.setText("")
@@ -1161,23 +1147,33 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Append to Slicer module GUI command logging box
     currentInfoText = self.infoTextbox.toPlainText()
-    self.infoTextbox.setText(currentInfoText + '\n' + timestamp + " -- " + infoMsg + " to " + receiver + '\n')
+    #self.infoTextbox.setText(currentInfoText + '\n' + timestamp + " -- " + infoMsg + " to " + receiver + '\n')
+    self.infoTextbox.append(f"{timestamp} -- {infoMsg} to {receiver} \n")
+    self.infoTextbox.verticalScrollBar().setValue(self.infoTextbox.verticalScrollBar().maximum)
 
   def appendReceivedMessageToCommandLog(self, last_string_sent, elapsed_time):
     currentInfoText = self.infoTextbox.toPlainText()
     with open(self.commandLogFilePath,"a") as f:
       if last_string_sent.split("_")[0] == "ACK": # NO- CHANGE
         f.write("   -- Acknowledgment received for command: " + last_string_sent + " after " + elapsed_time +  "ms\n")
-        self.infoTextbox.setText(currentInfoText + "\n   -- Acknowledgment received for command: " + last_string_sent + " after " + elapsed_time +  "ms\n")
+        #self.infoTextbox.setText(   -- Acknowledgment received for command: " + last_string_sent + " after " + elapsed_time +  "ms\n")
+        self.infoTextbox.append(f"   -- Acknowledgment received for command: {last_string_sent} after {elapsed_time}ms\n")
+        self.infoTextbox.verticalScrollBar().setValue(self.infoTextbox.verticalScrollBar().maximum)
       elif last_string_sent.split(' ')[0] == "Received" or last_string_sent.split(' ')[0] == "TRANSFORM":
         f.write("   -- " + last_string_sent + '\n')
-        self.infoTextbox.setText(currentInfoText + "\n   -- " + last_string_sent + "\n")
+        #self.infoTextbox.setText(currentInfoText + "\n   -- " + last_string_sent + "\n")
+        self.infoTextbox.append(f"   --  {last_string_sent} \n")
+        self.infoTextbox.verticalScrollBar().setValue(self.infoTextbox.verticalScrollBar().maximum)
       elif last_string_sent == "REACHABLE_TARGET":
         f.write("   -- Received TRANSFORM from WPI: ( REACHABLE_TARGET )\n")
-        self.infoTextbox.setText(currentInfoText + "\n   -- Received TRANSFORM from WPI: ( REACHABLE_TARGET )\n")
+        #self.infoTextbox.setText(currentInfoText + "\n   -- Received TRANSFORM from WPI: ( REACHABLE_TARGET )\n")
+        self.infoTextbox.append(f"   -- Received TRANSFORM from WPI: ( REACHABLE_TARGET )\n")
+        self.infoTextbox.verticalScrollBar().setValue(self.infoTextbox.verticalScrollBar().maximum)
       elif last_string_sent == "CURRENT_POSITION":
         f.write("   -- Received TRANSFORM from WPI: ( CURRENT_POSTION )\n")
-        self.infoTextbox.setText(currentInfoText + "\n   -- Received TRANSFORM from WPI: ( CURRENT_POSITION )\n")
+        #self.infoTextbox.setText(currentInfoText + "\n   -- Received TRANSFORM from WPI: ( CURRENT_POSITION )\n")
+        self.infoTextbox.append(f"   -- Received TRANSFORM from WPI: ( CURRENT_POSITION )\n")
+        self.infoTextbox.verticalScrollBar().setValue(self.infoTextbox.verticalScrollBar().maximum)
       else:
         f.write("Unsupported message. Modify appendReceivedMessageToCommandLog accordingly.\n")
 
@@ -1190,10 +1186,15 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Append to Slicer module GUI command logging box
     currentInfoText = self.infoTextbox.toPlainText()
-    self.infoTextbox.setText(currentInfoText + "\n[" + str(round(outputMatrix.GetElement(0,0),2)) + ", " + str(round(outputMatrix.GetElement(0,1),2)) + ", " + str(round(outputMatrix.GetElement(0,2),2)) + ", " + str(round(outputMatrix.GetElement(0,3),2)) + "]\n[" 
-                                 + str(round(outputMatrix.GetElement(1,0),2)) + ", " + str(round(outputMatrix.GetElement(1,1),2)) + ", " + str(round(outputMatrix.GetElement(1,2),2)) + ", " + str(round(outputMatrix.GetElement(1,3),2)) + "]\n["
-                                 + str(round(outputMatrix.GetElement(2,0),2)) + ", " + str(round(outputMatrix.GetElement(2,1),2)) + ", " + str(round(outputMatrix.GetElement(2,2),2)) + ", " + str(round(outputMatrix.GetElement(2,3),2)) + "]\n["
-                                 + str(round(outputMatrix.GetElement(3,0),2)) + ", " + str(round(outputMatrix.GetElement(3,1),2)) + ", " + str(round(outputMatrix.GetElement(3,2),2)) + ", " + str(round(outputMatrix.GetElement(3,3),2)) + "]\n")
+    # self.infoTextbox.setText(currentInfoText + "\n[" + str(round(outputMatrix.GetElement(0,0),2)) + ", " + str(round(outputMatrix.GetElement(0,1),2)) + ", " + str(round(outputMatrix.GetElement(0,2),2)) + ", " + str(round(outputMatrix.GetElement(0,3),2)) + "]\n[" 
+    #                              + str(round(outputMatrix.GetElement(1,0),2)) + ", " + str(round(outputMatrix.GetElement(1,1),2)) + ", " + str(round(outputMatrix.GetElement(1,2),2)) + ", " + str(round(outputMatrix.GetElement(1,3),2)) + "]\n["
+    #                              + str(round(outputMatrix.GetElement(2,0),2)) + ", " + str(round(outputMatrix.GetElement(2,1),2)) + ", " + str(round(outputMatrix.GetElement(2,2),2)) + ", " + str(round(outputMatrix.GetElement(2,3),2)) + "]\n["
+    #                              + str(round(outputMatrix.GetElement(3,0),2)) + ", " + str(round(outputMatrix.GetElement(3,1),2)) + ", " + str(round(outputMatrix.GetElement(3,2),2)) + ", " + str(round(outputMatrix.GetElement(3,3),2)) + "]\n")
+    self.infoTextbox.append(f"\n[{str(round(outputMatrix.GetElement(0,0),2))}, {str(round(outputMatrix.GetElement(0,1),2))}, {str(round(outputMatrix.GetElement(0,2),2))}, {str(round(outputMatrix.GetElement(0,3),2))}]\n\
+                                [{str(round(outputMatrix.GetElement(1,0),2))}, {str(round(outputMatrix.GetElement(1,1),2))}, {str(round(outputMatrix.GetElement(1,2),2))}, {str(round(outputMatrix.GetElement(1,3),2))}]\n\
+                                [{str(round(outputMatrix.GetElement(1,0),2))}, {str(round(outputMatrix.GetElement(1,1),2))}, {str(round(outputMatrix.GetElement(1,2),2))}, {str(round(outputMatrix.GetElement(1,3),2))}]\n\
+                                [{str(round(outputMatrix.GetElement(1,0),2))}, {str(round(outputMatrix.GetElement(1,1),2))}, {str(round(outputMatrix.GetElement(1,2),2))}, {str(round(outputMatrix.GetElement(1,3),2))}]\n")
+    self.infoTextbox.verticalScrollBar().setValue(self.infoTextbox.verticalScrollBar().maximum)                                
 
   def activateButtons(self):
     self.planningButton.enabled = True
@@ -1259,37 +1260,13 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
     print("Send command to get current status of the robot")
-    # getstatusNode = slicer.vtkMRMLTextNode()
-    # self.last_prefix_sent = "CMD"
-    # timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)  
-    # self.last_name_sent = timestampIDname
-    # getstatusNode.SetName(timestampIDname)
-    # getstatusNode.SetText("GET_STATUS")
-    # getstatusNode.SetEncoding(3)
-    # slicer.mrmlScene.AddNode(getstatusNode)
-    # self.openIGTNode.RegisterOutgoingMRMLNode(getstatusNode)
-    # self.openIGTNode.PushNode(getstatusNode)
-    # infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_STATUS )"
-    # re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    # self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-
     getStatusNode = slicer.vtkMRMLIGTLQueryNode()
     getStatusNode.SetIGTLDeviceName("STATUS")
-    # getStatusNode.SetQueryType("TYPE_GET")
     getStatusNode.SetQueryType(1) # Query type "1" corresponds with "GET"; Query type "2" corresponds with "START"; Query type 3 corresponds with "STOP"
     getStatusNode.SetIGTLName("GET")
     slicer.mrmlScene.AddNode(getStatusNode)
-    # self.last_prefix_sent = "STATUS_"
-    # timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)  
-    # self.last_name_sent = timestampIDname
-    # getStatusNode.SetIGTLName(timestampIDname)
     self.openIGTNode.RegisterOutgoingMRMLNode(getStatusNode)
     self.openIGTNode.PushNode(getStatusNode)
-
-    # infoMsg =  "Sending STRING( " + timestampIDname + ",  GET_STATUS )"
-    # re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-    # self.appendSentMessageToCommandLog(timestampIDname, infoMsg)
-
 
   def updateGetTransform(self):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
@@ -1352,10 +1329,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
-    # TODO - DELETE THIS LINE - FOR DEBUGGING ONLY 
-    # (function call to getRobotPoseUntilTargetIsReached should be executed once the MOVE_TO_TARGET acknowledgement is received)
-    # self.getRobotPoseUntilTargetIsReached()
-
     # Hide Calibration, Planning, and Targetting GUIs
     # self.outboundEntryCollapsibleButton.collapsed = True
     # self.outboundTargetCollapsibleButton.collapsed = True
@@ -1413,44 +1386,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.planningCollapsibleButton.collapsed = False
     self.calibrationCollapsibleButton.collapsed = True
     self.RetractNeedleButton.enabled = False
-
-  # def onUnlockButtonClicked(self):
-  #   print("Asking to Unlock the robot")
-  #   # Send stringMessage containing the command "UNLOCK" to the script via IGTLink
-  #   unlockNode = slicer.vtkMRMLTextNode()
-  #   self.last_prefix_sent = "CMD"
-  #   timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
-  #   self.last_name_sent = timestampIDname
-  #   unlockNode.SetName(timestampIDname)
-  #   unlockNode.SetText("UNLOCK")
-  #   unlockNode.SetEncoding(3)
-  #   slicer.mrmlScene.AddNode(unlockNode)
-  #   self.openIGTNode.RegisterOutgoingMRMLNode(unlockNode)
-  #   self.openIGTNode.PushNode(unlockNode)
-  #   self.start = time.time()
-  #   self.last_string_sent = unlockNode.GetText()
-  #   infoMsg =  "Sending STRING( " + timestampIDname + ",  UNLOCK )"
-  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-  #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
-
-  # def onLockButtonClicked(self):
-  #   print("Asking to Lock the robot")
-  #   # Send stringMessage containing the command "LOCK" to the script via IGTLink
-  #   lockNode = slicer.vtkMRMLTextNode()
-  #   self.last_prefix_sent = "CMD"
-  #   timestampIDname = self.generateTimestampNameID(self.last_prefix_sent)
-  #   self.last_name_sent = timestampIDname
-  #   lockNode.SetName(timestampIDname)
-  #   lockNode.SetText("LOCK")
-  #   lockNode.SetEncoding(3)
-  #   slicer.mrmlScene.AddNode(lockNode)
-  #   self.openIGTNode.RegisterOutgoingMRMLNode(lockNode)
-  #   self.openIGTNode.PushNode(lockNode)
-  #   self.start = time.time()
-  #   self.last_string_sent = lockNode.GetText()
-  #   infoMsg =  "Sending STRING( " + timestampIDname + ",  LOCK )"
-  #   re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
-  #   self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
   def onRetractNeedleButtonClicked(self):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
@@ -1562,22 +1497,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.currentPositionOffButton.enabled = False
     self.currentPositionOnButton.enabled = True    
 
-  # def onVisibleButtonClicked(self):
-  #   # If button is checked
-  #   if (self.VisibleButton.isChecked()):
-  #     eyeIconVisible = qt.QPixmap(":/Icons/Small/SlicerVisible.png")
-  #     self.VisibleButton.setIcon(qt.QIcon(eyeIconVisible))
-  #     self.AddPointerModel("PointerNode")
-  #     TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
-  #     locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
-  #     locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
-  #   # If it is unchecked
-  #   else:
-  #     eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
-  #     self.VisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
-  #     PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PointerNode")
-  #     slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
-
   def onPlannedTargetNeedleVisibleButtonClicked(self):
     # If button is checked
     if (self.targetNeedleVisibleButton.isChecked()):
@@ -1590,15 +1509,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetTransform")
       locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedle")
       locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
-
-      # # Add dashed line for needle trajectory
-      # if slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory") is not None:
-      #   PointerNodeToRemove = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
-      #   slicer.mrmlScene.RemoveNode(PointerNodeToRemove)
-      # self.AddNeedleTrajectoryLine("PlannedTargetNeedleTrajectory")
-      # TransformNodeToDisplay = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetTransform")
-      # locatorModelNode = slicer.mrmlScene.GetFirstNodeByName("PlannedTargetNeedleTrajectory")
-      # locatorModelNode.SetAndObserveTransformNodeID(TransformNodeToDisplay.GetID())
 
     # If it is unchecked
     else:
@@ -1832,9 +1742,12 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
             re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     else:
       textNode.robotMessageTextbox.setText(concatenateMsg)
-      print("Received something different than expected, received: ", ReceivedStringMsg.GetText())      
+      print("Received something different than expected, received: ", ReceivedStringMsg.GetText())
       
   def onStatusNodeModified(statusNode, unusedArg2=None, unusedArg3=None):
+    qt.QTimer.singleShot(5, lambda: statusNode.triggerStatusNodeModified(statusNode))
+
+  def triggerStatusNodeModified(self, statusNode):
     print("New status received")
     ReceivedStatusMsg = slicer.mrmlScene.GetFirstNodeByName("StatusMessage")
     s1 = str(ReceivedStatusMsg.GetCode())
@@ -1854,7 +1767,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     infoMsg =  "Received STATUS from WPI: ( " + nameonly + ", " + statusNode.status_codes[ReceivedStatusMsg.GetCode()] + " )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     statusNode.appendReceivedMessageToCommandLog(infoMsg, elapsed_time)
-
     if((statusNode.status_codes[ReceivedStatusMsg.GetCode()] == 'STATUS_OK') and (statusNode.ack == 1) and (nameonly == 'CURRENT_STATUS')): 
       print("Robot is in phase: ", s3, "after", elapsed_time*100, "ms")
       statusNode.phaseTextbox.setText(s3)
@@ -1874,15 +1786,17 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       #   statusNode.getRobotPoseUntilTargetIsReached()
       statusNode.ack = 0
     else:
+      pass
       print("Error in changing phase")
       print("statusNode.status_codes[ReceivedStatusMsg.GetCode()]: ", statusNode.status_codes[ReceivedStatusMsg.GetCode()])
       print("statusNode.ack: ", statusNode.ack)
       print("statusNode.loading_phase: ", statusNode.loading_phase)
       print("nameonly: ", nameonly)
+    print(" ")    
 
-  def onTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+  def onACKTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
     print("New transform received")
-    ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("TransformMessage")
+    ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
 
@@ -1890,63 +1804,50 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     refMatrix = vtk.vtkMatrix4x4()
     LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(transformNode.last_randomIDname_transform)
     LastTransformNode.GetMatrixTransformToParent(refMatrix)
-    if (transformNode.transformType == "ACK"):
-      nbRows = transformNode.robotTableWidget.rowCount
-      nbColumns = transformNode.robotTableWidget.columnCount
-      same_transforms = 1
-      for i in range(nbRows):
-        for j in range(nbColumns):
-          val = transformMatrix.GetElement(i,j)
-          val = round(val,2)
-          ref = refMatrix.GetElement(i,j)
-          ref = round(val,2)
-          if(transformNode.transformType == "ACK"):
-            if(val != ref):
-              same_transforms = 0
-          transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
-      if not same_transforms:
-        infoMsg =  "TRANSFORM received from WPI does NOT match transform sent"
-        transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
-      else:
-        infoMsg =  "TRANSFORM received from WPI matches transform sent"
-        transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
-    elif(transformNode.transformType == "REACHABLE_TARGET"):
-      nbRows = transformNode.robotTableWidget.rowCount
-      nbColumns = transformNode.robotTableWidget.columnCount
-      for i in range(nbRows):
-        for j in range(nbColumns):
-          transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(transformMatrix.GetElement(i,j))))      
-      transformNode.onReachableTargetTransformReceived(transformMatrix)
-    elif(transformNode.transformType == "CURRENT_POSITION"):
-      nbRows = transformNode.robotPositionTableWidget.rowCount
-      nbColumns = transformNode.robotPositionTableWidget.columnCount
-      for i in range(nbRows):
-        for j in range(nbColumns):
-          transformNode.robotPositionTableWidget.setItem(i , j, qt.QTableWidgetItem(str(transformMatrix.GetElement(i,j))))           
-      transformNode.onCurrentPositionTransformReceived(transformMatrix)
-    else: 
-      print("Invalid transform type")
 
-  def onTransformInfoNodeModified(infoNode, unusedArg2=None, unusedArg3=None):
-    ReceivedTransformInfo = slicer.mrmlScene.GetFirstNodeByName("TransformInfo")
-    info = ReceivedTransformInfo.GetText()
+    nbRows = transformNode.robotTableWidget.rowCount
+    nbColumns = transformNode.robotTableWidget.columnCount
+    same_transforms = 1
+    for i in range(nbRows):
+      for j in range(nbColumns):
+        val = transformMatrix.GetElement(i,j)
+        val = round(val,2)
+        ref = refMatrix.GetElement(i,j)
+        ref = round(val,2)
+        if(transformNode.transformType == "ACK"):
+          if(val != ref):
+            same_transforms = 0
+        transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(val)))
+    if not same_transforms:
+      infoMsg =  "TRANSFORM received from WPI does NOT match transform sent"
+      transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
+    else:
+      infoMsg =  "TRANSFORM received from WPI matches transform sent"
+      transformNode.appendReceivedMessageToCommandLog(infoMsg, 0)
 
-    if(info.find("_")!=-1): # Check for delimiter "_"
-      infoType = info[0: info.index("_")] # Possible infoTypes: ACK, REACHABLE, CURRENT
-      infoID = info[info.index("_") + 1: len(info)]
-      if(infoType == "ACK"):  
-        last_name_sentID = infoNode.last_name_sent[infoNode.last_name_sent.index("_") + 1: len(infoNode.last_name_sent)]
-        if(last_name_sentID == infoID):
-          print("Acknowledgment received for transform:", infoNode.last_name_sent)
-          infoNode.transformType = infoType
-      elif(info == "REACHABLE_TARGET" or info == "CURRENT_POSITION"):
-        # Set transformType to either REACHABLE_TARGET or CURRENT_POSITION
-        infoNode.transformType = info
-      else:
-        print ("Unsupported transform info node received: ", info)
+  def onTargetTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+    ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("REACHABLE_TARGET")
+    transformMatrix = vtk.vtkMatrix4x4()
+    ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
 
-    infoMsg =  "Received TRANSFORM from WPI: ( " + info + " )"
-    infoNode.appendReceivedMessageToCommandLog(infoMsg, 0)
+    nbRows = transformNode.robotTableWidget.rowCount
+    nbColumns = transformNode.robotTableWidget.columnCount
+    for i in range(nbRows):
+      for j in range(nbColumns):
+        transformNode.robotTableWidget.setItem(i , j, qt.QTableWidgetItem(str(transformMatrix.GetElement(i,j))))      
+    transformNode.onReachableTargetTransformReceived(transformMatrix)
+
+  def onPositionTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+    ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("CURRENT_POSITION")
+    transformMatrix = vtk.vtkMatrix4x4()
+    ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
+
+    nbRows = transformNode.robotPositionTableWidget.rowCount
+    nbColumns = transformNode.robotPositionTableWidget.columnCount
+    for i in range(nbRows):
+      for j in range(nbColumns):
+        transformNode.robotPositionTableWidget.setItem(i , j, qt.QTableWidgetItem(str(transformMatrix.GetElement(i,j))))           
+    transformNode.onCurrentPositionTransformReceived(transformMatrix)       
 
   def AddPointerModel(self, pointerNodeName):   
     self.cyl = vtk.vtkCylinderSource()
