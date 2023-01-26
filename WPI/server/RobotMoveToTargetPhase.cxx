@@ -31,27 +31,23 @@ int RobotMoveToTargetPhase::Initialize()
 {
   if (RStatus->GetTargetFlag())
   {
-    // Create a dummy 4x4 matrix to replicate the current pose of the robot and send to Slicer.
-    igtl::Matrix4x4 matrix;
-    igtl::IdentityMatrix(matrix);
-    matrix[0][3] = rand() % 100;
-    matrix[1][3] = rand() % 100;
-    matrix[2][3] = rand() % 100;
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
-    SendTransformMessage("CURRENT_POSITION", matrix);
+    SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_position);
   }
   else
   {
-    // Create a dummy 4x4 matrix to replicate the current pose of the robot and send to Slicer.
-    igtl::Matrix4x4 matrix;
-    igtl::IdentityMatrix(matrix);
-    matrix[0][3] = rand() % 100;
-    matrix[1][3] = rand() % 100;
-    matrix[2][3] = rand() % 100;
-
     // If the target has not been received, return error.
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_NOT_READY, 0);
-    SendTransformMessage("CURRENT_POSITION", matrix);
+    SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_position);
+    // Move the insertion axis forward
+    if (RStatus->robot.current_position[2][3] < 140)
+    {
+      RStatus->robot.current_position[2][3] += 0.5;
+    }
+    else
+    {
+      RStatus->robot.current_position[2][3] = 0;
+    }
   }
 
   return 1;
