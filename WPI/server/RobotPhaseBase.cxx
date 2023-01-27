@@ -57,14 +57,13 @@ int RobotPhaseBase::Process()
     return 1;
   }
 
-  //Not when message is empty
+  // Not when message is empty
   if (strcmp(headerMsg->GetDeviceName(), "") != 0)
   {
-      // Otherwise, the current workphase is the next workphase.
-      this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
-      std::cout << this->Name() << ": is the current state\n"; // Added it for test
+    // Otherwise, the current workphase is the next workphase.
+    this->NextWorkphase = this->Name();                      // Set the name of the current workphase as the next one.
+    std::cout << this->Name() << ": is the current state\n"; // Added it for test
   }
-
 
   // Common messages are handled here.
   if (!this->CheckCommonMessage(headerMsg))
@@ -76,7 +75,7 @@ int RobotPhaseBase::Process()
 }
 
 int RobotPhaseBase::MessageHandler(igtl::MessageHeader *headerMsg)
-{   
+{
   return 0;
 }
 
@@ -153,14 +152,19 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
 
     if (strcmp(dev_name.c_str(), "CURRENT_POSITION") == 0)
     {
-      // Create a dummy 4x4 matrix to replicate the current pose of the robot and send to Slicer.
-      igtl::Matrix4x4 currentPosition;
-      igtl::IdentityMatrix(currentPosition);
-      currentPosition[0][3] = rand() % 100;
-      currentPosition[1][3] = rand() % 100;
-      currentPosition[2][3] = rand() % 100;
       // Send navigation about how the desired target will look like
-      SendTransformMessage("CURRENT_POSITION", currentPosition);
+      SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_position);
+
+      // Move the insertion axis forward
+      if (RStatus->robot.current_position[2][3] < 140)
+      {
+        RStatus->robot.current_position[2][3] += 0.5;
+      }
+      else
+      {
+        RStatus->robot.current_position[2][3] = 0;
+      }
+
       Logger &log = Logger::GetInstance();
       log.Log("Info: Sent CURRENT_POSITION to navigation", 1, 1);
       return 1;

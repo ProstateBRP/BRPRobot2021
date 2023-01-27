@@ -37,17 +37,7 @@ int RobotMoveToTargetPhase::Initialize()
   else
   {
     // If the target has not been received, return error.
-    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_NOT_READY, 0);
-    SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_position);
-    // Move the insertion axis forward
-    if (RStatus->robot.current_position[2][3] < 140)
-    {
-      RStatus->robot.current_position[2][3] += 0.5;
-    }
-    else
-    {
-      RStatus->robot.current_position[2][3] = 0;
-    }
+    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
   }
 
   return 1;
@@ -67,6 +57,29 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
     igtl::Sleep(2000);
     // Send acknowledgment for successful needle retraction.
     SendStatusMessage("RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
+    return 1;
+  }
+  /// Check if GET_TRANSFORM has been received
+  else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
+           strncmp(headerMsg->GetDeviceName(), "TGT_", 4) == 0)
+  {
+    igtl::Matrix4x4 matrix;
+    this->ReceiveTransform(headerMsg, matrix);
+
+    this->RStatus->SetTargetMatrix(matrix);
+
+    std::string devName = headerMsg->GetDeviceName();
+    std::stringstream ss;
+    ss << "ACK_" << devName.substr(4, std::string::npos);
+
+    SendTransformMessage(ss.str().c_str(), matrix);
+
+    // Mimic target checking process
+    igtl::Sleep(1000);
+
+    SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
+    SendTransformMessage("REACHABLE_TARGET", matrix);
+
     return 1;
   }
 
