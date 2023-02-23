@@ -255,13 +255,13 @@ MRIGTL->>SGUI:Image IGTL(IMAGE)
 MRIGTL->>SGUI:Timestamp IGTL(STRING, TIMESTAMP)
 note over SGUI: Needle detection
 
-SGUI->R: Transform IGTL(TRANSFORM, NPOSE_XXXX)
-R->SGUI: Acknowledgement IGTL(STATUS, ACK_XXXX)
+SGUI->>R: Transform IGTL(TRANSFORM, NPOSE_XXXX)
+R->>SGUI: Acknowledgement IGTL(STATUS, ACK_XXXX)
 note over R: Check if the target is still reachable)
-R->SGUI: Status IGTL(STATUS, )
+R->>SGUI: Status IGTL(STATUS, )
 
-SGUI->R: Command IGTL(STRING, CMD_XXXX, CURRENT_POSITION)
-R->SGUI: Transform IGTL(TRANSFORM, CURR_POS)
+SGUI->>R: Command IGTL(STRING, CMD_XXXX, CURRENT_POSITION)
+R->>SGUI: Transform IGTL(TRANSFORM, CURR_POS)
 end
 ```
 
