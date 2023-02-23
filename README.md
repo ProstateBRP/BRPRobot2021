@@ -229,7 +229,43 @@ note over SGUI:⠀⠀⠀CURRENT_POSITION received⠀⠀⠀
 end
 ```
 
-Scan & Move
+Scan & Move (Revised on Feb 23, 2023)
+-----------
+
+```mermaid
+sequenceDiagram
+
+participant R as Robot
+participant SGUI as 3D Slicer GUI
+participant MRIGTL  as MR IGTL Bridge
+participant MRS as MR Scanner
+
+SGUI->>R:Command IGTL(STRING, MOVE_TO_TARGET)
+R->>SGUI:Acknowledgement IGTL(STRING, ACK_XXXXX)
+R->>SGUI:Status IGTL(STATUS)
+R->>SGUI:Transform IGTL(TRANSFORM, CURR_POS)
+
+loop Image feedback
+SGUI->>MRIGTL:Transform IGTL(TRANSFORM, PLANE_0)
+MRIGTL->>MRS:Transform
+note over MRS:⠀⠀⠀Updates the scan plane⠀⠀⠀
+note over MRS:⠀⠀⠀Acquires an image⠀⠀⠀
+MRS->>MRIGTL:Image
+MRIGTL->>SGUI:Image IGTL(IMAGE)
+MRIGTL->>SGUI:Timestamp IGTL(STRING, TIMESTAMP)
+note over SGUI: Needle detection
+
+SGUI->R: Transform IGTL(TRANSFORM, NPOSE_XXXX)
+R->SGUI: Acknowledgement IGTL(STATUS, ACK_XXXX)
+note over R: Check if the target is still reachable)
+R->SGUI: Status IGTL(STATUS, )
+
+SGUI->R: Command IGTL(STRING, CMD_XXXX, CURRENT_POSITION)
+R->SGUI: Transform IGTL(TRANSFORM, CURR_POS)
+end
+```
+
+Scan & Move (Obsolete)
 -----------
 
 ```mermaid
@@ -264,7 +300,6 @@ R->>SGUI:Transform IGTL(TRANSFORM)
 note over SGUI:⠀⠀⠀CURRENT_POSITION received⠀⠀⠀
 end
 ```
-
 
 
                                                                         
