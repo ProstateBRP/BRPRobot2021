@@ -453,7 +453,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Add 1 line of spacing
     RobotInboundCommunicationLayout.addWidget(qt.QLabel(" "), 0, 0)
 
-    self.robotMessageTextbox = qt.QLineERdit("No message received")
+    self.robotMessageTextbox = qt.QLineEdit("No message received")
     self.robotMessageTextbox.setReadOnly(True)
     self.robotMessageTextbox.setFixedWidth(200)
     robotMessageTextboxLabel = qt.QLabel("   Message received:")
