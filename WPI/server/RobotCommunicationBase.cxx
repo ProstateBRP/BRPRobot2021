@@ -384,7 +384,9 @@ int RobotCommunicationBase::SendStatusMessage(const char *name, int Code, int Su
     std::cerr << "ERROR: Sending STATUS( " << name << " )" << std::endl;
     exit(0); // Maybe Change to return 0; since this will result in program exit!
   }
-
+  // Wait for 100 milliseconds for the message to go through
+  igtl::Sleep(100);
+  
   return 1;
 }
 
