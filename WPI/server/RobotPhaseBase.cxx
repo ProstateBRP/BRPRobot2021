@@ -189,14 +189,14 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
 
     // Acknowledgement
     std::stringstream ss;
-    ss << "ACK_" << devName.substr(6, std::string::npos);
+    ss << "ACK_" << devName.substr(5, std::string::npos);
     SendTransformMessage(ss.str().c_str(), matrix);
 
     // Validate the needle transform matrix
     if (ValidateMatrix(matrix))
     {
       Logger &log = Logger::GetInstance();
-      log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(6, std::string::npos), LOG_LEVEL_INFO, true);
+      log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
       // needle pose should be saved in a robot variable in the real robot sw.
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
     }
