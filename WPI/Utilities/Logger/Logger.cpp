@@ -47,6 +47,7 @@ void Logger::Log(string logData, int severity, bool printToConsole) {
 			"CRITICAL", "DATA" };
 
 	// If within current log levels write data to log file
+	//*
 	pthread_mutex_lock( &logMutex );
 	if (severity >= _logLevelSeverity) {
 		_file << "[" << time_micro_seconds << "] " << severities[severity]
@@ -58,6 +59,7 @@ void Logger::Log(string logData, int severity, bool printToConsole) {
 				<< " --: " << logData << endl;
 	}
 	pthread_mutex_unlock( &logMutex );
+	//*/
 }
 // Overloaded log method to log data using the actual time received from the navigation software
 void Logger::Log(std::string logData, std::string actual_time, int severity, bool printToConsole)
@@ -73,6 +75,7 @@ void Logger::Log(std::string logData, std::string actual_time, int severity, boo
 			"CRITICAL", "DATA" };
 
 	// If within current log levels write data to log file
+	//*
 	pthread_mutex_lock( &logMutex );
 	if (severity >= _logLevelSeverity) {
 		_file << "[" << GetActualTime() << "] " << severities[severity]
@@ -84,7 +87,7 @@ void Logger::Log(std::string logData, std::string actual_time, int severity, boo
 				<< " --: " << logData << endl;
 	}
 	pthread_mutex_unlock( &logMutex );
-
+	//*/
 }
 
 

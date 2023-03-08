@@ -207,7 +207,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.scanPlaneRobotPositionCheckbox.setChecked(False)
     updateScanPlaneLayout.addWidget(self.scanPlaneRobotPositionCheckbox)
 
-
     # MRI Start Updating scan target button
     self.MRIupdateTargetButton = qt.QPushButton("Start Observing Transform")
     self.MRIupdateTargetButton.toolTip = "Start sending transform to scanner"
@@ -844,9 +843,38 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
     planningLayoutBottom.addSpacerItem(spacer)
 
+    # Needle Tracking panel collapsible button
+    self.needleTrackingPanelCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.needleTrackingPanelCollapsibleButton.text = "Needle Tracking"
+    self.needleTrackingPanelCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.needleTrackingPanelCollapsibleButton)
+
+    # Layout within the needle view panel collapsible button
+    needleTrackingPanelLayout = qt.QFormLayout(self.needleTrackingPanelCollapsibleButton)
+
+    self.needleTipTransformComboBox = slicer.qMRMLNodeComboBox()
+    self.needleTipTransformComboBox.nodeTypes = ["vtkMRMLLinearTransformNode"]
+    self.needleTipTransformComboBox.selectNodeUponCreation = False
+    self.needleTipTransformComboBox.noneEnabled = False
+    self.needleTipTransformComboBox.addEnabled = True
+    self.needleTipTransformComboBox.showHidden = False
+    self.needleTipTransformComboBox.setMRMLScene( slicer.mrmlScene )
+    self.needleTipTransformComboBox.setToolTip( "Tracked Needle Tip Transform" )
+    needleTrackingPanelLayout.addRow("Tracked Needle Tip Transform:", self.needleTipTransformComboBox)
+
+    self.sendTrackedTipTransformCheckbox = qt.QCheckBox("Send tracked tip position to Robot")
+    self.sendTrackedTipTransformCheckbox.setChecked(False)
+    needleTrackingPanelLayout.addWidget(self.sendTrackedTipTransformCheckbox)
+
+    # currentPosition On Button
+    self.sendTrackedNeedleTipTransform = qt.QPushButton("Send Tracked Needle Tip")
+    self.sendTrackedNeedleTipTransform.toolTip = "Send Tracked Needle Tip"
+    needleTrackingPanelLayout.addWidget(self.sendTrackedNeedleTipTransform)
+    self.sendTrackedNeedleTipTransform.connect('clicked()', self.onSendTrackedTipTransform)    
+
     # Needle view panel collapsible button
     self.modelViewPanelCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.modelViewPanelCollapsibleButton.text = "Model View Panel"
+    self.modelViewPanelCollapsibleButton.text = "Model View"
     self.modelViewPanelCollapsibleButton.collapsed = True
     self.layout.addWidget(self.modelViewPanelCollapsibleButton)
 
@@ -1754,6 +1782,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     s2 = str(ReceivedStatusMsg.GetSubCode())
     s3 = ReceivedStatusMsg.GetErrorName()
     concatenateMsg = ReceivedStatusMsg.GetStatusString()
+    
     if(concatenateMsg.find(":")!=-1): # found delimiter is in the string
       nameonly = concatenateMsg[0: concatenateMsg.index(":")]
     else:
@@ -2434,3 +2463,24 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # self.greenCompositeNode.SetForegroundVolumeID(foregroundVolumeID)
     # self.greenCompositeNode.SetBackgroundVolumeID(backgroundVolumeID)
     # self.greenSliceNode.SetOrientationToCoronal()
+
+  def onSendTrackedTipTransform(self):
+    if (self.sendTrackedTipTransformCheckbox.isChecked()):
+      trackedTipMatrix = vtk.vtkMatrix4x4()
+      self.needleTipTransformComboBox.currentNode().GetMatrixTransformToParent(trackedTipMatrix)
+      #Remove orientation part of matrix?
+
+      if (slicer.mrmlScene.GetNumberOfNodesByClass('vtkMRMLIGTLConnectorNode') > 0): # AKA, if the IGTL connector is active
+        TrackedTipTransformNodeTemp = slicer.vtkMRMLLinearTransformNode()
+        timestampIDname = self.generateTimestampNameID("NPOS")
+        self.last_name_sent = timestampIDname
+        TrackedTipTransformNodeTemp.SetName(timestampIDname)
+        TrackedTipTransformNodeTemp.SetMatrixTransformToParent(trackedTipMatrix)
+        slicer.mrmlScene.AddNode(TrackedTipTransformNodeTemp)
+        self.openIGTNode.RegisterOutgoingMRMLNode(TrackedTipTransformNodeTemp)
+        self.openIGTNode.PushNode(TrackedTipTransformNodeTemp)
+        infoMsg =  "Sending TRACKED TIP TRANSFORM( " + timestampIDname + " )"
+        re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+        self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
+        #slicer.mrmlScene.RemoveNode(TrackedTipTransformNodeTemp)
+
