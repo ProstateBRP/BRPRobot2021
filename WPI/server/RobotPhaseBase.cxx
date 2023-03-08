@@ -180,7 +180,7 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
 
   /// Check if the navigation is sending the needle tip pose
   else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
-           strncmp(headerMsg->GetDeviceName(), "NPOSE_", 6) == 0)
+           strncmp(headerMsg->GetDeviceName(), "NPOS_", 5) == 0)
   {
     // Create a matrix to store needle pose
     std::string devName = headerMsg->GetDeviceName();
