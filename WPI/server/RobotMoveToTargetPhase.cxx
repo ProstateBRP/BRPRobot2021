@@ -32,7 +32,7 @@ int RobotMoveToTargetPhase::Initialize()
   if (RStatus->GetTargetFlag())
   {
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
-    SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_position);
+    SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_pose);
   }
   else
   {
@@ -59,7 +59,8 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
     SendStatusMessage("RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
     return 1;
   }
-  /// Check if GET_TRANSFORM has been received
+
+  /// Check if new target is reported
   else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
            strncmp(headerMsg->GetDeviceName(), "TGT_", 4) == 0)
   {
@@ -80,6 +81,37 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
     SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
     SendTransformMessage("REACHABLE_TARGET", matrix);
 
+    return 1;
+  }
+
+  /// Check if the navigation is sending the needle tip pose
+  else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
+           strncmp(headerMsg->GetDeviceName(), "NPOS_", 5) == 0)
+  {
+    // Create a matrix to store needle pose
+    std::string devName = headerMsg->GetDeviceName();
+    igtl::Matrix4x4 matrix;
+    this->ReceiveTransform(headerMsg, matrix);
+
+    // Acknowledgement
+    std::stringstream ss;
+    ss << "ACK_" << devName.substr(5, std::string::npos);
+    SendTransformMessage(ss.str().c_str(), matrix);
+
+    // Validate the needle transform matrix
+    if (ValidateMatrix(matrix))
+    {
+      Logger &log = Logger::GetInstance();
+      log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
+      // needle pose should be saved in a robot variable in the real robot sw.
+      SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
+    }
+    else
+    {
+      // Incorrect needle pose send status error
+      std::cerr << "ERROR: Invalid calibration matrix." << std::endl;
+      SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
+    }
     return 1;
   }
 

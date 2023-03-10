@@ -62,22 +62,39 @@ int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
   {
     igtl::Matrix4x4 matrix;
     this->ReceiveTransform(headerMsg, matrix);
+    if (ValidateMatrix(matrix))
+    {
+      this->RStatus->SetTargetMatrix(matrix);
+      std::string devName = headerMsg->GetDeviceName();
+      std::stringstream ss;
+      ss << "ACK_" << devName.substr(4, std::string::npos);
 
-    this->RStatus->SetTargetMatrix(matrix);
+      SendTransformMessage(ss.str().c_str(), matrix);
 
-    std::string devName = headerMsg->GetDeviceName();
-    std::stringstream ss;
-    ss << "ACK_" << devName.substr(4, std::string::npos);
+      // Mimic target checking process
+      igtl::Sleep(1000);
 
-    SendTransformMessage(ss.str().c_str(), matrix);
+      SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
+      SendTransformMessage("REACHABLE_TARGET", matrix);
+      // Mimic moving toward the target
+      int inc = 10;
+      double x_inc = (matrix[0][3] - this->RStatus->robot.current_pose[0][3])/inc;
+      double y_inc = (matrix[1][3] - this->RStatus->robot.current_pose[1][3])/inc;
+      double z_inc = (matrix[2][3] - this->RStatus->robot.current_pose[2][3])/inc;
+      while (!this->RStatus->robot.isApprox(this->RStatus->robot.current_pose, matrix))
+      {
+        this->RStatus->robot.current_pose[0][3] += x_inc;
+        this->RStatus->robot.current_pose[0][3] += y_inc;
+        this->RStatus->robot.current_pose[0][3] += z_inc;
+      }
+      // Robot has reached the targeting position
+      RStatus->robot.in_target_position = true;
+      //  Inform Slicer that the robot has reached the targeting position
+      SendStringMessage("TargetingComplete","Robot is in Targeting Position!");
 
-    // Mimic target checking process
-    igtl::Sleep(1000);
-
-    SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
-    SendTransformMessage("REACHABLE_TARGET", matrix);
-
-    return 1;
+      return 1;
+    }
+    
   }
 
   return 0;

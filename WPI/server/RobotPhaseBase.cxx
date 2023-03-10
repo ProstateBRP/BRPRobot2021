@@ -153,16 +153,16 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
     if (strcmp(dev_name.c_str(), "CURRENT_POSITION") == 0)
     {
       // Send navigation about how the desired target will look like
-      SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_position);
+      SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_pose);
 
       // Move the insertion axis forward
-      if (RStatus->robot.current_position[2][3] < 140)
+      if (RStatus->robot.current_pose[2][3] < 140)
       {
-        RStatus->robot.current_position[2][3] += 0.5;
+        RStatus->robot.current_pose[2][3] += 0.5;
       }
       else
       {
-        RStatus->robot.current_position[2][3] = 0;
+        RStatus->robot.current_pose[2][3] = 0;
       }
 
       Logger &log = Logger::GetInstance();
@@ -178,36 +178,7 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
     }
   }
 
-  /// Check if the navigation is sending the needle tip pose
-  else if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
-           strncmp(headerMsg->GetDeviceName(), "NPOS_", 5) == 0)
-  {
-    // Create a matrix to store needle pose
-    std::string devName = headerMsg->GetDeviceName();
-    igtl::Matrix4x4 matrix;
-    this->ReceiveTransform(headerMsg, matrix);
-
-    // Acknowledgement
-    std::stringstream ss;
-    ss << "ACK_" << devName.substr(5, std::string::npos);
-    SendTransformMessage(ss.str().c_str(), matrix);
-
-    // Validate the needle transform matrix
-    if (ValidateMatrix(matrix))
-    {
-      Logger &log = Logger::GetInstance();
-      log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
-      // needle pose should be saved in a robot variable in the real robot sw.
-      SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
-    }
-    else
-    {
-      // Incorrect needle pose send status error
-      std::cerr << "ERROR: Invalid calibration matrix." << std::endl;
-      SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
-    }
-    return 1;
-  }
+  
   else if (strcmp(headerMsg->GetDeviceType(), "STATUS") == 0)
   {
     bool timeout(false);
