@@ -84,8 +84,9 @@ int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       while (!this->RStatus->robot.isApprox(this->RStatus->robot.current_pose, matrix))
       {
         this->RStatus->robot.current_pose[0][3] += x_inc;
-        this->RStatus->robot.current_pose[0][3] += y_inc;
-        this->RStatus->robot.current_pose[0][3] += z_inc;
+        this->RStatus->robot.current_pose[1][3] += y_inc;
+        this->RStatus->robot.current_pose[2][3] += z_inc;
+        igtl::Sleep(1000);
       }
       // Robot has reached the targeting position
       RStatus->robot.in_target_position = true;

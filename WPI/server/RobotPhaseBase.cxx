@@ -154,17 +154,6 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
     {
       // Send navigation about how the desired target will look like
       SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_pose);
-
-      // Move the insertion axis forward
-      if (RStatus->robot.current_pose[2][3] < 140)
-      {
-        RStatus->robot.current_pose[2][3] += 0.5;
-      }
-      else
-      {
-        RStatus->robot.current_pose[2][3] = 0;
-      }
-
       Logger &log = Logger::GetInstance();
       log.Log("Info: Sent CURRENT_POSITION to navigation", 1, 1);
       return 1;
