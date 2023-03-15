@@ -35,7 +35,7 @@ public:
   virtual int Initialize() = 0;
 
   // Process() will be called by the main session loop.
-  // It checks if any work phase change request is recevied first. If not it calles
+  // It checks if any work phase change request is received first. If not it calls
   // MessageHander() to perform workphase-specific message handling.
   // Returns 1 if there is any workphase change request. Otherwise returns 0.
   virtual int Process();

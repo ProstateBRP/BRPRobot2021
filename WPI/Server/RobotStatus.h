@@ -38,6 +38,7 @@ public:
   Robot robot;
 
 protected:
+  // TODO: Move these flags to the Robot class
   int FlagCalibration;
   int FlagTarget;
 };
