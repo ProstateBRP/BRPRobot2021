@@ -33,6 +33,8 @@ int RobotMoveToTargetPhase::Initialize()
   {
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
     SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_pose);
+    // Enable the axis to move
+    RStatus->robot.EnableMove();
   }
   else
   {
@@ -41,6 +43,11 @@ int RobotMoveToTargetPhase::Initialize()
   }
 
   return 1;
+}
+
+void RobotMoveToTargetPhase::OnExit()
+{
+  RStatus->robot.StopRobot();
 }
 
 int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)

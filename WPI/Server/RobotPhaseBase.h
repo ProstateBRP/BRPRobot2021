@@ -22,26 +22,30 @@ class RobotPhaseBase : public RobotCommunicationBase
 {
 public:
   RobotPhaseBase();
-  virtual ~RobotPhaseBase(); // Changed the destructor to virtual
-
+  virtual ~RobotPhaseBase();
+  /* name of the state*/
   virtual const char *Name() = 0;
 
-  // Enter() will be called when the workphase is switched from another
-  // workphase. Enter() calls Initialize() which implements actual
-  // initialization process for this workphase.
+  /* This function is called when the state is switched.*/
   virtual int Enter(const char *queryID);
 
-  // Initialization process. This must be implemented in child classes.
+  /* Initialization process. This must be implemented in child classes.*/
   virtual int Initialize() = 0;
 
-  // Process() will be called by the main session loop.
-  // It checks if any work phase change request is received first. If not it calls
-  // MessageHander() to perform workphase-specific message handling.
-  // Returns 1 if there is any workphase change request. Otherwise returns 0.
+  /*
+  This function is called by the main session loop.
+  It checks if any work phase change request is received first. If not it calls
+  MessageHander() to perform state-specific message handling.
+  */
   virtual int Process();
+  
+  /* 
+  This method is use to clean up the current state upon changing to a new one. Specific behavior can be defined in the 
+  inherited classes.
+  */
+  virtual void OnExit();
 
-  // MessageHandler() defines workphase-specific message handling.
-  // The function needs to be implemented in child classes.
+  /*  State-specific message handling is defined using this function.*/
   virtual int MessageHandler(igtl::MessageHeader *headerMsg); // Message handler
 
   std::string GetNextWorkPhase() { return this->NextWorkphase; };

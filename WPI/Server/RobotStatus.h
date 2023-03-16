@@ -23,8 +23,8 @@ public:
   RobotStatus();
   ~RobotStatus();
 
-  int GetTargetFlag() { return FlagTarget; }
-  int GetCalibrationFlag() { return this->FlagCalibration; };
+  int GetTargetFlag() { return robot.isTargetPointReceived(); }
+  int GetCalibrationFlag() { return this->robot.isCalibrationReceived(); };
 
   void SetCalibrationMatrix(igtl::Matrix4x4 &matrix);
 
@@ -35,12 +35,10 @@ public:
 
   // Return 0 if a target matrix has not been set.
   int GetTargetMatrix(igtl::Matrix4x4 &matrix);
+  // Set reported needle tip position
+  void SetCurrentNeedlePos(const igtl::Matrix4x4 &matrix);
+  void GetCurrentPosition(igtl::Matrix4x4 &currentPosition);
   Robot robot;
-
-protected:
-  // TODO: Move these flags to the Robot class
-  int FlagCalibration;
-  int FlagTarget;
 };
 
 #endif //__RobotStatus_h

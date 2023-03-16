@@ -27,12 +27,16 @@ RobotTargetingPhase::~RobotTargetingPhase()
 {
 }
 
+void RobotTargetingPhase::OnExit()
+{
+  RStatus->robot.StopRobot();
+}
+
 int RobotTargetingPhase::Initialize()
 {
 
   // Send Status after waiting for 2 seconds (mimicking initialization process)
   igtl::Sleep(1000); // wait for 1000 msec
-
   // If the robot has not been calibrated, return device-not-ready error
   igtl::Matrix4x4 cmatrix;
   if (!this->RStatus || !this->RStatus->GetCalibrationMatrix(cmatrix))
@@ -42,6 +46,8 @@ int RobotTargetingPhase::Initialize()
   }
   else
   {
+    // Enable the axis to move
+    RStatus->robot.EnableMove();
     this->SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
   }
 
@@ -68,34 +74,31 @@ int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       std::string devName = headerMsg->GetDeviceName();
       std::stringstream ss;
       ss << "ACK_" << devName.substr(4, std::string::npos);
-
       SendTransformMessage(ss.str().c_str(), matrix);
-
       // Mimic target checking process
       igtl::Sleep(1000);
-
       SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
       SendTransformMessage("REACHABLE_TARGET", matrix);
-      // Mimic moving toward the target
-      int inc = 10;
-      double x_inc = (matrix[0][3] - this->RStatus->robot.current_pose[0][3])/inc;
-      double y_inc = (matrix[1][3] - this->RStatus->robot.current_pose[1][3])/inc;
-      double z_inc = (matrix[2][3] - this->RStatus->robot.current_pose[2][3])/inc;
-      while (!this->RStatus->robot.isApprox(this->RStatus->robot.current_pose, matrix))
-      {
-        this->RStatus->robot.current_pose[0][3] += x_inc;
-        this->RStatus->robot.current_pose[1][3] += y_inc;
-        this->RStatus->robot.current_pose[2][3] += z_inc;
-        igtl::Sleep(1000);
-      }
-      // Robot has reached the targeting position
-      RStatus->robot.in_target_position = true;
-      //  Inform Slicer that the robot has reached the targeting position
-      SendStringMessage("TargetingComplete","Robot is in Targeting Position!");
-
       return 1;
     }
-    
+  }
+
+  if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
+  {
+    if (strcmp(headerMsg->GetDeviceName(), "RETRACT_NEEDLE") == 0)
+    {
+      string text;
+      ReceiveString(headerMsg, text);
+      SendStatusMessage("ACK_RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
+      // Ask the robot to retract the needle
+      /*
+      TODO:      IMPLEMENT in the simulator
+      */
+      // Send acknowledgment for successful needle retraction.
+      SendStatusMessage("RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
+      return 1;
+    }
+
   }
 
   return 0;

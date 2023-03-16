@@ -152,10 +152,17 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
 
     if (strcmp(dev_name.c_str(), "CURRENT_POSITION") == 0)
     {
-      // Send navigation about how the desired target will look like
-      SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_pose);
+      // Send current needle pose to Slicer
+      igtl::Matrix4x4 curr_pose;
+      RStatus->GetCurrentPosition(curr_pose);
+      SendTransformMessage("CURRENT_POSITION", curr_pose);
       Logger &log = Logger::GetInstance();
       log.Log("Info: Sent CURRENT_POSITION to navigation", 1, 1);
+      
+      // Send string msg flag for targeting position
+      // TODO:
+      // Send string msg flag for insertion depth
+      // TODO:
       return 1;
     }
     else if (strcmp(dev_name.c_str(), "CURRENT_STATUS") == 0)
@@ -180,4 +187,9 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
   }
 
   return 0;
+}
+
+void RobotPhaseBase::OnExit()
+{
+  // specific behaviour should be defined in child classes
 }

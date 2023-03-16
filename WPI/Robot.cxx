@@ -1,10 +1,24 @@
 #include "Robot.hpp"
 
-Robot::Robot()
+Robot::Robot(): x_inc{0}, y_inc{0}
 {
-    igtl::IdentityMatrix(current_pose);
-    igtl::IdentityMatrix(target_position);
-    igtl::IdentityMatrix(calibration);
+    current_pose = Eigen::Matrix4d::Identity();
+    target_position = Eigen::Matrix4d::Identity();
+    calibration = Eigen::Matrix4d::Identity();
+
+    *move_interrupted = false;
+}
+
+void Robot::UpdateRobot()
+{
+    if (current_state == "TARGETING")
+    {
+        MoveToTargetingPosition();
+    }
+    else if (current_state == "MOVE_TO_TARGET")
+    {
+        InsertNeedleToTargetDepth();
+    }
 }
 
 bool Robot::isApprox(const igtl::Matrix4x4 &mtx1, const igtl::Matrix4x4 &mtx2, double epsilon)
@@ -22,31 +36,77 @@ bool Robot::isApprox(const igtl::Matrix4x4 &mtx1, const igtl::Matrix4x4 &mtx2, d
     return true;
 }
 
-int Robot::MoveToTargetingPosition(int increment)
+bool Robot::isInTargetingPos(double epsilon)
 {
-    // Calculate the increments in each axis
-    double x_inc = (target_position[0][3] - current_pose[0][3]) / increment;
-    double y_inc = (target_position[1][3] - current_pose[1][3]) / increment;
-    double z_inc = (target_position[2][3] - current_pose[2][3]) / increment;
-    
-    // Start moving toward the desired target
-    while (!isApprox(current_pose, target_position))
+    // Check the orientation
+    for (int i = 0; i < 3; i++)
     {
-        current_pose[0][3] += x_inc;
-        current_pose[1][3] += y_inc;
-        current_pose[2][3] += z_inc;
-        igtl::Sleep(10);
+        for (int j = 0; j < 3; j++)
+        {
+            if (abs(current_pose(i, j) - target_position(i, j)) > epsilon)
+            {
+                return false;
+            }
+        }
     }
-    in_target_position = true;
+    // Check the x and y of the robot
+    if (current_pose(0, 3) - target_position(0, 3) > epsilon || current_pose(1, 3) - target_position(1, 3) > epsilon)
+    {
+        return false;
+    }
+    // The robot has reached the targeting position
+    return true;
 }
 
-int Robot::InsertNeedleToTargetDepth(int increment)
+int Robot::MoveToTargetingPosition()
 {
-    
+    if (!isInTargetingPos() && !*move_interrupted)
+    {
+        current_pose(0, 3) += x_inc;
+        current_pose(1, 3) += y_inc;
+        igtl::Sleep(10);
+        return 1;
+    }
+}
 
+void Robot::CalcMoveToTargetInc(int increment)
+{
+    if (!isInTargetingPos())
+    {
+        // Calculate the increments in each axis
+        double x_inc = (target_position(0, 3) - current_pose(0, 3)) / increment;
+        double y_inc = (target_position(1, 3) - current_pose(1, 3)) / increment;
+        double z_inc = (target_position(2, 3) - current_pose(2, 3)) / increment;
+    }
+}
+
+int Robot::InsertNeedleToTargetDepth()
+{
 }
 
 void Robot::ZeroRobot()
 {
-    igtl::IdentityMatrix(current_pose);
+    current_pose.setIdentity();
+}
+
+void Robot::StopRobot()
+{
+    *move_interrupted = true;
+}
+void Robot::EnableMove()
+{
+    *move_interrupted = false;
+}
+
+void Robot::SetTargetPosition(const Eigen::Matrix4d&target_position)
+{
+    this->target_position = target_position;
+    this->CalcMoveToTargetInc();
+    this->SetTargetPointFlag(true);
+}
+
+void Robot::SetCalibration(const Eigen::Matrix4d&calibration)
+{
+    this->calibration = calibration;
+    this->SetCalibrationFlag(true);
 }

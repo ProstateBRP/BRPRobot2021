@@ -25,6 +25,7 @@ public:
 
   virtual int Initialize();
   virtual int MessageHandler(igtl::MessageHeader* headerMsg);
+  virtual void OnExit();
 
 protected:
 

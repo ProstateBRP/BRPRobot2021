@@ -54,6 +54,7 @@ void RobotFunctionality(Robot *robot, Timer _timer, unsigned int loopRate)
 	// Launch main robot program
 	while (1)
 	{ 
+		robot->UpdateRobot();
 		// Profile code to maintain a consistent loop time
 		do
 		{
