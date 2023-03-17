@@ -73,7 +73,7 @@ void *OpenIGTLink::ThreadIGT(void *igt)
 
 int OpenIGTLink::Session()
 {
-    RobotStatus *rs = new RobotStatus();
+    RobotStatus *rs = new RobotStatus(robot);
 
     // Set socket and robot status
     std::vector<RobotPhaseBase *>::iterator iter;
@@ -118,7 +118,7 @@ int OpenIGTLink::Session()
             }
         }
     }
-
+    delete rs;
     return 1;
 }
 void OpenIGTLink::DisconnectSocket()

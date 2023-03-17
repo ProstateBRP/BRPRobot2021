@@ -32,9 +32,12 @@ int RobotMoveToTargetPhase::Initialize()
   if (RStatus->GetTargetFlag())
   {
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
-    SendTransformMessage("CURRENT_POSITION", RStatus->robot.current_pose);
+    // Send current needle pose to Slicer
+    igtl::Matrix4x4 curr_pose;
+    RStatus->GetCurrentPosition(curr_pose);
+    SendTransformMessage("CURRENT_POSITION", curr_pose);
     // Enable the axis to move
-    RStatus->robot.EnableMove();
+    RStatus->robot->EnableMove();
   }
   else
   {
@@ -47,7 +50,7 @@ int RobotMoveToTargetPhase::Initialize()
 
 void RobotMoveToTargetPhase::OnExit()
 {
-  RStatus->robot.StopRobot();
+  RStatus->robot->StopRobot();
 }
 
 int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)

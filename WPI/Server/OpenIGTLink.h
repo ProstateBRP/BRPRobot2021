@@ -17,7 +17,7 @@
 #include <vector>
 
 // Robot includes
-#include "../Robot.hpp"
+#include "../Robot/Robot.hpp"
 // IGTL includes
 #include "igtlServerSocket.h"
 

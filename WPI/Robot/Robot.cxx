@@ -1,12 +1,10 @@
 #include "Robot.hpp"
 
-Robot::Robot(): x_inc{0}, y_inc{0}
+Robot::Robot() : x_inc{0}, y_inc{0}
 {
     current_pose = Eigen::Matrix4d::Identity();
     target_position = Eigen::Matrix4d::Identity();
     calibration = Eigen::Matrix4d::Identity();
-
-    *move_interrupted = false;
 }
 
 void Robot::UpdateRobot()
@@ -50,7 +48,7 @@ bool Robot::isInTargetingPos(double epsilon)
         }
     }
     // Check the x and y of the robot
-    if (current_pose(0, 3) - target_position(0, 3) > epsilon || current_pose(1, 3) - target_position(1, 3) > epsilon)
+    if (abs(current_pose(0, 3) - target_position(0, 3)) > epsilon || abs(current_pose(1, 3) - target_position(1, 3)) > epsilon)
     {
         return false;
     }
@@ -60,28 +58,27 @@ bool Robot::isInTargetingPos(double epsilon)
 
 int Robot::MoveToTargetingPosition()
 {
-    if (!isInTargetingPos() && !*move_interrupted)
+    if (!isInTargetingPos() && motor_enabled)
     {
+
         current_pose(0, 3) += x_inc;
         current_pose(1, 3) += y_inc;
         igtl::Sleep(10);
         return 1;
     }
+    return 0;
 }
 
 void Robot::CalcMoveToTargetInc(int increment)
 {
-    if (!isInTargetingPos())
-    {
-        // Calculate the increments in each axis
-        double x_inc = (target_position(0, 3) - current_pose(0, 3)) / increment;
-        double y_inc = (target_position(1, 3) - current_pose(1, 3)) / increment;
-        double z_inc = (target_position(2, 3) - current_pose(2, 3)) / increment;
-    }
+    // Calculate the increments in each axis
+    x_inc = (target_position(0, 3) - current_pose(0, 3)) / increment;
+    y_inc = (target_position(1, 3) - current_pose(1, 3)) / increment;
 }
 
 int Robot::InsertNeedleToTargetDepth()
 {
+    return 0;
 }
 
 void Robot::ZeroRobot()
@@ -91,21 +88,21 @@ void Robot::ZeroRobot()
 
 void Robot::StopRobot()
 {
-    *move_interrupted = true;
+    motor_enabled = false;
 }
 void Robot::EnableMove()
 {
-    *move_interrupted = false;
+    motor_enabled = true;
 }
 
-void Robot::SetTargetPosition(const Eigen::Matrix4d&target_position)
+void Robot::SetTargetPosition(const Eigen::Matrix4d &target_position)
 {
     this->target_position = target_position;
     this->CalcMoveToTargetInc();
     this->SetTargetPointFlag(true);
 }
 
-void Robot::SetCalibration(const Eigen::Matrix4d&calibration)
+void Robot::SetCalibration(const Eigen::Matrix4d &calibration)
 {
     this->calibration = calibration;
     this->SetCalibrationFlag(true);

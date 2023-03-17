@@ -62,9 +62,6 @@ int RobotCalibrationPhase::MessageHandler(igtl::MessageHeader *headerMsg)
     igtl::Matrix4x4 matrix;
     this->ReceiveTransform(headerMsg, matrix);
 
-    // Show the matrix that I have received
-    PrintMatrix("", matrix);
-
     // Acknowledgement
     std::string devName = headerMsg->GetDeviceName();
     std::stringstream ss;

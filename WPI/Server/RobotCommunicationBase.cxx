@@ -441,7 +441,7 @@ int RobotCommunicationBase::ReceiveTransform(igtl::MessageHeader *header, igtl::
   {
     // Retrive the transform data
     transMsg->GetMatrix(matrix);
-    //igtl::PrintMatrix(matrix);
+    igtl::PrintMatrix(matrix);
     std::cerr << std::endl;
     return 1;
   }

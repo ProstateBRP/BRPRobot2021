@@ -157,8 +157,7 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
       RStatus->GetCurrentPosition(curr_pose);
       SendTransformMessage("CURRENT_POSITION", curr_pose);
       Logger &log = Logger::GetInstance();
-      log.Log("Info: Sent CURRENT_POSITION to navigation", 1, 1);
-      
+      log.Log("Info: Sent CURRENT_POSITION to navigation", 1, 1);   
       // Send string msg flag for targeting position
       // TODO:
       // Send string msg flag for insertion depth

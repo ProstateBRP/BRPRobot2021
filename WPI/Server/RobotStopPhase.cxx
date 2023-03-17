@@ -22,8 +22,11 @@ RobotStopPhase::RobotStopPhase() :
 {
 }
 
-
 RobotStopPhase::~RobotStopPhase()
+{
+}
+
+void RobotStopPhase::OnExit()
 {
 }
 

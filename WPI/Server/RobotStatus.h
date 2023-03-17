@@ -11,7 +11,7 @@
 
 #include <string>
 #include <map>
-#include "Robot.hpp"
+#include "../Robot/Robot.hpp"
 #include "igtlSocket.h"
 #include "igtlMath.h"
 #include "igtlMessageBase.h"
@@ -20,11 +20,11 @@
 class RobotStatus
 {
 public:
-  RobotStatus();
+  RobotStatus(Robot*);
   ~RobotStatus();
 
-  int GetTargetFlag() { return robot.isTargetPointReceived(); }
-  int GetCalibrationFlag() { return this->robot.isCalibrationReceived(); };
+  int GetTargetFlag() { return robot->isTargetPointReceived(); }
+  int GetCalibrationFlag() { return robot->isCalibrationReceived(); };
 
   void SetCalibrationMatrix(igtl::Matrix4x4 &matrix);
 
@@ -38,7 +38,7 @@ public:
   // Set reported needle tip position
   void SetCurrentNeedlePos(const igtl::Matrix4x4 &matrix);
   void GetCurrentPosition(igtl::Matrix4x4 &currentPosition);
-  Robot robot;
+  Robot *robot;
 };
 
 #endif //__RobotStatus_h

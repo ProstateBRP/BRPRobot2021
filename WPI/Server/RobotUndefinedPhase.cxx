@@ -22,7 +22,9 @@ RobotUndefinedPhase::RobotUndefinedPhase() :
 {
 }
 
-
+void RobotUndefinedPhase::OnExit()
+{
+}
 RobotUndefinedPhase::~RobotUndefinedPhase()
 {
 }

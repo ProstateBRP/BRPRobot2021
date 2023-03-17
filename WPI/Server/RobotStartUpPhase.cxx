@@ -25,6 +25,10 @@ RobotStartUpPhase::~RobotStartUpPhase()
 {
 }
 
+void RobotStartUpPhase::OnExit()
+{
+}
+
 int RobotStartUpPhase::Initialize()
 {
 

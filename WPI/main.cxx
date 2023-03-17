@@ -18,11 +18,11 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
-#include "./Robot.hpp"
+#include "./Robot/Robot.hpp"
 #include "./Utilities/Logger/Logger.hpp"
 #include "./Server/OpenIGTLink.h"
 
-void RobotFunctionality(Robot *robot, Timer _timer, unsigned int loopRate)
+void RobotFunctionality(Robot *robot, Timer _timer, unsigned int loopRate, int port)
 {
 
 	Logger &log = Logger::GetInstance();
@@ -42,7 +42,7 @@ void RobotFunctionality(Robot *robot, Timer _timer, unsigned int loopRate)
 
 	// Create a thread for OpenIGT Communications
 	pthread_t _igtID;
-	OpenIGTLink _igtModule = OpenIGTLink(robot, 18936);
+	OpenIGTLink _igtModule = OpenIGTLink(robot, port);
 	void *_joinIgt;
 	pthread_create(&_igtID, NULL, &OpenIGTLink::ThreadIGT, (void *)&_igtModule);
 	pthread_setaffinity_np(_igtID, sizeof(cpu_set_t), &cpuset1);
@@ -53,7 +53,7 @@ void RobotFunctionality(Robot *robot, Timer _timer, unsigned int loopRate)
 	//====================================== MAIN LOOP ========================================
 	// Launch main robot program
 	while (1)
-	{ 
+	{
 		robot->UpdateRobot();
 		// Profile code to maintain a consistent loop time
 		do
@@ -78,11 +78,15 @@ int main(int argc, char *argv[])
 
 	//===================================== ROBOTS ==========================================
 	// Launch Robot Objects -- Assume we're using the NeuroRobot unless told otherwise
-	if (argc > 1 && strcmp(argv[1], "ProstateRobot") == 0)
+	int port{18936};
+	if (argc > 1)
 	{
-		log.Log("Launching Prostate Robot...", LOG_LEVEL_INFO, true);
-		Robot robot = Robot();
-		RobotFunctionality(&robot, _timer, loopRate);
+		port = atoi(argv[1]);
 	}
+	string ss = "Launching Simulated Robot On Port " + std::to_string(port);
+	log.Log(ss, LOG_LEVEL_INFO, true);
+	Robot robot = Robot();
+	RobotFunctionality(&robot, _timer, loopRate, port);
+	
 	return 0;
 }

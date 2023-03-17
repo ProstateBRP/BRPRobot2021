@@ -9,8 +9,9 @@
 #include "RobotStatus.h"
 #include "igtlMath.h"
 
-RobotStatus::RobotStatus()
+RobotStatus::RobotStatus(Robot *robot)
 {
+  this->robot = robot;
 }
 
 RobotStatus::~RobotStatus()
@@ -28,18 +29,18 @@ void RobotStatus::SetCalibrationMatrix(igtl::Matrix4x4 &matrix)
       calibration(i,j) = matrix[i][j];
     }
   }
-  this->robot.SetCalibration(calibration);
+  robot->SetCalibration(calibration);
 }
 
 int RobotStatus::GetCalibrationMatrix(igtl::Matrix4x4 &matrix)
 {
-  if (this->robot.isCalibrationReceived())
+  if (robot->isCalibrationReceived())
   {
     for (int i = 0; i < 4; i++)
     {
       for (int j = 0; j < 4; j++)
       {
-        matrix[i][j] = this->robot.calibration(i,j);
+        matrix[i][j] = robot->calibration(i,j);
       }
     }
     return 1;
@@ -62,15 +63,15 @@ void RobotStatus::SetTargetMatrix(igtl::Matrix4x4 &matrix)
     }
   }
   // Calculate the target point in robot base and set in the robot
-  this->robot.SetTargetPosition(robot.calibration.inverse() * target_in_imager_frame);
+  robot->SetTargetPosition(robot->calibration.inverse() * target_in_imager_frame);
 }
 
 int RobotStatus::GetTargetMatrix(igtl::Matrix4x4 &matrix)
 {
-  if (this->robot.isTargetPointReceived())
+  if (robot->isTargetPointReceived())
   {
     // Convert target to imager frame
-    Eigen::Matrix4d target_in_imager_frame = this->robot.calibration * this->robot.target_position;
+    Eigen::Matrix4d target_in_imager_frame = robot->calibration * robot->target_position;
     for (int i = 0; i < 4; i++)
     {
       for (int j = 0; j < 4; j++)
@@ -98,7 +99,7 @@ void RobotStatus::SetCurrentNeedlePos(const igtl::Matrix4x4 &matrix)
     }
   }
   // Convert to robot coordinate frame
-  this->robot.current_pose = robot.calibration.inverse() * current_pos_imager;
+  robot->current_pose = robot->calibration.inverse() * current_pos_imager;
 }
 
 /*!
@@ -107,7 +108,7 @@ Returns current tip pose of the robot in imager frame.
 void RobotStatus::GetCurrentPosition(igtl::Matrix4x4 &matrix)
 {
   // Convert to imager frame
-  Eigen::Matrix4d current_pose_in_imager_frame = this->robot.calibration * this->robot.current_pose;
+  Eigen::Matrix4d current_pose_in_imager_frame = robot->calibration * robot->current_pose;
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 4; j++)

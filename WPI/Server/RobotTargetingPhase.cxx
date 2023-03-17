@@ -29,7 +29,7 @@ RobotTargetingPhase::~RobotTargetingPhase()
 
 void RobotTargetingPhase::OnExit()
 {
-  RStatus->robot.StopRobot();
+  RStatus->robot->StopRobot();
 }
 
 int RobotTargetingPhase::Initialize()
@@ -47,7 +47,7 @@ int RobotTargetingPhase::Initialize()
   else
   {
     // Enable the axis to move
-    RStatus->robot.EnableMove();
+    RStatus->robot->EnableMove();
     this->SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
   }
 
