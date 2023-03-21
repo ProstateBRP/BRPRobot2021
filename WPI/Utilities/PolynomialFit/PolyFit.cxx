@@ -8,11 +8,11 @@ PolyFit::PolyFit(std::string plane)
         x_idx = 2;
         y_idx = 1;
     }
-    else if (plane == "XY" || plane == "xy")
+    else if (plane == "ZX" || plane == "zx")
     {
-        desired_plane = DesiredPlane::XY;
-        x_idx = 0;
-        y_idx = 1;
+        desired_plane = DesiredPlane::ZY;
+        x_idx = 2;
+        y_idx = 0;
     }
     else
     {
@@ -29,7 +29,11 @@ int PolyFit::Fit(const std::vector<Eigen::Vector3d> &data_pts, int order)
         std::cerr << "Invalid Operation!" << std::endl;
         return 0;
     }
-    else if (data_pts.size() > 2)
+    else if (data_pts.size() == 2)
+    {
+        fit_type = FitType::LINEAR;
+    }
+    else
     {
         fit_type = FitType::CUBIC;
     }
@@ -54,6 +58,7 @@ int PolyFit::Fit(const std::vector<Eigen::Vector3d> &data_pts, int order)
     {
         CubicFit();
     }
+    return 1;
 }
 
 int PolyFit::LinearFit()

@@ -67,7 +67,7 @@ double CurvSteering::CalcRotationalVel(const double &rbt_theta_rad)
     {
         return UnidirectionalCurv(rbt_theta_rad);
     }
-    else if (*curv_method == CurvMethod::BIDIRECTIONAL)
+    else
     {
         return BidirectionalCurv(rbt_theta_rad);
     }

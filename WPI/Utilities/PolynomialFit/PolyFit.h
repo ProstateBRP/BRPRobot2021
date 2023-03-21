@@ -1,4 +1,4 @@
-# pragma once
+#pragma once
 
 #include <Eigen/Dense>
 #include <iostream>
@@ -14,7 +14,7 @@ enum class FitType
 
 enum class DesiredPlane
 {
-    XY,
+    ZX,
     ZY
 };
 
@@ -24,13 +24,14 @@ public:
     PolyFit(std::string);
     // Functions
     int Fit(const std::vector<Eigen::Vector3d> &, int = 3);
+    double CalcAngle();
+private:
     int CubicFit(int = 3);
     int LinearFit();
-    double CalcAngle();
     // Attributes
     std::vector<double> coeffs{0, 0, 0};
     FitType fit_type{FitType::LINEAR};
-    int x_idx{0}, y_idx{1};
+    int x_idx{2}, y_idx{0};
     std::vector<double> x_data{};
     std::vector<double> y_data{};
     DesiredPlane desired_plane;

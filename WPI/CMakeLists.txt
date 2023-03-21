@@ -11,18 +11,16 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
-# find_package(OpenIGTLink REQUIRED)
-# include(${OpenIGTLink_USE_FILE})
-
 set(EIGEN_DIR /usr/include/eigen3)
 include_directories(${EIGEN_DIR})
 
-add_subdirectory(./NeedleKinematics/)
-add_subdirectory(./Robot/)
-add_subdirectory(./Server/)
 add_subdirectory(./SteeringAlgorithm/CurvSteering/)
+add_subdirectory(./Robot/)
+add_subdirectory(./NeedleKinematics/)
+add_subdirectory(./Server/)
 add_subdirectory(./Utilities/Timer)
 add_subdirectory(./Utilities/Logger)
+add_subdirectory(./Utilities/PolynomialFit)
 
 
 set(ROBOT_SIM_SOURCE
@@ -36,8 +34,8 @@ OpenIGTLinkComm
 Logger
 Timer
 Robot
-BicycleKinematics
 CurvSteering
-
+PolyFit
+BicycleKinematics
 )
 

@@ -159,9 +159,9 @@ int RobotPhaseBase::CheckCommonMessage(igtl::MessageHeader *headerMsg)
       Logger &log = Logger::GetInstance();
       log.Log("Info: Sent CURRENT_POSITION to navigation", 1, 1);   
       // Send string msg flag for targeting position
-      // TODO:
+      SendStringMessage("IS_IN_TARGETING_POS", to_string(RStatus->robot->isInTargetingPos()).c_str());
       // Send string msg flag for insertion depth
-      // TODO:
+      SendStringMessage("HAS_REACHED_TARGET", to_string(RStatus->robot->hasReachedTarget()).c_str());
       return 1;
     }
     else if (strcmp(dev_name.c_str(), "CURRENT_STATUS") == 0)

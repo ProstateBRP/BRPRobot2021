@@ -38,11 +38,10 @@ public:
     CurvSteering(CurvMethod *);
     void CalcCurvParams(const Eigen::Matrix4d &, const Eigen::Vector4d &, const double &);
     double CalcAlpha(const double &);
-    void set_alpha(const double &alpha) { this->alpha = alpha; }
-    double CalcRotationVelocity(const double &);
     double UnidirectionalCurv(const double &);
     double BidirectionalCurv(const double &);
     double CalcRotationalVel(const double &);
+    inline void set_alpha(const double &alpha) { this->alpha = alpha; }
     inline void ResetRotationDir() { current_rotation_dir = RotationDirection::CW; }
 
     /*!
@@ -59,7 +58,7 @@ public:
     RotationDirection current_rotation_dir{CW};
     CurvMethod *curv_method;
     double theta_d{0};
-    double alpha{0.1};
+    double alpha{0.0};
     double theta_diff{0};
     double c{60 * M_PI / 180};
 };

@@ -20,13 +20,13 @@ RobotStatus::~RobotStatus()
 
 void RobotStatus::SetCalibrationMatrix(igtl::Matrix4x4 &matrix)
 {
-  // Convert to Eigen 
+  // Convert to Eigen
   Eigen::Matrix4d calibration = Eigen::Matrix4d::Identity();
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 4; j++)
     {
-      calibration(i,j) = matrix[i][j];
+      calibration(i, j) = matrix[i][j];
     }
   }
   robot->SetCalibration(calibration);
@@ -40,7 +40,7 @@ int RobotStatus::GetCalibrationMatrix(igtl::Matrix4x4 &matrix)
     {
       for (int j = 0; j < 4; j++)
       {
-        matrix[i][j] = robot->calibration(i,j);
+        matrix[i][j] = robot->calibration(i, j);
       }
     }
     return 1;
@@ -54,12 +54,12 @@ int RobotStatus::GetCalibrationMatrix(igtl::Matrix4x4 &matrix)
 void RobotStatus::SetTargetMatrix(igtl::Matrix4x4 &matrix)
 {
   // Convert to Eigen matrix
-  Eigen::Matrix4d target_in_imager_frame = Eigen::Matrix4d::Identity(); 
+  Eigen::Matrix4d target_in_imager_frame = Eigen::Matrix4d::Identity();
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 4; j++)
     {
-      target_in_imager_frame(i,j) = matrix[i][j];
+      target_in_imager_frame(i, j) = matrix[i][j];
     }
   }
   // Calculate the target point in robot base and set in the robot
@@ -76,7 +76,7 @@ int RobotStatus::GetTargetMatrix(igtl::Matrix4x4 &matrix)
     {
       for (int j = 0; j < 4; j++)
       {
-        matrix[i][j] = target_in_imager_frame(i,j);
+        matrix[i][j] = target_in_imager_frame(i, j);
       }
     }
     return 1;
@@ -90,12 +90,12 @@ int RobotStatus::GetTargetMatrix(igtl::Matrix4x4 &matrix)
 void RobotStatus::SetCurrentNeedlePos(const igtl::Matrix4x4 &matrix)
 {
   // Convert to Eigen matrix
-  Eigen::Matrix4d current_pos_imager = Eigen::Matrix4d::Identity(); 
+  Eigen::Matrix4d current_pos_imager = Eigen::Matrix4d::Identity();
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 4; j++)
     {
-      current_pos_imager(i,j) = matrix[i][j];
+      current_pos_imager(i, j) = matrix[i][j];
     }
   }
   // Convert to robot coordinate frame
@@ -116,4 +116,21 @@ void RobotStatus::GetCurrentPosition(igtl::Matrix4x4 &matrix)
       matrix[i][j] = current_pose_in_imager_frame(i, j);
     }
   }
+}
+
+void RobotStatus::PushBackActualNeedlePos(const igtl::Matrix4x4 &matrix)
+{
+  // Convert to Eigen matrix
+  Eigen::Matrix4d reported_needle_pos_imager = Eigen::Matrix4d::Identity();
+  for (int i = 0; i < 4; i++)
+  {
+    for (int j = 0; j < 4; j++)
+    {
+      reported_needle_pos_imager(i, j) = matrix[i][j];
+    }
+  }
+  Eigen::Matrix4d reported_needle_tip_robot = robot->calibration.inverse() * reported_needle_pos_imager;
+  Eigen::Vector3d needle_tip_pos(reported_needle_tip_robot(0, 3), reported_needle_tip_robot(1, 3),
+                                 reported_needle_tip_robot(2, 3));
+  this->robot->PushBackActualNeedlePosAndUpdatePose(needle_tip_pos);
 }

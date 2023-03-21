@@ -30,6 +30,12 @@ RobotTargetingPhase::~RobotTargetingPhase()
 void RobotTargetingPhase::OnExit()
 {
   RStatus->robot->StopRobot();
+  // Check if the robot has reached its targeting position And if the state is changing to Move to Target
+  if(RStatus->robot->isInTargetingPos() && strcmp("MOVE_TO_TARGET", GetNextWorkPhase().c_str()) == 0 )
+  {
+    // Capture the last reported needle tip position
+    RStatus->robot->SaveNeedleTipPose();
+  }
 }
 
 int RobotTargetingPhase::Initialize()
@@ -83,23 +89,6 @@ int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
     }
   }
 
-  if (strcmp(headerMsg->GetDeviceType(), "STRING") == 0)
-  {
-    if (strcmp(headerMsg->GetDeviceName(), "RETRACT_NEEDLE") == 0)
-    {
-      string text;
-      ReceiveString(headerMsg, text);
-      SendStatusMessage("ACK_RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
-      // Ask the robot to retract the needle
-      /*
-      TODO:      IMPLEMENT in the simulator
-      */
-      // Send acknowledgment for successful needle retraction.
-      SendStatusMessage("RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
-      return 1;
-    }
-
-  }
 
   return 0;
 }

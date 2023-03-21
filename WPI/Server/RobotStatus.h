@@ -38,6 +38,7 @@ public:
   // Set reported needle tip position
   void SetCurrentNeedlePos(const igtl::Matrix4x4 &matrix);
   void GetCurrentPosition(igtl::Matrix4x4 &currentPosition);
+  void PushBackActualNeedlePos(const igtl::Matrix4x4 &matrix);
   Robot *robot;
 };
 
