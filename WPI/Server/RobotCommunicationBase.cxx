@@ -533,7 +533,8 @@ int RobotCommunicationBase::ValidateMatrix(const igtl::Matrix4x4 &matrix)
     double l = (matrix[0][i] * matrix[0][i]) + (matrix[1][i] * matrix[1][i]) + (matrix[2][i] * matrix[2][i]);
     if (abs(l - 1.0) > 0.00001)
     {
-      std::cerr << "Columns are not normal! l is:" << l << std::endl;;
+      std::cerr << "Columns are not normal! l is:" << l << std::endl;
+      std::cerr << "Check columns "<< i << std::endl;
       return 0;
     }
   }

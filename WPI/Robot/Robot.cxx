@@ -132,9 +132,9 @@ void Robot::SetCalibration(const Eigen::Matrix4d &calibration)
     this->SetCalibrationFlag(true);
 }
 
-void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &matrix)
+void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported_tip_pos)
 {
-    actual_tip_positions.push_back(matrix);
+    actual_tip_positions.push_back(reported_tip_pos);
     zx_fit.Fit(actual_tip_positions);
     zy_fit.Fit(actual_tip_positions);
     // estimate rotation angle about
@@ -176,4 +176,17 @@ void Robot::UpdateCurvParams()
 Eigen::Vector4d Robot::GetTargetPointVector()
 {
     return Eigen::Vector4d(target_position(0, 3), target_position(1, 3), target_position(2, 3), 1);
+}
+
+void Robot::PushBackKinematicTipAsActualPose()
+{
+    actual_tip_positions.push_back(Eigen::Vector3d(current_pose(0,3),current_pose(1,3),current_pose(2,3)));
+    zx_fit.Fit(actual_tip_positions);
+    zy_fit.Fit(actual_tip_positions);
+    // estimate rotation angle about
+    double beta = zx_fit.CalcAngle();
+    double omega = zy_fit.CalcAngle();
+    // Update the current pose based on the estimated pose
+    current_pose = kinematics.ApplyRotation(current_pose, Eigen::Vector3d(theta, beta, omega));
+
 }

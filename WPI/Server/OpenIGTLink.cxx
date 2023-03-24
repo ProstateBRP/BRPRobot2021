@@ -89,7 +89,7 @@ int OpenIGTLink::Session()
     // Set undefined phase as the current phase;
     std::vector<RobotPhaseBase *>::iterator currentPhase = WorkphaseList.begin();
     // Update robot state
-    robot->current_state = (*currentPhase)->Name();
+    robot->SetCurrentState((*currentPhase)->Name());
     //------------------------------------------------------------
     // loop
     while ((*currentPhase)->connect)
@@ -111,8 +111,8 @@ int OpenIGTLink::Session()
                     // Change the current phase
                     currentPhase = iter;
                     (*currentPhase)->Enter(queryID.c_str()); // Initialization process
-                    // Update robot current state
-                    robot->current_state = (*currentPhase)->Name();
+                                                             // Update robot current state
+                    robot->SetCurrentState((*currentPhase)->Name());
                     break;
                 }
             }
