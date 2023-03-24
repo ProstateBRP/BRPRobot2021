@@ -2367,7 +2367,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       slicer.mrmlScene.RemoveNode(self.robotModelNode)
       self.robotModelNode = None
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
-    robotModelPath = os.path.join(currentFilePath, "Resources", "robot", "robot->vtk")
+    robotModelPath = os.path.join(currentFilePath, "Resources", "robot", "robot.vtk")
     _, self.robotModelNode = slicer.util.loadModel(robotModelPath, returnNode=True)
     self.robotModelNode.SetName("RobotModel")
     modelDisplayNode = self.robotModelNode.GetDisplayNode()
