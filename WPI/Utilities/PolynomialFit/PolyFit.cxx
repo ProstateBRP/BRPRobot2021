@@ -122,8 +122,9 @@ double PolyFit::CalcAngle()
             const double x = x_data.back();
             const double y = y_data.back();
             double slope = (3 * coeffs.at(3) * pow(x, 2)) + (2 * coeffs.at(2) * x) + coeffs.at(1);
-            double x0 = x - ((y) / (x - x0));
-            return atan2(y, (x - x0));
+            double x0 = x - (y / slope);
+            // return atan2(y, (x - x0));
+            return atan(slope);
         }
     }
     else
