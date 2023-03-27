@@ -16,14 +16,14 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotPhaseBase::RobotPhaseBase()
+RobotPhaseBase::RobotPhaseBase(Robot *robot) : RStatus(new RobotStatus(robot))
 {
   this->NextWorkphase.clear();
-  this->RStatus = NULL;
 }
 
 RobotPhaseBase::~RobotPhaseBase()
 {
+  delete RStatus;
 }
 
 int RobotPhaseBase::Enter(const char *queryID)

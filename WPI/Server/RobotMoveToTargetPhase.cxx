@@ -19,7 +19,7 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotMoveToTargetPhase::RobotMoveToTargetPhase() : RobotPhaseBase()
+RobotMoveToTargetPhase::RobotMoveToTargetPhase(Robot *robot) : RobotPhaseBase(robot)
 {
 }
 
@@ -38,7 +38,7 @@ int RobotMoveToTargetPhase::Initialize()
     SendTransformMessage("CURRENT_POSITION", curr_pose);
     // Send the current kinematic tip position as the first actual tip position
     RStatus->PushBackKinematicTipPose();
-    
+
     // Enable the axis to move
     RStatus->robot->EnableMove();
   }
@@ -123,7 +123,7 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       // Pushback the reported needle tip position
       RStatus->PushBackActualNeedlePos(matrix);
       RStatus->robot->UpdateCurvParams();
-      
+
       Logger &log = Logger::GetInstance();
       log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
       // needle pose should be saved in a robot variable in the real robot sw.

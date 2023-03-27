@@ -18,7 +18,7 @@ class RobotManualPhase : public RobotPhaseBase
 {
 public:
 
-  RobotManualPhase();
+  RobotManualPhase(Robot *);
   ~RobotManualPhase();
 
   virtual const char* Name() { return "MANUAL"; };

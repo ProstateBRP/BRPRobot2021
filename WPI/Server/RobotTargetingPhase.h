@@ -17,21 +17,18 @@
 class RobotTargetingPhase : public RobotPhaseBase
 {
 public:
-
-  RobotTargetingPhase();
+  RobotTargetingPhase(Robot *);
   ~RobotTargetingPhase();
 
-  virtual const char* Name() { return "TARGETING"; };
+  virtual const char *Name() { return "TARGETING"; };
 
   virtual int Initialize();
-  virtual int MessageHandler(igtl::MessageHeader* headerMsg);
+  virtual int MessageHandler(igtl::MessageHeader *headerMsg);
   virtual void OnExit();
 
 protected:
-  
   // Has the  received a target matrix?
   int TargetFlag;
-
 };
 
 #endif //__RobotTargetingPhase_h

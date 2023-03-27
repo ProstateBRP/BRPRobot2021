@@ -17,18 +17,16 @@
 class RobotStartUpPhase : public RobotPhaseBase
 {
 public:
-
-  RobotStartUpPhase();
+  RobotStartUpPhase(Robot *);
   ~RobotStartUpPhase();
 
-  virtual const char* Name() { return "START_UP"; };
+  virtual const char *Name() { return "START_UP"; };
 
   virtual int Initialize();
-  virtual int MessageHandler(igtl::MessageHeader* headerMsg);
+  virtual int MessageHandler(igtl::MessageHeader *headerMsg);
   virtual void OnExit();
 
 protected:
-
 };
 
 #endif //__RobotStartUpPhase_h

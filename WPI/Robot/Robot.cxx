@@ -54,7 +54,7 @@ bool Robot::isInTargetingPos(double epsilon)
         }
     }
     // Check the x and y of the robot
-    if (abs(current_pose(0, 3) - target_position(0, 3)) > epsilon || abs(current_pose(1, 3) - target_position(1, 3)) > epsilon)
+    if ((abs(current_pose(0, 3) - target_position(0, 3)) > epsilon) || (abs(current_pose(1, 3) - target_position(1, 3)) > epsilon))
     {
         return false;
     }
@@ -66,6 +66,7 @@ int Robot::MoveToTargetingPosition()
 {
     if (!isInTargetingPos() && motor_enabled)
     {
+        current_pose.block(0,0,3,3) = target_position.block(0,0,3,3);
         current_pose(0, 3) += x_inc;
         current_pose(1, 3) += y_inc;
         igtl::Sleep(10);
@@ -100,8 +101,6 @@ int Robot::InsertNeedleToTargetDepth()
 
 bool Robot::hasReachedTarget(double epsilon)
 {
-    // abs(current_pose(0, 3) - target_position(0, 3)) > epsilon || abs(current_pose(1, 3) - 
-    // target_position(1, 3)) > epsilon ||
     return !(abs(current_pose(2, 3) - target_position(2, 3)) > epsilon);
 }
 
@@ -189,4 +188,14 @@ void Robot::PushBackKinematicTipAsActualPose()
     // Update the current pose based on the estimated pose
     current_pose = kinematics.ApplyRotation(current_pose, Eigen::Vector3d(theta, beta, omega));
 
+}
+
+void Robot::Reset()
+{
+    current_pose.Identity();
+    target_position.Identity();
+    calibration.Identity();
+    calibration_received = false;
+    target_point_received = false;
+    CleanUp();
 }

@@ -28,7 +28,7 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotCalibrationPhase::RobotCalibrationPhase() : RobotPhaseBase()
+RobotCalibrationPhase::RobotCalibrationPhase(Robot *robot) : RobotPhaseBase(robot)
 {
 }
 

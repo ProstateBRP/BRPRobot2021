@@ -17,8 +17,7 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotUndefinedPhase::RobotUndefinedPhase() :
-  RobotPhaseBase()
+RobotUndefinedPhase::RobotUndefinedPhase(Robot *robot) : RobotPhaseBase(robot)
 {
 }
 
@@ -34,15 +33,13 @@ int RobotUndefinedPhase::Initialize()
   return 1;
 }
 
-
-int RobotUndefinedPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+int RobotUndefinedPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
 
   if (RobotPhaseBase::MessageHandler(headerMsg))
-    {
+  {
     return 1;
-    }
+  }
 
   return 0;
 }
-

@@ -17,18 +17,16 @@
 class RobotEmergencyPhase : public RobotPhaseBase
 {
 public:
-
-  RobotEmergencyPhase();
+  RobotEmergencyPhase(Robot *);
   ~RobotEmergencyPhase();
 
-  virtual const char* Name() { return "EMERGENCY"; };
+  virtual const char *Name() { return "EMERGENCY"; };
 
   virtual int Initialize();
-  virtual int MessageHandler(igtl::MessageHeader* headerMsg);
+  virtual int MessageHandler(igtl::MessageHeader *headerMsg);
   virtual void OnExit();
 
 protected:
-
 };
 
 #endif //__RobotEmergencyPhase_h

@@ -71,4 +71,5 @@ public:
     void PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &);
     void PushBackKinematicTipAsActualPose();
     void CleanUp();
+    void Reset();
 };

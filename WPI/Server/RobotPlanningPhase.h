@@ -17,18 +17,16 @@
 class RobotPlanningPhase : public RobotPhaseBase
 {
 public:
-
-  RobotPlanningPhase();
+  RobotPlanningPhase(Robot *);
   ~RobotPlanningPhase();
 
-  virtual const char* Name() { return "PLANNING"; };
+  virtual const char *Name() { return "PLANNING"; };
 
   virtual int Initialize();
-  virtual int MessageHandler(igtl::MessageHeader* headerMsg);
+  virtual int MessageHandler(igtl::MessageHeader *headerMsg);
   virtual void OnExit();
 
 protected:
-
 };
 
 #endif //__RobotPlanningPhase_h

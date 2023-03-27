@@ -18,7 +18,7 @@ class RobotCalibrationPhase : public RobotPhaseBase
 {
 public:
 
-  RobotCalibrationPhase();
+  RobotCalibrationPhase(Robot*);
   ~RobotCalibrationPhase();
 
   virtual const char* Name() { return "CALIBRATION"; };
