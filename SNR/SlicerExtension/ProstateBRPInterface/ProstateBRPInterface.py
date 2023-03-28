@@ -89,7 +89,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Create server button
     self.createServerButton = qt.QPushButton("Create robot client")
-    self.createServerButton.toolTip = "Create the IGTLink client connection with robot->"
+    self.createServerButton.toolTip = "Create the IGTLink client connection with robot."
     self.createServerButton.enabled = True
     self.createServerButton.setFixedWidth(250)
     serverFormLayout.addWidget(self.createServerButton, 2, 0)
@@ -317,7 +317,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # startupButton Button
     self.startupButton = qt.QPushButton("START UP")
-    self.startupButton.toolTip = "Send the startup command to the WPI robot->"
+    self.startupButton.toolTip = "Send the startup command to the WPI robot."
     self.startupButton.enabled = True
     self.startupButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.startupButton, 2, 0)
@@ -344,7 +344,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # calibrationButton Button
     self.calibrationButton = qt.QPushButton("CALIBRATION")
-    self.calibrationButton.toolTip = "Send the calibration command to the WPI robot->"
+    self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
     self.calibrationButton.enabled = False
     self.calibrationButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.calibrationButton, 4, 0)
@@ -352,7 +352,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
     self.planningButton = qt.QPushButton("PLANNING")
-    self.planningButton.toolTip = "Send the planning command to the WPI robot->"
+    self.planningButton.toolTip = "Send the planning command to the WPI robot."
     self.planningButton.enabled = False
     self.planningButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.planningButton, 4, 1)
@@ -360,7 +360,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # targetingButton Button
     self.targetingButton = qt.QPushButton("TARGETING")
-    self.targetingButton.toolTip = "Send the targeting command to the WPI robot->"
+    self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
     self.targetingButton.enabled = False
     self.targetingButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.targetingButton, 5 , 0)
@@ -368,7 +368,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # moveButton Button
     self.moveButton = qt.QPushButton("MOVE")
-    self.moveButton.toolTip = "Send the move to target command to the WPI robot->"
+    self.moveButton.toolTip = "Send the move to target command to the WPI robot."
     self.moveButton.enabled = False
     self.moveButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.moveButton, 5, 1)
@@ -376,7 +376,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # # Lock Button to ask WPI to lock robot
     # self.LockButton = qt.QPushButton("LOCK")
-    # self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot->"
+    # self.LockButton.toolTip = "Send the command to ask the operator to lock the WPI robot."
     # self.LockButton.enabled = False
     # self.LockButton.setMaximumWidth(250)
     # RobotOutboundCommunicationLayout.addWidget(self.LockButton, 5, 0)
@@ -384,7 +384,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # # Unlock Button to ask WPI to unlock robot
     # self.UnlockButton = qt.QPushButton("UNLOCK")
-    # self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot->"
+    # self.UnlockButton.toolTip = "Send the command to ask the operator to unlock the WPI robot."
     # self.UnlockButton.enabled = False
     # self.UnlockButton.setMaximumWidth(250)
     # RobotOutboundCommunicationLayout.addWidget(self.UnlockButton, 5, 1)
@@ -416,7 +416,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # STOP Button 
     self.StopButton = qt.QPushButton("STOP")
-    self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot->"
+    self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
     self.StopButton.enabled = False
     self.StopButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.StopButton, 7, 0)
@@ -424,7 +424,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # EMERGENCY Button 
     self.EmergencyButton = qt.QPushButton("EMERGENCY")
-    self.EmergencyButton.toolTip = "Send emergency command to WPI robot->"
+    self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
     self.EmergencyButton.enabled = False
     self.EmergencyButton.setMaximumWidth(250)
     RobotOutboundCommunicationLayout.addWidget(self.EmergencyButton, 7, 1)
@@ -2367,7 +2367,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       slicer.mrmlScene.RemoveNode(self.robotModelNode)
       self.robotModelNode = None
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
-    robotModelPath = os.path.join(currentFilePath, "Resources", "robot", "robot->vtk")
+    robotModelPath = os.path.join(currentFilePath, "Resources", "robot", "robot.vtk")
     _, self.robotModelNode = slicer.util.loadModel(robotModelPath, returnNode=True)
     self.robotModelNode.SetName("RobotModel")
     modelDisplayNode = self.robotModelNode.GetDisplayNode()
