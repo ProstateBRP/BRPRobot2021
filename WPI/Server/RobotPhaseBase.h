@@ -21,7 +21,7 @@
 class RobotPhaseBase : public RobotCommunicationBase
 {
 public:
-  RobotPhaseBase();
+  RobotPhaseBase(Robot *robot);
   virtual ~RobotPhaseBase();
   /* name of the state*/
   virtual const char *Name() = 0;

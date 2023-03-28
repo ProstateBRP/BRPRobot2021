@@ -19,19 +19,17 @@ void *OpenIGTLink::ThreadIGT(void *igt)
 {
     //------------------------------------------------------------
     // Setup workphases
-    // Should have a if statement to have specific workphases for respective robots
-    // WorkphaseList wlist;
     OpenIGTLink *igtModule = (OpenIGTLink *)igt;
 
-    igtModule->WorkphaseList.push_back(new RobotUndefinedPhase());
-    igtModule->WorkphaseList.push_back(new RobotStartUpPhase());
-    igtModule->WorkphaseList.push_back(new RobotPlanningPhase());
-    igtModule->WorkphaseList.push_back(new RobotCalibrationPhase());
-    igtModule->WorkphaseList.push_back(new RobotTargetingPhase());
-    igtModule->WorkphaseList.push_back(new RobotMoveToTargetPhase());
-    igtModule->WorkphaseList.push_back(new RobotManualPhase());
-    igtModule->WorkphaseList.push_back(new RobotStopPhase());
-    igtModule->WorkphaseList.push_back(new RobotEmergencyPhase());
+    igtModule->WorkphaseList.push_back(new RobotUndefinedPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotStartUpPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotPlanningPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotCalibrationPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotTargetingPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotMoveToTargetPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotManualPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotStopPhase(igtModule->robot));
+    igtModule->WorkphaseList.push_back(new RobotEmergencyPhase(igtModule->robot));
 
     igtl::ServerSocket::Pointer serverSocket;
     serverSocket = igtl::ServerSocket::New();
@@ -73,15 +71,12 @@ void *OpenIGTLink::ThreadIGT(void *igt)
 
 int OpenIGTLink::Session()
 {
-    RobotStatus *rs = new RobotStatus(robot);
-
     // Set socket and robot status
     std::vector<RobotPhaseBase *>::iterator iter;
     for (iter = WorkphaseList.begin(); iter != WorkphaseList.end(); iter++)
     {
         // std::cerr << "MESSAGE: Setting up " << (*iter)->Name() << " phase." << std::endl;
         (*iter)->SetSocket(socket);
-        (*iter)->SetRobotStatus(rs);
         (*iter)->connect = true;
     }
 
@@ -89,7 +84,7 @@ int OpenIGTLink::Session()
     // Set undefined phase as the current phase;
     std::vector<RobotPhaseBase *>::iterator currentPhase = WorkphaseList.begin();
     // Update robot state
-    robot->current_state = (*currentPhase)->Name();
+    robot->SetCurrentState((*currentPhase)->Name());
     //------------------------------------------------------------
     // loop
     while ((*currentPhase)->connect)
@@ -111,14 +106,14 @@ int OpenIGTLink::Session()
                     // Change the current phase
                     currentPhase = iter;
                     (*currentPhase)->Enter(queryID.c_str()); // Initialization process
-                    // Update robot current state
-                    robot->current_state = (*currentPhase)->Name();
+                                                             // Update robot current state
+                    robot->SetCurrentState((*currentPhase)->Name());
                     break;
                 }
             }
         }
     }
-    delete rs;
+    robot->Reset();
     return 1;
 }
 void OpenIGTLink::DisconnectSocket()

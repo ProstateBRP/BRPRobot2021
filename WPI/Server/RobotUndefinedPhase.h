@@ -26,18 +26,16 @@
 class RobotUndefinedPhase : public RobotPhaseBase
 {
 public:
-
-  RobotUndefinedPhase();
+  RobotUndefinedPhase(Robot *);
   ~RobotUndefinedPhase();
 
-  virtual const char* Name() { return "UNDEFINED"; };
+  virtual const char *Name() { return "UNDEFINED"; };
 
   virtual int Initialize();
-  virtual int MessageHandler(igtl::MessageHeader* headerMsg);
+  virtual int MessageHandler(igtl::MessageHeader *headerMsg);
   virtual void OnExit();
 
 protected:
-
 };
 
 #endif //__RobotUndefinedPhase_h

@@ -26,18 +26,16 @@
 class RobotStopPhase : public RobotPhaseBase
 {
 public:
-
-  RobotStopPhase();
+  RobotStopPhase(Robot *);
   ~RobotStopPhase();
 
-  virtual const char* Name() { return "STOP"; };
+  virtual const char *Name() { return "STOP"; };
 
   virtual int Initialize();
-  virtual int MessageHandler(igtl::MessageHeader* headerMsg);
+  virtual int MessageHandler(igtl::MessageHeader *headerMsg);
   virtual void OnExit();
 
 protected:
-
 };
 
 #endif //__RobotStopPhase_h

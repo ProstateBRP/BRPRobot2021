@@ -19,7 +19,7 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotTargetingPhase::RobotTargetingPhase() : RobotPhaseBase()
+RobotTargetingPhase::RobotTargetingPhase(Robot *robot) : RobotPhaseBase(robot)
 {
 }
 
@@ -31,7 +31,7 @@ void RobotTargetingPhase::OnExit()
 {
   RStatus->robot->StopRobot();
   // Check if the robot has reached its targeting position And if the state is changing to Move to Target
-  if(RStatus->robot->isInTargetingPos() && strcmp("MOVE_TO_TARGET", GetNextWorkPhase().c_str()) == 0 )
+  if (RStatus->robot->isInTargetingPos() && strcmp("MOVE_TO_TARGET", GetNextWorkPhase().c_str()) == 0)
   {
     // Capture the last reported needle tip position
     RStatus->robot->SaveNeedleTipPose();
@@ -88,7 +88,6 @@ int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       return 1;
     }
   }
-
 
   return 0;
 }

@@ -17,7 +17,7 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotManualPhase::RobotManualPhase() : RobotPhaseBase()
+RobotManualPhase::RobotManualPhase(Robot *robot) : RobotPhaseBase(robot)
 {
 }
 

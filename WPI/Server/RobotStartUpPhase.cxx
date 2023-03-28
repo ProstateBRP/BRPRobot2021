@@ -17,7 +17,7 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotStartUpPhase::RobotStartUpPhase() : RobotPhaseBase()
+RobotStartUpPhase::RobotStartUpPhase(Robot *robot) : RobotPhaseBase(robot)
 {
 }
 
@@ -43,28 +43,5 @@ int RobotStartUpPhase::Initialize()
 
 int RobotStartUpPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
-  // In the startup the actual needle tip pose can be initialized (ONLY for the SIMULATION)
-  /// Check if the navigation is sending the needle tip pose
-  if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
-      strncmp(headerMsg->GetDeviceName(), "NPOS_", 5) == 0)
-  {
-    // Create a matrix to store needle pose
-    std::string devName = headerMsg->GetDeviceName();
-    igtl::Matrix4x4 matrix;
-    this->ReceiveTransform(headerMsg, matrix);
-
-    // Acknowledgement
-    std::stringstream ss;
-    ss << "ACK_" << devName.substr(5, std::string::npos);
-    SendTransformMessage(ss.str().c_str(), matrix);
-    // Update current needle position
-    RStatus->SetCurrentNeedlePos(matrix);
-    Logger &log = Logger::GetInstance();
-    log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
-    // needle pose should be saved in a robot variable in the real robot sw.
-    SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
-    return 1;
-  }
-
   return 0;
 }

@@ -17,11 +17,9 @@
 #include "igtlTransformMessage.h"
 #include <cmath>
 
-RobotEmergencyPhase::RobotEmergencyPhase() :
-  RobotPhaseBase()
+RobotEmergencyPhase::RobotEmergencyPhase(Robot *robot) : RobotPhaseBase(robot)
 {
 }
-
 
 RobotEmergencyPhase::~RobotEmergencyPhase()
 {
@@ -41,14 +39,13 @@ void RobotEmergencyPhase::OnExit()
 {
 }
 
-int RobotEmergencyPhase::MessageHandler(igtl::MessageHeader* headerMsg)
+int RobotEmergencyPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
 
   if (RobotPhaseBase::MessageHandler(headerMsg))
-    {
+  {
     return 1;
-    }
+  }
 
   return 0;
 }
-
