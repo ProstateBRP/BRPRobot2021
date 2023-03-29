@@ -1,0 +1,3 @@
+Install the following python packages to 3D Slicer (use 3D Slicer Python Interactor):
+
+slicer.util.pip_install('scikit-image')
