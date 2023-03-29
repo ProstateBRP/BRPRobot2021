@@ -23,20 +23,17 @@ public:
   RobotStatus(Robot*);
   ~RobotStatus();
 
-  int GetTargetFlag() { return robot->isTargetPointReceived(); }
-  int GetCalibrationFlag() { return robot->isCalibrationReceived(); };
-
-  void SetCalibrationMatrix(igtl::Matrix4x4 &matrix);
+  bool GetTargetFlag() { return robot->isTargetPointReceived(); }
+  bool GetCalibrationFlag() { return robot->isCalibrationReceived(); };
 
   // Return 0 if a calibration matrix has not been set.
   int GetCalibrationMatrix(igtl::Matrix4x4 &matrix);
-
-  void SetTargetMatrix(igtl::Matrix4x4 &matrix);
+  void SetCalibrationMatrix(igtl::Matrix4x4 &matrix);
 
   // Return 0 if a target matrix has not been set.
   int GetTargetMatrix(igtl::Matrix4x4 &matrix);
-  // Set reported needle tip position
-  void SetCurrentNeedlePos(const igtl::Matrix4x4 &matrix);
+  void SetTargetMatrix(igtl::Matrix4x4 &matrix);
+  
   void GetCurrentPosition(igtl::Matrix4x4 &currentPosition);
   void PushBackActualNeedlePos(const igtl::Matrix4x4 &matrix);
   void PushBackKinematicTipPose();

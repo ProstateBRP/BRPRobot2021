@@ -46,7 +46,6 @@ void *OpenIGTLink::ThreadIGT(void *igt)
         //------------------------------------------------------------
         // Waiting for Connection
         igtModule->socket = serverSocket->WaitForConnection(2000);
-        // std::cout << "waiting for connection\n";
 
         // Connection specific variables state -- Not connected, This will show up in the UI console
         igtModule->clientSocketConnected = 0;
@@ -75,7 +74,6 @@ int OpenIGTLink::Session()
     std::vector<RobotPhaseBase *>::iterator iter;
     for (iter = WorkphaseList.begin(); iter != WorkphaseList.end(); iter++)
     {
-        // std::cerr << "MESSAGE: Setting up " << (*iter)->Name() << " phase." << std::endl;
         (*iter)->SetSocket(socket);
         (*iter)->connect = true;
     }
