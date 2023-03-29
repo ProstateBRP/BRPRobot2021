@@ -1604,7 +1604,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     if self.currentPositionTransform is None:
       self.currentPositionTransform = slicer.vtkMRMLLinearTransformNode()
       self.currentPositionTransform.SetName("CurrentPositionTransform")
-      slicer.mrmlScene.AddNode(self.currentPositionTransform)  
+      slicer.mrmlScene.AddNode(self.currentPositionTransform)
+    #Remove orientation component of matrix
+    currentPositionMatrix.SetElement(0,0,1); currentPositionMatrix.SetElement(0,1,0); currentPositionMatrix.SetElement(0,2,0)
+    currentPositionMatrix.SetElement(1,0,0); currentPositionMatrix.SetElement(1,1,1); currentPositionMatrix.SetElement(1,2,0)
+    currentPositionMatrix.SetElement(2,0,0); currentPositionMatrix.SetElement(2,1,0); currentPositionMatrix.SetElement(2,2,1)
     self.currentPositionTransform.SetMatrixTransformToParent(currentPositionMatrix)
     #self.currentPositionTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.updateScanPlaneIn3DView)
 
