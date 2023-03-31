@@ -482,10 +482,14 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
           
   # Create Slicer node and push ITK image to it
   def pushitkToSlicer(self, sitkImage, name):
-    node = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLScalarVolumeNode')
-    node.SetName(name)
+    # Check if tracked tip node exists, if not, create a new one
+    try:
+      node = slicer.util.getNode(name)
+    except:
+      node = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLScalarVolumeNode')
+      node.SetName(name)
     sitkUtils.PushVolumeToSlicer(sitkImage, name, 0, True)
-        
+
   # Return sitk Image from numpy array
   def numpyToitk(self, array, sitkReference, type=None):
     image = sitk.GetImageFromArray(array, isVector=False)
@@ -578,8 +582,8 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     sitk_img_p = self.phaseRescaleFilter.Execute(sitk_img_p)
     # Push debug images to Slicer     
     if debugFlag:
-      self.pushitkToSlicer(sitk_img_m, 'debug_img_m_'+str(self.count))
-      self.pushitkToSlicer(sitk_img_p, 'debug_img_p_'+str(self.count))
+      self.pushitkToSlicer(sitk_img_m, 'debug_img_m')
+      self.pushitkToSlicer(sitk_img_p, 'debug_img_p')
 
     ######################################
     ##                                  ##
@@ -595,7 +599,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     # Plot
     if debugFlag:
       sitk_img_unwraped_p = self.numpyToitk(numpy_img_unwraped_p, self.sitk_base_p)
-      self.pushitkToSlicer(sitk_img_unwraped_p, 'debug_img_unwraped_p_'+str(self.count))
+      self.pushitkToSlicer(sitk_img_unwraped_p, 'debug_img_unwraped_p')
 
     ######################################
     ##                                  ##
@@ -613,7 +617,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
 
     # Plot
     if debugFlag:
-      self.pushitkToSlicer(sitk_diff_p, 'debug_phase_diff_'+str(self.count))
+      self.pushitkToSlicer(sitk_diff_p, 'debug_phase_diff')
     
     ######################################
     ##                                  ##
@@ -623,7 +627,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     
     # Get tip predicted coordinates: 3D Slicer (RAS)
     transformMatrix = vtk.vtkMatrix4x4()
-    tipPrediction.GetMatrixTransformToParent(transformMatrix)
+    tipPrediction.GetMatrixTransformToWorld(transformMatrix)
     tipHorizontal = transformMatrix.GetElement(0,3) # Right-Left
     tipSlice = transformMatrix.GetElement(1,3)      # Anterior-Posteriot
     tipVertical = transformMatrix.GetElement(2,3)   # Inferior-Superior
@@ -646,7 +650,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     sitk_roi = self.phaseRescaleFilter.Execute(sitk_roi)
     # Plot
     if debugFlag:
-      self.pushitkToSlicer(sitk_roi, 'debug_roi_'+str(self.count))    
+      self.pushitkToSlicer(sitk_roi, 'debug_roi')    
     
     ####################################
     ##                                ##
@@ -665,7 +669,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
       # Put slice in the volume
       sitk_phaseGradientVolume = self.createBlankItk(sitk_roi)
       sitk_phaseGradientVolume[:,:,sliceIndex] = sitk_phaseGradient
-      self.pushitkToSlicer(sitk_phaseGradientVolume, 'debug_phase_gradient_'+str(self.count))    
+      self.pushitkToSlicer(sitk_phaseGradientVolume, 'debug_phase_gradient')    
 
     ####################################
     ##                                ##
@@ -680,7 +684,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     sitk_blobsVolume[:,:,sliceIndex] = sitk_blobs
     # Plot
     if debugFlag:
-      self.pushitkToSlicer(sitk_blobsVolume, 'debug_blobs_'+str(self.count))  
+      self.pushitkToSlicer(sitk_blobsVolume, 'debug_blobs')  
           
     # Label blobs
     stats = sitk.LabelShapeStatisticsImageFilter()
@@ -709,7 +713,6 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
       print('No centroids found')
       return False
     center = labels_centroid[label_index]
-    
     # Convert to 3D Slicer coordinates (RAS)
     centerRAS = (-center[0], -center[1], center[2])
 
@@ -720,12 +723,11 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
 
     # Calculate prediction error
     predError = sqrt(pow((tipRAS[0]-centerRAS[0]),2)+pow((tipRAS[1]-centerRAS[1]),2)+pow((tipRAS[2]-centerRAS[2]),2))
-
     # Check error threshold
     if(predError>errorThreshold):
       print('Tip too far from prediction')
       return False
-
+    
     # Push coordinates to tip Node
     transformMatrix.SetElement(0,3, centerRAS[0])
     transformMatrix.SetElement(1,3, centerRAS[1])
