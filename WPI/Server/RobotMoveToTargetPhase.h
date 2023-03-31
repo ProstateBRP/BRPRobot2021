@@ -26,9 +26,6 @@ public:
   virtual int MessageHandler(igtl::MessageHeader *headerMsg);
   virtual void OnExit();
 
-protected:
-  // Has the  received a target matrix?
-  int TargetFlag;
 };
 
 #endif //__RobotMoveToTargetPhase_h

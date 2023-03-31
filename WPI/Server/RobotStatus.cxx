@@ -29,6 +29,7 @@ void RobotStatus::SetCalibrationMatrix(igtl::Matrix4x4 &matrix)
       calibration(i, j) = matrix[i][j];
     }
   }
+  robot->SetCalibrationFlag(true);
   robot->SetCalibration(calibration);
 }
 
@@ -125,21 +126,3 @@ void RobotStatus::PushBackKinematicTipPose()
 {
   robot->PushBackKinematicTipAsActualPose();
 }
-
-
-
-// Depricated
-// void RobotStatus::SetCurrentNeedlePos(const igtl::Matrix4x4 &matrix)
-// {
-//   // Convert to Eigen matrix
-//   Eigen::Matrix4d current_pos_imager = Eigen::Matrix4d::Identity();
-//   for (int i = 0; i < 4; i++)
-//   {
-//     for (int j = 0; j < 4; j++)
-//     {
-//       current_pos_imager(i, j) = matrix[i][j];
-//     }
-//   }
-//   // Convert to robot coordinate frame
-//   robot->current_pose = robot->GetRegistration().inverse() * current_pos_imager;
-// }

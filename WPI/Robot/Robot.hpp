@@ -66,8 +66,6 @@ public:
     Eigen::Matrix4d GetCurrentNeedlePos(){return current_pose;}
     Eigen::Matrix4d GetTargetPointMatrix(){return target_position;}
     Eigen::Vector4d GetTargetPointVector();
-    Eigen::Matrix3d CalcActualTipOrientation(const double &, const double &);
-    Eigen::Matrix4d CalcActualTipPose(const Eigen::Matrix3d &);
     void PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &);
     void PushBackKinematicTipAsActualPose();
     void CleanUp();
