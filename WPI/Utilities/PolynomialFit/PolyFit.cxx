@@ -41,8 +41,6 @@ int PolyFit::Fit(const std::vector<Eigen::Vector3d> &data_pts, int order)
     x_data.clear();
     y_data.clear();
 
-    // Extract the data points
-    Eigen::Vector3d data_pt;
     // Populate the x and y points
     for (size_t i = 0; i < data_pts.size(); i++)
     {

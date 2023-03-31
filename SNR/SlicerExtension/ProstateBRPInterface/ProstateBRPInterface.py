@@ -2516,7 +2516,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def onSendTrackedTipTransform(self):
     if (self.sendTrackedTipTransformCheckbox.isChecked()):
       trackedTipMatrix = vtk.vtkMatrix4x4()
-      self.needleTipTransformComboBox.currentNode().GetMatrixTransformToParent(trackedTipMatrix)
+      self.needleTipTransformComboBox.currentNode().GetMatrixTransformToWorld(trackedTipMatrix)
       reachedTargetString = (slicer.mrmlScene.GetFirstNodeByName("HAS_REACHED_TARGET")).GetText()
       if (reachedTargetString == "0") and (not ((trackedTipMatrix.GetElement(0,3) == self.previousTrackedTipMatrix.GetElement(0,3)) and (trackedTipMatrix.GetElement(1,3) == self.previousTrackedTipMatrix.GetElement(1,3)) and (trackedTipMatrix.GetElement(2,3) == self.previousTrackedTipMatrix.GetElement(2,3)))):
         #Remove orientation component of matrix

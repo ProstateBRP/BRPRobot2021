@@ -1,6 +1,6 @@
 #include "Robot.hpp"
 
-Robot::Robot() : x_inc{0}, y_inc{0}, delta{1e-3}, max_insertion_speed{10}, max_rotation_speed{4 * M_PI}, zx_fit{PolyFit("zx")},
+Robot::Robot() : x_inc{0}, y_inc{0}, delta{3e-3}, max_insertion_speed{10}, max_rotation_speed{4 * M_PI}, zx_fit{PolyFit("zx")},
                  zy_fit{PolyFit("zy")}
 {
     current_pose = Eigen::Matrix4d::Identity();
@@ -86,7 +86,6 @@ int Robot::InsertNeedleToTargetDepth()
 {
     if (!hasReachedTarget() && motor_enabled)
     {
-        std::cerr << "Has not reached target yet!" << std::endl;
         double du1 = max_insertion_speed * delta;
         double w_hat = curv_steering->CalcRotationalVel(theta);
         double du2 = w_hat * max_rotation_speed;
@@ -141,6 +140,9 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
     double omega = zy_fit.CalcAngle();
     // Update the current pose based on the estimated pose
     current_pose = kinematics.ApplyRotation(current_pose, Eigen::Vector3d(theta, beta, omega));
+    current_pose(0,3) = reported_tip_pos(0);
+    current_pose(1,3) = reported_tip_pos(1);
+    current_pose(2,3) = reported_tip_pos(2);
 }
 
 void Robot::PushBackKinematicTipAsActualPose()
