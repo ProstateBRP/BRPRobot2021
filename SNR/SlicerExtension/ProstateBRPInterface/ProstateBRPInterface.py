@@ -1108,7 +1108,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
    
     # Delete all nodes from the scene
     slicer.mrmlScene.RemoveNode(self.openIGTNode)
-    slicer.mrmlScene.Clear(0) 
+    #slicer.mrmlScene.Clear(0)
 
   def onCreateScannerServerButtonClicked(self):
     self.createScannerServerButton.enabled = False
@@ -1162,7 +1162,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Delete all nodes from the scene
     slicer.mrmlScene.RemoveNode(self.openIGTNode_Scanner)
-    slicer.mrmlScene.Clear(0) 
+    #slicer.mrmlScene.Clear(0) 
   
   def generateTimestampNameID(self, last_prefix_sent):
     timestampID = [last_prefix_sent, "_"]
@@ -1514,12 +1514,13 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
   def onCurrentPositionOnClicked(self):
     # Start querying robot position
-    self.getTransformNode = slicer.vtkMRMLTextNode()
-    self.getTransformNode.SetName("CURRENT_POSITION")
-    self.getTransformNode.SetText("CURRENT_POSITION")
-    self.getTransformNode.SetEncoding(3)
-    slicer.mrmlScene.AddNode(self.getTransformNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(self.getTransformNode)
+    # self.getTransformNode = slicer.vtkMRMLTextNode()
+    # self.getTransformNode.SetName("CURRENT_POSITION")
+    # self.getTransformNode.SetText("CURRENT_POSITION")
+    # self.getTransformNode.SetEncoding(3)
+    # slicer.mrmlScene.AddNode(self.getTransformNode)
+    # self.openIGTNode.RegisterOutgoingMRMLNode(self.getTransformNode)
+
     self.getTransformTimer.start(int(1000/int(self.getTransformFPSBox.value)))
     self.getTransformFPSBox.enabled = False
 
@@ -1942,9 +1943,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def LoadCurrentPositionModel(self, pointerModelName, pointerModelBaseName):
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
     currentPositionPath = os.path.join(currentFilePath, "Resources", "robot", "needle.vtk")
-    _, currentPositionModelNode = slicer.util.loadModel(currentPositionPath, returnNode=True)
+    currentPositionModelNode = slicer.util.loadModel(currentPositionPath)
     currentPositionBasePath = os.path.join(currentFilePath, "Resources", "robot", "needleBase.vtk")
-    _, currentPositionBaseModelNode = slicer.util.loadModel(currentPositionBasePath, returnNode=True)    
+    currentPositionBaseModelNode = slicer.util.loadModel(currentPositionBasePath)    
     currentPositionModelNode.SetName(pointerModelName)
     currentPositionBaseModelNode.SetName(pointerModelBaseName)
     modelDisplayNode = currentPositionModelNode.GetDisplayNode()
@@ -2388,7 +2389,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.zFrameModelNode = None
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
     zFrameModelPath = os.path.join(currentFilePath, "Resources", "zframe", self.ZFRAME_MODEL_PATH)
-    _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath, returnNode=True)
+    self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath)
     # _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath)
     self.zFrameModelNode.SetName(self.ZFRAME_MODEL_NAME)
     modelDisplayNode = self.zFrameModelNode.GetDisplayNode()
@@ -2401,7 +2402,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       self.robotModelNode = None
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
     robotModelPath = os.path.join(currentFilePath, "Resources", "robot", "robot.vtk")
-    _, self.robotModelNode = slicer.util.loadModel(robotModelPath, returnNode=True)
+    self.robotModelNode = slicer.util.loadModel(robotModelPath)
     self.robotModelNode.SetName("RobotModel")
     modelDisplayNode = self.robotModelNode.GetDisplayNode()
     modelDisplayNode.SetColor(0.7, 0.7, 0.85)
