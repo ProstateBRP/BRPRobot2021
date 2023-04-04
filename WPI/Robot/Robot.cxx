@@ -66,7 +66,7 @@ int Robot::MoveToTargetingPosition()
 {
     if (!isInTargetingPos() && motor_enabled)
     {
-        current_pose.block(0,0,3,3) = target_position.block(0,0,3,3);
+        current_pose.block(0, 0, 3, 3) = target_position.block(0, 0, 3, 3);
         current_pose(0, 3) += x_inc;
         current_pose(1, 3) += y_inc;
         igtl::Sleep(10);
@@ -98,9 +98,9 @@ int Robot::InsertNeedleToTargetDepth()
     return 0;
 }
 
-bool Robot::hasReachedTarget(double epsilon)
+bool Robot::hasReachedTarget()
 {
-    return !(abs(current_pose(2, 3) - target_position(2, 3)) > epsilon);
+    return !(current_pose(2, 3) < target_position(2, 3));
 }
 
 void Robot::ZeroRobot()
@@ -140,15 +140,15 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
     double omega = zy_fit.CalcAngle();
     // Update the current pose based on the estimated pose
     current_pose = kinematics.ApplyRotation(current_pose, Eigen::Vector3d(theta, beta, omega));
-    current_pose(0,3) = reported_tip_pos(0);
-    current_pose(1,3) = reported_tip_pos(1);
-    current_pose(2,3) = reported_tip_pos(2);
+    current_pose(0, 3) = reported_tip_pos(0);
+    current_pose(1, 3) = reported_tip_pos(1);
+    current_pose(2, 3) = reported_tip_pos(2);
 }
 
 void Robot::PushBackKinematicTipAsActualPose()
 {
     actual_tip_positions.clear();
-    actual_tip_positions.push_back(Eigen::Vector3d(current_pose(0,3),current_pose(1,3),current_pose(2,3)));
+    actual_tip_positions.push_back(Eigen::Vector3d(current_pose(0, 3), current_pose(1, 3), current_pose(2, 3)));
 }
 
 void Robot::SetNeedleEntryPoint(const Eigen::Matrix4d &matrix)
@@ -185,12 +185,11 @@ Eigen::Vector4d Robot::GetTargetPointVector()
     return Eigen::Vector4d(target_position(0, 3), target_position(1, 3), target_position(2, 3), 1);
 }
 
-
 void Robot::Reset()
 {
-    current_pose.Identity();
-    target_position.Identity();
-    calibration.Identity();
+    current_pose = current_pose.Identity();
+    target_position = target_position.Identity();
+    calibration = calibration.Identity();
     calibration_received = false;
     target_point_received = false;
     CleanUp();
