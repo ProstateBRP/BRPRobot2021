@@ -53,7 +53,7 @@ public:
     void EnableMove();
     bool isApprox(const igtl::Matrix4x4 &, const igtl::Matrix4x4 &, double epsilon = 1e-6);
     bool isInTargetingPos(double epsilon = 1e-6);
-    bool hasReachedTarget(double epsilon = 1e-1);
+    bool hasReachedTarget();
     bool isTargetPointReceived() { return target_point_received; }
     bool isCalibrationReceived() { return calibration_received; }
     void SetCalibrationFlag(const bool flag) { calibration_received = flag; };
