@@ -1088,6 +1088,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
     self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
+    if self.getTransformNode:
+      slicer.mrmlScene.RemoveNode(self.getTransformNode)
+      self.getTransformNode = None
+
     # Clear textboxes
     # self.MRIphaseTextbox.setText("")
     # self.MRImessageTextbox.setText("No message received")
