@@ -95,7 +95,11 @@ Returns current tip pose of the robot in imager frame.
 void RobotStatus::GetCurrentPosition(igtl::Matrix4x4 &matrix)
 {
   // Convert to imager frame
+  std::cout << "In Get Current position\n";
+  std::cout << "registation is\n" << robot->GetRegistration() << std::endl;
+  std::cout << "current pose robot coord is\n" << robot->GetCurrentNeedlePos() << std::endl;
   Eigen::Matrix4d current_pose_in_imager_frame = robot->GetRegistration() * robot->GetCurrentNeedlePos();
+  std::cout << "current pose imager is\n" << current_pose_in_imager_frame << std::endl;
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < 4; j++)

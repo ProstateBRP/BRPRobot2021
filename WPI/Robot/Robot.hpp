@@ -31,6 +31,8 @@ protected:
     Eigen::Matrix4d needle_tip_pose_at_targeting;
     double x_inc;
     double y_inc;
+    double x_goal{0};
+    double y_goal{0};
     double delta;
     double max_insertion_speed;
     double max_rotation_speed;
@@ -68,6 +70,7 @@ public:
     Eigen::Vector4d GetTargetPointVector();
     void PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &);
     void PushBackKinematicTipAsActualPose();
+    Eigen::Vector3d ConvertRotationMatrixToEulerAngles(Eigen::Matrix3d rotation_mtx);
     void CleanUp();
     void Reset();
 };

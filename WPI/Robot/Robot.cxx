@@ -43,18 +43,12 @@ bool Robot::isApprox(const igtl::Matrix4x4 &mtx1, const igtl::Matrix4x4 &mtx2, d
 bool Robot::isInTargetingPos(double epsilon)
 {
     // Check the orientation
-    for (int i = 0; i < 3; i++)
+    if (current_pose.block(0, 0, 3, 3) != target_position.block(0, 0, 3, 3))
     {
-        for (int j = 0; j < 3; j++)
-        {
-            if (abs(current_pose(i, j) - target_position(i, j)) > epsilon)
-            {
-                return false;
-            }
-        }
+        return false;
     }
     // Check the x and y of the robot
-    if ((abs(current_pose(0, 3) - target_position(0, 3)) > epsilon) || (abs(current_pose(1, 3) - target_position(1, 3)) > epsilon))
+    if ((abs(current_pose(0, 3) - x_goal) > epsilon) || (abs(current_pose(1, 3) - y_goal) > epsilon))
     {
         return false;
     }
@@ -77,9 +71,17 @@ int Robot::MoveToTargetingPosition()
 
 void Robot::CalcMoveToTargetInc(int increment)
 {
+    // Calculate target's rotation in Euler angles
+    Eigen::Vector3d rot_angles = ConvertRotationMatrixToEulerAngles(target_position.block(0, 0, 3, 3));
+    double x_prime = target_position(2, 3) * -tan(rot_angles(1));
+    double y_prime = target_position(2, 3) * tan(rot_angles(0));
+    x_goal = target_position(0, 3) + x_prime;
+    y_goal = target_position(1, 3) + y_prime;
+    std::cout << "x_goal:    " << x_goal << std::endl;
+    std::cout << "y_goal:    " << y_goal << std::endl;
     // Calculate the increments in each axis
-    x_inc = (target_position(0, 3) - current_pose(0, 3)) / increment;
-    y_inc = (target_position(1, 3) - current_pose(1, 3)) / increment;
+    x_inc = (x_goal - current_pose(0, 3)) / increment;
+    y_inc = (y_goal - current_pose(1, 3)) / increment;
 }
 
 int Robot::InsertNeedleToTargetDepth()
@@ -120,6 +122,7 @@ void Robot::EnableMove()
 void Robot::SetTargetPosition(const Eigen::Matrix4d &target_position)
 {
     this->target_position = target_position;
+    std::cout << "Target Robot COORD: " << target_position << std::endl;
     this->CalcMoveToTargetInc();
     this->SetTargetPointFlag(true);
 }
@@ -187,10 +190,46 @@ Eigen::Vector4d Robot::GetTargetPointVector()
 
 void Robot::Reset()
 {
-    current_pose = current_pose.Identity();
-    target_position = target_position.Identity();
-    calibration = calibration.Identity();
+    current_pose.setIdentity();
+    target_position.setIdentity();
+    calibration.setIdentity();
     calibration_received = false;
     target_point_received = false;
+    x_goal = 0;
+    y_goal = 0;
     CleanUp();
+}
+
+Eigen::Vector3d Robot::ConvertRotationMatrixToEulerAngles(Eigen::Matrix3d rotation_mtx)
+{
+    Eigen::Vector3d angles;
+    angles.setZero();
+    if (rotation_mtx(2, 0) != 1 && rotation_mtx(2, 0) != -1)
+    {
+        double pitch1 = -1 * asin(rotation_mtx(2, 0));
+        double pitch2 = M_PI - pitch1;
+        double roll1 = atan2(rotation_mtx(2, 1) / cos(pitch1),
+                             rotation_mtx(2, 2) / cos(pitch1));
+        double roll2 = atan2(rotation_mtx(2, 1) / cos(pitch2),
+                             rotation_mtx(2, 2) / cos(pitch2));
+        double yaw1 = atan2(rotation_mtx(1, 0) / cos(pitch1), rotation_mtx(0, 0) / cos(pitch1));
+        double yaw2 = atan2(rotation_mtx(1, 0) / cos(pitch2), rotation_mtx(0, 0) / cos(pitch2));
+        angles << roll1, pitch1, yaw1;
+    }
+    else
+    {
+        angles(2) = 0;
+        if (rotation_mtx(2, 0) == -1)
+        {
+            angles(1) = M_PI / 2;
+            angles(0) = angles(1) + atan2(rotation_mtx(0, 1), rotation_mtx(0, 2));
+        }
+        else
+        {
+            angles(1) = -M_PI / 2;
+            angles(0) = -angles(2) + atan2(-rotation_mtx(0, 1), -rotation_mtx(0, 2));
+        }
+    }
+    std::cout << "Roll(x): " << angles(0) << "Pitch(y): " << angles(1) << "Yaw(z): " << angles(2) << std::endl;
+    return angles;
 }
