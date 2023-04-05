@@ -77,8 +77,6 @@ void Robot::CalcMoveToTargetInc(int increment)
     double y_prime = target_position(2, 3) * tan(rot_angles(0));
     x_goal = target_position(0, 3) + x_prime;
     y_goal = target_position(1, 3) + y_prime;
-    std::cout << "x_goal:    " << x_goal << std::endl;
-    std::cout << "y_goal:    " << y_goal << std::endl;
     // Calculate the increments in each axis
     x_inc = (x_goal - current_pose(0, 3)) / increment;
     y_inc = (y_goal - current_pose(1, 3)) / increment;
@@ -122,7 +120,6 @@ void Robot::EnableMove()
 void Robot::SetTargetPosition(const Eigen::Matrix4d &target_position)
 {
     this->target_position = target_position;
-    std::cout << "Target Robot COORD: " << target_position << std::endl;
     this->CalcMoveToTargetInc();
     this->SetTargetPointFlag(true);
 }
@@ -230,6 +227,5 @@ Eigen::Vector3d Robot::ConvertRotationMatrixToEulerAngles(Eigen::Matrix3d rotati
             angles(0) = -angles(2) + atan2(-rotation_mtx(0, 1), -rotation_mtx(0, 2));
         }
     }
-    std::cout << "Roll(x): " << angles(0) << "Pitch(y): " << angles(1) << "Yaw(z): " << angles(2) << std::endl;
     return angles;
 }
