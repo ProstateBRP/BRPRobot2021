@@ -81,6 +81,8 @@ int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       this->RStatus->SetTargetMatrix(matrix);
       SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
       SendTransformMessage("REACHABLE_TARGET", matrix);
+      Logger &log = Logger::GetInstance();
+      log.Log(matrix, this->Name(),devName.substr(4, std::string::npos), 1);
       return 1;
     }
   }

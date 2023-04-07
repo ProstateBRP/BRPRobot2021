@@ -15,8 +15,8 @@
 #include <fstream>
 #include <string>
 #include <vector>
-//#define HAVE_STRUCT_TIMESPEC
-//#pragma comment(lib,"pthreadVC2.lib")
+#include "Eigen/Dense"
+#include "igtlMath.h"
 #include <pthread.h>
 #include "../Timer/Timer.hpp"
 
@@ -54,8 +54,10 @@ public:
 	void Log(string logData, int severity, bool printToConsole = false);
 	// Overloaded method for loging events with the actual time
 	void Log(string logData, string actual_time, int severity, bool printToConsole = false);
+	void Log(const Eigen::Matrix4d &logData, string name, string actual_time, int severity, bool printToConsole = false);
+	void Log(const igtl::Matrix4x4 &logData, string name, string actual_time, int severity, bool printToConsole = false);
 	void SetActualTime(std::string actualTime);
-	string GetActualTime(){return this->_actualTime;}
+	string GetActualTime() { return this->_actualTime; }
 	//======== Singleton Specific Methods ===========
 	static Logger &GetInstance()
 	{

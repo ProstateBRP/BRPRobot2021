@@ -38,7 +38,8 @@ int RobotMoveToTargetPhase::Initialize()
     SendTransformMessage("CURRENT_POSITION", curr_pose);
     // Send the current kinematic tip position as the first actual tip position
     RStatus->PushBackKinematicTipPose();
-
+    // Calculate Steering Effort 
+    RStatus->robot->UpdateCurvParams();
     // Enable the axis to move
     RStatus->robot->EnableMove();
   }
@@ -101,6 +102,8 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       // algorithm sends a config error status and sets the steering to max curvature towards the target.
       SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
       SendTransformMessage("REACHABLE_TARGET", matrix);
+      Logger &log = Logger::GetInstance();
+      log.Log(matrix, "New Target",devName.substr(4, std::string::npos), 1);
 
       return 1;
     }
@@ -117,15 +120,14 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       ss << "ACK_" << devName.substr(5, std::string::npos);
       SendTransformMessage(ss.str().c_str(), matrix);
 
-      // TODO: Validate the needle transform matrix
-      // Validation Steps
+      Logger &log = Logger::GetInstance();
+      log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
+      log.Log(matrix, "Needle Position",devName.substr(4, std::string::npos), 1);
 
       // Pushback the reported needle tip position
       RStatus->PushBackActualNeedlePos(matrix);
       RStatus->robot->UpdateCurvParams();
-
-      Logger &log = Logger::GetInstance();
-      log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
+      
       // needle pose should be saved in a robot variable in the real robot sw.
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
       return 1;

@@ -87,8 +87,12 @@ int Robot::InsertNeedleToTargetDepth()
     if (!hasReachedTarget() && motor_enabled)
     {
         double du1 = max_insertion_speed * delta;
-        double w_hat = curv_steering->CalcRotationalVel(theta);
-        double du2 = w_hat * max_rotation_speed;
+        double w_hat = curv_steering->CalcRotationalVel(theta); // Desired normalized rot speed
+        double u2 = w_hat * max_rotation_speed; // desired rotation speed
+        double du2 = u2 * delta; // Change in rotation angle 
+        Logger &log = Logger::GetInstance();
+        string ss = "Desired Velocity,  " + to_string(du2);
+        log.Log(ss,1);
         // Update the needle rotation
         theta += du2;
         current_pose = kinematics.ForwardKinematicsBicycleModel(current_pose, du1, du2);

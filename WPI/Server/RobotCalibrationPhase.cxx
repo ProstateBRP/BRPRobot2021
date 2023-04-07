@@ -42,7 +42,7 @@ int RobotCalibrationPhase::Initialize()
 }
 
 void RobotCalibrationPhase::OnExit()
-{ 
+{
 }
 // TODO: this should return a 4x4 matrix and set the robot registration to it
 // The calibration matrix is set within the RStatus object
@@ -79,6 +79,8 @@ int RobotCalibrationPhase::MessageHandler(igtl::MessageHeader *headerMsg)
         this->RStatus->SetCalibrationMatrix(matrix);
       }
       SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_OK, 0);
+      Logger &log = Logger::GetInstance();
+      log.Log(matrix, this->Name(),devName.substr(4, std::string::npos), 1);
     }
     else
     {
