@@ -56,6 +56,7 @@ public:
 	void Log(string logData, string actual_time, int severity, bool printToConsole = false);
 	void Log(const Eigen::Matrix4d &logData, string name, string actual_time, int severity, bool printToConsole = false);
 	void Log(const igtl::Matrix4x4 &logData, string name, string actual_time, int severity, bool printToConsole = false);
+	void Log(const Eigen::Vector3d &logData, string name, string actual_time, int severity, bool printToConsole = false);
 	void SetActualTime(std::string actualTime);
 	string GetActualTime() { return this->_actualTime; }
 	//======== Singleton Specific Methods ===========

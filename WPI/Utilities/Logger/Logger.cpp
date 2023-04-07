@@ -132,7 +132,6 @@ void Logger::Log(const Eigen::Matrix4d &logData, string name, string actual_time
 	pthread_mutex_unlock(&logMutex);
 }
 
-
 void Logger::Log(const igtl::Matrix4x4 &logData, string name, string actual_time, int severity, bool printToConsole)
 {
 	// Updating the actual time based on what the navigation software has sent
@@ -165,6 +164,35 @@ void Logger::Log(const igtl::Matrix4x4 &logData, string name, string actual_time
 	}
 	pthread_mutex_unlock(&logMutex);
 }
+
+// Overloaded log method to log VECTOR data
+void Logger::Log(const Eigen::Vector3d &logData, string name, string actual_time, int severity, bool printToConsole)
+{
+	// Updating the actual time based on what the navigation software has sent
+	SetActualTime(actual_time);
+	// MUST BE IN SAME ORDER AS LOG LEVEL DEFINES
+	vector<std::string> severities = {"DEBUG", "INFO", "WARNING", "ERROR",
+									  "CRITICAL", "DATA"};
+
+	// If within current log levels write data to log file
+	pthread_mutex_lock(&logMutex);
+
+	if (severity >= _logLevelSeverity)
+	{
+		_file << "[" << GetActualTime() << "] " << severities[severity]
+			  << " --:" << name << ":\n"
+			  << "[" << logData(0) << "," << logData(1) << "," << logData(2) << "]" << endl;
+	}
+
+	if (printToConsole)
+	{
+		cout << "[" << GetActualTime() << "] " << severities[severity]
+			 << " --:" << name << ":\n"
+			 << "[" << logData(0) << "," << logData(1) << "," << logData(2) << "]" << endl;
+	}
+	pthread_mutex_unlock(&logMutex);
+}
+
 // Read in the last n number of lines to read
 vector<vector<string>> Logger::ReadLogData(int numberOfLinesToRead)
 {

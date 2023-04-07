@@ -65,6 +65,7 @@ int PolyFit::LinearFit()
     coeffs.clear();
     // Calculate the slope and push back
     coeffs.push_back((y_data.at(1) - y_data.at(0)) / (x_data.at(1) - x_data.at(0)));
+    std::cout << coeffs.back() << std::endl;
     return 1;
 }
 
@@ -103,14 +104,16 @@ int PolyFit::CubicFit(int order)
 
 double PolyFit::CalcAngle()
 {
-    if (x_data.size() > 2)
+    if (x_data.size() >= 2)
     {
         if (fit_type == FitType::LINEAR)
         {
             // Find an arbitrary point based on the calculated slope.
-            double x{1};
-            double y = x * coeffs.at(0);
-            return atan2(y, x);
+            // double x{1};
+            // double y = x * coeffs.at(0);
+            // return atan2(y, x);
+            std::cout << "angle: " << coeffs.back() << std::endl;
+            return atan(coeffs.back());
         }
         // Cubic fit angle calculation
         else

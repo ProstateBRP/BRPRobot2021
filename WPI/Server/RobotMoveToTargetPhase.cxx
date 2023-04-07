@@ -127,6 +127,7 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       // Pushback the reported needle tip position
       RStatus->PushBackActualNeedlePos(matrix);
       RStatus->robot->UpdateCurvParams();
+      // igtl::Sleep(2000);
       
       // needle pose should be saved in a robot variable in the real robot sw.
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
