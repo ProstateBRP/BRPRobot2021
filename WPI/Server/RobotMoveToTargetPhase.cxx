@@ -66,15 +66,17 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
   {
     if (strcmp(headerMsg->GetDeviceName(), "RETRACT_NEEDLE") == 0)
     {
+      // Stop robot
+      RStatus->robot->StopRobot();
       string text;
       ReceiveString(headerMsg, text);
       SendStatusMessage("ACK_RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
       // Ask the robot to retract the needle
       RStatus->robot->RetractNeedle();
-      igtl::Sleep(2000); // Simulate the delay
+      igtl::Sleep(500); // Simulate the delay
+
       // Send acknowledgment for successful needle retraction.
       SendStatusMessage("RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
-      RStatus->robot->StopRobot();
       return 1;
     }
   }

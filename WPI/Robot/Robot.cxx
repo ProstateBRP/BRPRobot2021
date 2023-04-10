@@ -93,6 +93,7 @@ int Robot::InsertNeedleToTargetDepth()
 
         // Update the needle rotation
         theta += du2;
+        std::cout << theta << std::endl;
         current_pose = kinematics.ForwardKinematicsBicycleModel(current_pose, du1, du2);
         igtl::Sleep(10);
         return 1;
@@ -113,6 +114,7 @@ void Robot::ZeroRobot()
 void Robot::StopRobot()
 {
     motor_enabled = false;
+    igtl::Sleep(200);
 }
 void Robot::EnableMove()
 {
@@ -193,6 +195,7 @@ void Robot::SaveNeedleTipPose()
 void Robot::RetractNeedle()
 {
     current_pose = needle_tip_pose_at_targeting;
+    theta = 0;
 }
 void Robot::UpdateCurvParams()
 {
@@ -214,6 +217,7 @@ void Robot::Reset()
     target_point_received = false;
     x_goal = 0;
     y_goal = 0;
+    theta = 0;
     CleanUp();
 }
 
