@@ -42,6 +42,7 @@ protected:
 public:
     Robot();
     ~Robot();
+    double GetTheta(){return theta;}
     void UpdateRobot();
     void UpdateCurvParams();
     int MoveToTargetingPosition();

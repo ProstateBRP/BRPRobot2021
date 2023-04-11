@@ -1,6 +1,6 @@
 #include "Robot.hpp"
 
-Robot::Robot() : x_inc{0}, y_inc{0}, delta{3e-3}, max_insertion_speed{10}, max_rotation_speed{4 * M_PI}, zx_fit{PolyFit("zx")},
+Robot::Robot() : x_inc{0}, y_inc{0}, delta{1e-4}, max_insertion_speed{0.5}, max_rotation_speed{4 * M_PI}, zx_fit{PolyFit("zx")},
                  zy_fit{PolyFit("zy")}
 {
     current_pose = Eigen::Matrix4d::Identity();
@@ -93,9 +93,9 @@ int Robot::InsertNeedleToTargetDepth()
 
         // Update the needle rotation
         theta += du2;
-        std::cout << theta << std::endl;
+        // std::cout << theta << std::endl;
         current_pose = kinematics.ForwardKinematicsBicycleModel(current_pose, du1, du2);
-        igtl::Sleep(10);
+        // igtl::Sleep(10);
         return 1;
     }
     return 0;
@@ -144,9 +144,9 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
     zy_fit.Fit(actual_tip_positions);
     // estimate rotation angle about
     double beta = zx_fit.CalcAngle();
-    double omega = zy_fit.CalcAngle();
-    std::cout << "Beta is: " << beta << "   Omga is: " << omega << "   theta is: " << theta << std::endl;
-    string ss = "Beta,  " + to_string(beta);
+    double omega = -zy_fit.CalcAngle();
+    std::cout << "Beta is: " << beta << "   Omega is: " << omega << "   theta is: " << theta << std::endl;
+    string ss{"Beta,  " + to_string(beta)};
     log.Log(ss, 1);
     ss.clear();
     ss = "Omega,  " + to_string(omega);
@@ -155,14 +155,15 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
     log.Log(ss, 1);
 
     // Update the current pose based on the estimated pose
-    log.Log(current_pose, "Current Pose Before Update: ", "44", 1);
+    log.Log(current_pose, "Current Pose Before Update", "44", 1);
     // Update orientation component of needle tip
-    current_pose.block(0, 0, 3, 3) = kinematics.ApplyRotation(Eigen::Vector3d(omega, beta,theta));
+    current_pose.block(0, 0, 3, 3) = kinematics.ApplyRotation(Eigen::Vector3d(omega, beta, theta));
     // Update Position component of needle tip
     current_pose(0, 3) = reported_tip_pos(0);
     current_pose(1, 3) = reported_tip_pos(1);
     current_pose(2, 3) = reported_tip_pos(2);
-    log.Log(current_pose, "Current Pose After Update: ", "33", 1);
+    log.Log(current_pose, "Current Pose After Update", "33", 1);
+    UpdateCurvParams();
 }
 
 void Robot::PushBackKinematicTipAsActualPose()
@@ -195,6 +196,7 @@ void Robot::SaveNeedleTipPose()
 void Robot::RetractNeedle()
 {
     current_pose = needle_tip_pose_at_targeting;
+    CleanUp();
     theta = 0;
 }
 void Robot::UpdateCurvParams()

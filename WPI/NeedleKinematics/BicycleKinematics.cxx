@@ -7,7 +7,7 @@ BicycleKinematics::BicycleKinematics()
     e2 << 0, 1, 0;
     e3 << 0, 0, 1;
     l2 = 0;                  // Distance from the needle tip frame to the middle of the bicycle
-    max_curvature = 0.00221; // Natural curvature of the needle. This value is determined experimentally
+    max_curvature = 0.00449003; // Natural curvature of the needle. This value is determined experimentally
     v1 = Eigen::VectorXd::Zero(6);
     v1 << e3, max_curvature * e1; // Insertion velocity vector
     v2 = Eigen::VectorXd::Zero(6);
@@ -65,7 +65,7 @@ Eigen::Matrix3d BicycleKinematics::ApplyRotation(const Eigen::Vector3d &theta)
         sin(theta(2)), cos(theta(2)), 0.,
         0., 0., 1.;
 
-    return (rotation_z * rotation_y * rotation_x);
+    return (rotation_x * rotation_y * rotation_z);
 }
 /*!
     Computes the exponential map M of a 4x4 se(3) Lie algebra w^.

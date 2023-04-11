@@ -121,16 +121,18 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       std::stringstream ss;
       ss << "ACK_" << devName.substr(5, std::string::npos);
       SendTransformMessage(ss.str().c_str(), matrix);
-
+      // Stop the robot thread and wait for 150 millisecond for the thread to sync
+      RStatus->robot->StopRobot();
+      double t1 =  RStatus->robot->GetTheta();
+      igtl::Sleep(200);
+      std::cout << "Theta diff: " << RStatus->robot->GetTheta() - t1 << std::endl;
       Logger &log = Logger::GetInstance();
       log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
-      log.Log(matrix, "Needle Position",devName.substr(4, std::string::npos), 1);
-
-      // Pushback the reported needle tip position
+      log.Log(matrix, "Needle Position", devName.substr(4, std::string::npos), 1);
+      // Pushback the reported needle tip position and update the CURV
       RStatus->PushBackActualNeedlePos(matrix);
-      RStatus->robot->UpdateCurvParams();
-      // igtl::Sleep(2000);
-      
+      // Re-enable the robot with the
+      RStatus->robot->EnableMove();
       // needle pose should be saved in a robot variable in the real robot sw.
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
       return 1;
