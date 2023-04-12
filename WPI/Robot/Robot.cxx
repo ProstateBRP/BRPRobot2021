@@ -93,9 +93,7 @@ int Robot::InsertNeedleToTargetDepth()
 
         // Update the needle rotation
         theta += du2;
-        // std::cout << theta << std::endl;
         current_pose = kinematics.ForwardKinematicsBicycleModel(current_pose, du1, du2);
-        // igtl::Sleep(10);
         return 1;
     }
     return 0;
@@ -137,7 +135,6 @@ void Robot::SetCalibration(const Eigen::Matrix4d &calibration)
 void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported_tip_pos)
 {
     Logger &log = Logger::GetInstance();
-    log.Log(reported_tip_pos, "Needle Position Robot Coord", "112354", 1);
     actual_tip_positions.push_back(reported_tip_pos);
 
     zx_fit.Fit(actual_tip_positions);
@@ -145,7 +142,7 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
     // estimate rotation angle about
     double beta = zx_fit.CalcAngle();
     double omega = -zy_fit.CalcAngle();
-    std::cout << "Beta is: " << beta << "   Omega is: " << omega << "   theta is: " << theta << std::endl;
+    // Log estimated rotation angles about the needle base for the needle tip pose
     string ss{"Beta,  " + to_string(beta)};
     log.Log(ss, 1);
     ss.clear();
@@ -155,14 +152,12 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
     log.Log(ss, 1);
 
     // Update the current pose based on the estimated pose
-    log.Log(current_pose, "Current Pose Before Update", "44", 1);
     // Update orientation component of needle tip
     current_pose.block(0, 0, 3, 3) = kinematics.ApplyRotation(Eigen::Vector3d(omega, beta, theta));
     // Update Position component of needle tip
     current_pose(0, 3) = reported_tip_pos(0);
     current_pose(1, 3) = reported_tip_pos(1);
     current_pose(2, 3) = reported_tip_pos(2);
-    log.Log(current_pose, "Current Pose After Update", "33", 1);
     UpdateCurvParams();
 }
 
