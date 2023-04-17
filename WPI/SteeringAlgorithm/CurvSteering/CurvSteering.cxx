@@ -38,13 +38,12 @@ void CurvSteering::CalcCurvParams(const Eigen::Matrix4d &needle_pose_rbt_frame, 
     // Update desired theta (defined in needle's frame)
     this->theta_d = CalcTargetAngle(tgt_pos_needle_frame);
     // Find the desired curvature from needle tip to the target point
-    Eigen::Vector3d desired_rot(0, 0, theta_d);
     // Rotate needle frame so that the target is placed at the y-z plane of the needle frame to enable the calculation of the
     // curvature.
-    Eigen::Matrix4d rotated_needle_frame = bicycle_kinematics.ApplyRotation(needle_pose_rbt_frame, desired_rot);
+    Eigen::Matrix4d rotated_needle_frame = bicycle_kinematics.RotateAboutZ(needle_pose_rbt_frame, theta_d);
     // Recalculate the target pos in the rotated needle frame
     Eigen::Vector4d tgt_pos_needle_frame_rotated = rotated_needle_frame.inverse() * tgt_pos_rbt_frame;
-    // Calculate the curvature
+    // Calculate the curvature (target is now on the yz plane of the needle tip frame)
     this->curvature = CalcCurvature(tgt_pos_needle_frame_rotated);
     // Check if the point is reachable and set the alpha value accordingly
     if (is_reachable(curvature))

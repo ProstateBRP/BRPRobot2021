@@ -19,6 +19,7 @@ public:
     Eigen::Matrix4d ForwardKinematicsBicycleModel(const Eigen::Matrix4d &, const double &, const double &);
     Eigen::Matrix4d ApplyRotation(const Eigen::Matrix4d &, const Eigen::Vector3d &);
     Eigen::Matrix3d ApplyRotation(const Eigen::Vector3d &);
+    Eigen::Matrix4d RotateAboutZ(const Eigen::Matrix4d &, const double &);
     Eigen::Matrix4d CalcSpecialEuclideanMatrix(const Eigen::Matrix4d &);
     Eigen::Matrix3d CalcSpecialOrthagonalMatrix(const Eigen::Matrix3d &);
     Eigen::Vector3d ConvertToSpecialOrthagonalVector(const Eigen::Matrix3d &);

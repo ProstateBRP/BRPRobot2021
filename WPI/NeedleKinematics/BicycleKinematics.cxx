@@ -67,6 +67,18 @@ Eigen::Matrix3d BicycleKinematics::ApplyRotation(const Eigen::Vector3d &theta)
 
     return (rotation_x * rotation_y * rotation_z);
 }
+
+Eigen::Matrix4d BicycleKinematics::RotateAboutZ(const Eigen::Matrix4d &trans, const double &theta)
+{
+    Eigen::Matrix4d rotation_z;
+    rotation_z << cos(theta), -sin(theta), 0., 0.,
+        sin(theta), cos(theta), 0., 0.,
+        0., 0., 1., 0.,
+        0., 0., 0., 1;
+    return (trans * rotation_z);
+}
+
+
 /*!
     Computes the exponential map M of a 4x4 se(3) Lie algebra w^.
 */
