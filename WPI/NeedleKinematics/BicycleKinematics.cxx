@@ -47,7 +47,7 @@ Eigen::Matrix4d BicycleKinematics::ApplyRotationEulerAngles(const Eigen::Matrix4
     return (trans * rotation_z * rotation_y * rotation_x);
 }
 
-Eigen::Matrix3d BicycleKinematics::ApplyRotationFixedAngles(const Eigen::Vector3d &theta)
+Eigen::Matrix4d BicycleKinematics::ApplyRotationFixedAngles(const Eigen::Matrix4d &trans,const Eigen::Vector3d &theta)
 {
     // Calculating Rotation about x,y,z axis
     Eigen::Matrix3d rotation_x;
@@ -64,8 +64,9 @@ Eigen::Matrix3d BicycleKinematics::ApplyRotationFixedAngles(const Eigen::Vector3
     rotation_z << cos(theta(2)), -sin(theta(2)), 0.,
         sin(theta(2)), cos(theta(2)), 0.,
         0., 0., 1.;
-
-    return (rotation_x * rotation_y * rotation_z);
+    Eigen::Matrix4d result = Eigen::Matrix4d::Identity();
+    result.block(0,0,3,3) = trans.block(0,0,3,3) * rotation_x * rotation_y * rotation_z;
+    return result;
 }
 
 Eigen::Matrix4d BicycleKinematics::RotateAboutZ(const Eigen::Matrix4d &trans, const double &theta)

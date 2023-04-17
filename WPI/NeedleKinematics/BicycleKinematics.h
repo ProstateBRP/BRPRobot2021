@@ -18,7 +18,7 @@ public:
     // Member functions
     Eigen::Matrix4d ForwardKinematicsBicycleModel(const Eigen::Matrix4d &, const double &, const double &);
     Eigen::Matrix4d ApplyRotationEulerAngles(const Eigen::Matrix4d &, const Eigen::Vector3d &);
-    Eigen::Matrix3d ApplyRotationFixedAngles(const Eigen::Vector3d &);
+    Eigen::Matrix4d ApplyRotationFixedAngles(const Eigen::Matrix4d &, const Eigen::Vector3d &);
     Eigen::Matrix4d RotateAboutZ(const Eigen::Matrix4d &, const double &);
     Eigen::Matrix4d CalcSpecialEuclideanMatrix(const Eigen::Matrix4d &);
     Eigen::Matrix3d CalcSpecialOrthagonalMatrix(const Eigen::Matrix3d &);
