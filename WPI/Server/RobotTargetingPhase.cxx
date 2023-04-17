@@ -36,6 +36,7 @@ void RobotTargetingPhase::OnExit()
     // Capture the last reported needle tip position
     RStatus->robot->SaveNeedleTipPose();
   }
+  SetPreviousWorkPhase();
 }
 
 int RobotTargetingPhase::Initialize()

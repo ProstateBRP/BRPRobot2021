@@ -27,6 +27,7 @@ RobotStartUpPhase::~RobotStartUpPhase()
 
 void RobotStartUpPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 
 int RobotStartUpPhase::Initialize()

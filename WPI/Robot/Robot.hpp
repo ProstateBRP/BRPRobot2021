@@ -23,6 +23,7 @@ private:
     string current_state{""};
     PolyFit zx_fit;
     PolyFit zy_fit;
+    bool has_reached_target_pos_flag{false};
 
 protected:
     bool motor_enabled{false};
@@ -42,7 +43,7 @@ protected:
 public:
     Robot();
     ~Robot();
-    double GetTheta(){return theta;}
+    double GetTheta() { return theta; }
     void UpdateRobot();
     void UpdateCurvParams();
     int MoveToTargetingPosition();
@@ -56,18 +57,20 @@ public:
     void EnableMove();
     bool isApprox(const igtl::Matrix4x4 &, const igtl::Matrix4x4 &, double epsilon = 1e-6);
     bool isInTargetingPos(double epsilon = 1e-6);
+    bool GetInTargetPosFlag() { return has_reached_target_pos_flag; }
+    void SetInTargetPosFlag(const bool &flag) { has_reached_target_pos_flag = flag; }
     bool hasReachedTarget();
     bool isTargetPointReceived() { return target_point_received; }
     bool isCalibrationReceived() { return calibration_received; }
     void SetCalibrationFlag(const bool flag) { calibration_received = flag; };
     void SetTargetPointFlag(const bool flag) { target_point_received = flag; };
-    void SetCurrentState(const std::string &state){current_state = state;}
-    std::string GetCurrentState(){return current_state;}
+    void SetCurrentState(const std::string &state) { current_state = state; }
+    std::string GetCurrentState() { return current_state; }
     void SetTargetPosition(const Eigen::Matrix4d &);
     void SetCalibration(const Eigen::Matrix4d &);
-    Eigen::Matrix4d GetRegistration(){return calibration;}
-    Eigen::Matrix4d GetCurrentNeedlePos(){return current_pose;}
-    Eigen::Matrix4d GetTargetPointMatrix(){return target_position;}
+    Eigen::Matrix4d GetRegistration() { return calibration; }
+    Eigen::Matrix4d GetCurrentNeedlePos() { return current_pose; }
+    Eigen::Matrix4d GetTargetPointMatrix() { return target_position; }
     Eigen::Vector4d GetTargetPointVector();
     void PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &);
     void PushBackKinematicTipAsActualPose();

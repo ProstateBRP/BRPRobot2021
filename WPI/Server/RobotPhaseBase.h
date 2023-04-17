@@ -48,12 +48,12 @@ public:
   /*  State-specific message handling is defined using this function.*/
   virtual int MessageHandler(igtl::MessageHeader *headerMsg); // Message handler
 
+  void SetPreviousWorkPhase(){this->PreviousWorkphase = this->Name();}
+  std::string GetPreviousWorkPhase(){return this->PreviousWorkphase;}
   std::string GetNextWorkPhase() { return this->NextWorkphase; };
   std::string GetQueryID() { return this->QueryID; };
   
   void SetRobotStatus(RobotStatus *rs) { this->RStatus = rs; };
-  // Get robot status
-  RobotStatus* GetRobotStatus(){return this->RStatus;};
 
 protected:
   // Check if a CMD message (workphase change) has been received.
@@ -64,14 +64,9 @@ protected:
   // regardless of current workhpase.
   int CheckCommonMessage(igtl::MessageHeader *headerMsg);
 
-  // Register defect type.
-  // int RegisterDefectType(const char *name, const char *desc);
-
+  std::string PreviousWorkphase;
   std::string NextWorkphase;
   std::string QueryID;
-
-  // std::map<std::string, int> DefectStatus;
-  // std::map<std::string, std::string> DefectDescription;
 
   RobotStatus *RStatus;
 };

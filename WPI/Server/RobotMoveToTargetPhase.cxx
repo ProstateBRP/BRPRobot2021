@@ -29,17 +29,21 @@ RobotMoveToTargetPhase::~RobotMoveToTargetPhase()
 
 int RobotMoveToTargetPhase::Initialize()
 {
-  if (RStatus->robot->isInTargetingPos())
+  if (RStatus->robot->GetInTargetPosFlag())
   {
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
     // Send current needle pose to Slicer
     igtl::Matrix4x4 curr_pose;
     RStatus->GetCurrentPosition(curr_pose);
     SendTransformMessage("CURRENT_POSITION", curr_pose);
-    // Send the current kinematic tip position as the first actual tip position
-    RStatus->PushBackKinematicTipAsActualPose();
-    // Calculate Steering Effort 
-    RStatus->robot->UpdateCurvParams();
+    // If we did not transition from a Stop state, initialize kinematic tip estimation.
+    if (strcmp(GetPreviousWorkPhase().c_str(), "STOP") != 0)
+    {
+      // Send the current kinematic tip position as the first actual tip position
+      RStatus->PushBackKinematicTipAsActualPose();
+      // Calculate Steering Effort
+      RStatus->robot->UpdateCurvParams();
+    }
     // Enable the axis to move
     RStatus->robot->EnableMove();
   }
@@ -59,6 +63,7 @@ void RobotMoveToTargetPhase::OnExit()
   {
     RStatus->robot->CleanUp();
   }
+  SetPreviousWorkPhase();
 }
 
 int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
@@ -107,7 +112,7 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
       SendTransformMessage("REACHABLE_TARGET", matrix);
       Logger &log = Logger::GetInstance();
-      log.Log(matrix, "New Target",devName.substr(4, std::string::npos), 1);
+      log.Log(matrix, "New Target", devName.substr(4, std::string::npos), 1);
 
       return 1;
     }

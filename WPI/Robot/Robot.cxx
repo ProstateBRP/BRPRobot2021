@@ -58,14 +58,22 @@ bool Robot::isInTargetingPos(double epsilon)
 
 int Robot::MoveToTargetingPosition()
 {
-    if (!isInTargetingPos() && motor_enabled)
+    if (motor_enabled && !GetInTargetPosFlag())
     {
-        current_pose.block(0, 0, 3, 3) = target_position.block(0, 0, 3, 3);
-        current_pose(0, 3) += x_inc;
-        current_pose(1, 3) += y_inc;
-        igtl::Sleep(10);
-        return 1;
+        if (!isInTargetingPos())
+        {
+            current_pose.block(0, 0, 3, 3) = target_position.block(0, 0, 3, 3);
+            current_pose(0, 3) += x_inc;
+            current_pose(1, 3) += y_inc;
+            igtl::Sleep(10);
+            return 1;
+        }
+        else
+        {
+            SetInTargetPosFlag(true);
+        }
     }
+
     return 0;
 }
 
@@ -124,6 +132,7 @@ void Robot::SetTargetPosition(const Eigen::Matrix4d &target_position)
     this->target_position = target_position;
     this->CalcMoveToTargetInc();
     this->SetTargetPointFlag(true);
+    this->SetInTargetPosFlag(false);
 }
 
 void Robot::SetCalibration(const Eigen::Matrix4d &calibration)

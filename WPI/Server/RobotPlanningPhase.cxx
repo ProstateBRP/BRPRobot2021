@@ -32,6 +32,7 @@ int RobotPlanningPhase::Initialize()
 
 void RobotPlanningPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 
 int RobotPlanningPhase::MessageHandler(igtl::MessageHeader *headerMsg)

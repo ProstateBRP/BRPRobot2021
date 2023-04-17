@@ -43,6 +43,7 @@ int RobotCalibrationPhase::Initialize()
 
 void RobotCalibrationPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 // TODO: this should return a 4x4 matrix and set the robot registration to it
 // The calibration matrix is set within the RStatus object

@@ -37,6 +37,7 @@ int RobotManualPhase::Initialize()
 
 void RobotManualPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 
 // What does this function do exactly? It seems that it is always returning zero.

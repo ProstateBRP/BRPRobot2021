@@ -23,6 +23,7 @@ RobotUndefinedPhase::RobotUndefinedPhase(Robot *robot) : RobotPhaseBase(robot)
 
 void RobotUndefinedPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 RobotUndefinedPhase::~RobotUndefinedPhase()
 {
