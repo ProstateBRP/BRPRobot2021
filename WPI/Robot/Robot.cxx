@@ -153,7 +153,7 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
 
     // Update the current pose based on the estimated pose
     // Update orientation component of needle tip
-    current_pose.block(0, 0, 3, 3) = kinematics.ApplyRotation(Eigen::Vector3d(omega, beta, theta));
+    current_pose.block(0, 0, 3, 3) = kinematics.ApplyRotationFixedAngles(Eigen::Vector3d(omega, beta, theta));
     // Update Position component of needle tip
     current_pose(0, 3) = reported_tip_pos(0);
     current_pose(1, 3) = reported_tip_pos(1);

@@ -26,7 +26,7 @@ Eigen::Matrix4d BicycleKinematics::ForwardKinematicsBicycleModel(const Eigen::Ma
     new rotated 4x4 transformation.
     Input: 3x1 vector corresponding to desired rotation amount about x,y,z axis in degrees
 */
-Eigen::Matrix4d BicycleKinematics::ApplyRotation(const Eigen::Matrix4d &trans, const Eigen::Vector3d &theta)
+Eigen::Matrix4d BicycleKinematics::ApplyRotationEulerAngles(const Eigen::Matrix4d &trans, const Eigen::Vector3d &theta)
 {
     // Calculating Rotation about x,y,z axis
     Eigen::Matrix4d rotation_x;
@@ -47,7 +47,7 @@ Eigen::Matrix4d BicycleKinematics::ApplyRotation(const Eigen::Matrix4d &trans, c
     return (trans * rotation_z * rotation_y * rotation_x);
 }
 
-Eigen::Matrix3d BicycleKinematics::ApplyRotation(const Eigen::Vector3d &theta)
+Eigen::Matrix3d BicycleKinematics::ApplyRotationFixedAngles(const Eigen::Vector3d &theta)
 {
     // Calculating Rotation about x,y,z axis
     Eigen::Matrix3d rotation_x;
