@@ -117,9 +117,9 @@ void RobotStatus::PushBackActualNeedlePos(const igtl::Matrix4x4 &matrix)
     }
   }
   Eigen::Matrix4d reported_needle_tip_robot = robot->GetRegistration().inverse() * reported_needle_pos_imager;
-  Eigen::Vector3d needle_tip_pos(reported_needle_tip_robot(0, 3), reported_needle_tip_robot(1, 3),
+  Eigen::Vector3d needle_tip_pos_robot(reported_needle_tip_robot(0, 3), reported_needle_tip_robot(1, 3),
                                  reported_needle_tip_robot(2, 3));
-  this->robot->PushBackActualNeedlePosAndUpdatePose(needle_tip_pos);
+  this->robot->PushBackActualNeedlePosAndUpdatePose(needle_tip_pos_robot);
 }
 
 void RobotStatus::PushBackKinematicTipPose()

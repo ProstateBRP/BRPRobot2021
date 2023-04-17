@@ -135,7 +135,10 @@ void Robot::SetCalibration(const Eigen::Matrix4d &calibration)
 void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported_tip_pos)
 {
     Logger &log = Logger::GetInstance();
-    actual_tip_positions.push_back(reported_tip_pos);
+    // Convert reported tip position from robot base to needle guide's frame.
+    Eigen::Vector4d reported_tip_pos_needle_guide_coord = needle_tip_pose_at_targeting.inverse() *
+                                                          Eigen::Vector4d(reported_tip_pos(0), reported_tip_pos(1), reported_tip_pos(2), 1);
+    actual_tip_positions.push_back(Eigen::Vector3d(reported_tip_pos_needle_guide_coord.head(3)));
 
     zx_fit.Fit(actual_tip_positions);
     zy_fit.Fit(actual_tip_positions);
@@ -164,9 +167,9 @@ void Robot::PushBackActualNeedlePosAndUpdatePose(const Eigen::Vector3d &reported
 void Robot::PushBackKinematicTipAsActualPose()
 {
     actual_tip_positions.clear();
-    actual_tip_positions.push_back(Eigen::Vector3d(current_pose(0, 3), current_pose(1, 3), current_pose(2, 3)));
-    Logger &log = Logger::GetInstance();
-    log.Log(GetCurrentNeedlePos(), "Needle Pose Robot Coord", "123", 1);
+    /* The first point is considered as the needle guide's frame location. Since all preceding points are defined w.r.t needle
+    guide's frame, the first point is defined as the base of the needle guide frame and is therefore zeros.*/
+    actual_tip_positions.push_back(Eigen::Vector3d::Zero());
 }
 
 void Robot::SetNeedleEntryPoint(const Eigen::Matrix4d &matrix)
