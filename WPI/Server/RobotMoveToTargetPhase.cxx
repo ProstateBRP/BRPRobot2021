@@ -45,18 +45,20 @@ int RobotMoveToTargetPhase::Initialize()
   }
   else
   {
-    // If the target has not been received, return error.
+    // Robot is not in the targeting position
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_NOT_READY, 0);
   }
-
   return 1;
 }
 
 void RobotMoveToTargetPhase::OnExit()
 {
   RStatus->robot->StopRobot();
-  // Clean up the reported tip positions from the buffer
-  RStatus->robot->CleanUp();
+  // Clean up the reported tip positions from the buffer (Skip process if robot is Stopped).
+  if (strcmp("STOP", GetNextWorkPhase().c_str()) != 0)
+  {
+    RStatus->robot->CleanUp();
+  }
 }
 
 int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)

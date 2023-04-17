@@ -182,7 +182,6 @@ void Robot::SetNeedleEntryPoint(const Eigen::Matrix4d &matrix)
 void Robot::CleanUp()
 {
     actual_tip_positions.clear();
-    // TODO:Potentially look into conditional cleanup based on the interrupt level
 }
 
 // Save needle tip position before entering the anatomy
