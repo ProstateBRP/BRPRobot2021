@@ -122,7 +122,7 @@ void RobotStatus::PushBackActualNeedlePos(const igtl::Matrix4x4 &matrix)
   this->robot->PushBackActualNeedlePosAndUpdatePose(needle_tip_pos_robot);
 }
 
-void RobotStatus::PushBackKinematicTipPose()
+void RobotStatus::PushBackKinematicTipAsActualPose()
 {
   robot->PushBackKinematicTipAsActualPose();
 }

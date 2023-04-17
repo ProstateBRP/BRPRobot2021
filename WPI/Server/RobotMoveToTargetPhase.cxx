@@ -29,7 +29,7 @@ RobotMoveToTargetPhase::~RobotMoveToTargetPhase()
 
 int RobotMoveToTargetPhase::Initialize()
 {
-  if (RStatus->GetTargetFlag())
+  if (RStatus->robot->isInTargetingPos())
   {
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
     // Send current needle pose to Slicer
@@ -37,7 +37,7 @@ int RobotMoveToTargetPhase::Initialize()
     RStatus->GetCurrentPosition(curr_pose);
     SendTransformMessage("CURRENT_POSITION", curr_pose);
     // Send the current kinematic tip position as the first actual tip position
-    RStatus->PushBackKinematicTipPose();
+    RStatus->PushBackKinematicTipAsActualPose();
     // Calculate Steering Effort 
     RStatus->robot->UpdateCurvParams();
     // Enable the axis to move
@@ -46,7 +46,7 @@ int RobotMoveToTargetPhase::Initialize()
   else
   {
     // If the target has not been received, return error.
-    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
+    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_NOT_READY, 0);
   }
 
   return 1;
