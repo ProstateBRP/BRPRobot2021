@@ -31,7 +31,7 @@ void RobotTargetingPhase::OnExit()
 {
   RStatus->robot->StopRobot();
   // Check if the robot has reached its targeting position And if the state is changing to Move to Target
-  if (RStatus->robot->isInTargetingPos() && strcmp("MOVE_TO_TARGET", GetNextWorkPhase().c_str()) == 0)
+  if (RStatus->robot->GetInTargetPosFlag() && strcmp("MOVE_TO_TARGET", GetNextWorkPhase().c_str()) == 0)
   {
     // Capture the last reported needle tip position
     RStatus->robot->SaveNeedleTipPose();
@@ -41,8 +41,6 @@ void RobotTargetingPhase::OnExit()
 
 int RobotTargetingPhase::Initialize()
 {
-
-  // Send Status after waiting for 2 seconds (mimicking initialization process)
   igtl::Sleep(1000); // wait for 1000 msec
   // If the robot has not been calibrated, return device-not-ready error
   if (!this->RStatus || !this->RStatus->GetCalibrationFlag())
@@ -62,8 +60,7 @@ int RobotTargetingPhase::Initialize()
 
 int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
-
-  /// Check if GET_TRANSFORM has been received
+  // Check if GET_TRANSFORM has been received
   if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
       strncmp(headerMsg->GetDeviceName(), "TGT_", 4) == 0)
   {
@@ -83,7 +80,7 @@ int RobotTargetingPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
       SendTransformMessage("REACHABLE_TARGET", matrix);
       Logger &log = Logger::GetInstance();
-      log.Log(matrix, this->Name(),devName.substr(4, std::string::npos), 1);
+      log.Log(matrix, this->Name(), devName.substr(4, std::string::npos), 1);
       return 1;
     }
   }

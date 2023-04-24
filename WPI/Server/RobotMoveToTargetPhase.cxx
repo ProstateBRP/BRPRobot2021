@@ -32,10 +32,7 @@ int RobotMoveToTargetPhase::Initialize()
   if (RStatus->robot->GetInTargetPosFlag())
   {
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
-    // Send current needle pose to Slicer
-    igtl::Matrix4x4 curr_pose;
-    RStatus->GetCurrentPosition(curr_pose);
-    SendTransformMessage("CURRENT_POSITION", curr_pose);
+
     // If we did not transition from a Stop state, initialize kinematic tip estimation.
     if (strcmp(GetPreviousWorkPhase().c_str(), "STOP") != 0)
     {
@@ -52,6 +49,10 @@ int RobotMoveToTargetPhase::Initialize()
     // Robot is not in the targeting position
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_NOT_READY, 0);
   }
+  // Send current needle pose to Slicer
+  igtl::Matrix4x4 curr_pose;
+  RStatus->GetCurrentPosition(curr_pose);
+  SendTransformMessage("CURRENT_POSITION", curr_pose);
   return 1;
 }
 

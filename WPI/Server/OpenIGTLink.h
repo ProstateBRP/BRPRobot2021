@@ -44,12 +44,8 @@ public:
 	 int clientSocketConnected{1};
 	igtl::Socket::Pointer socket;
 	Robot *robot;
-	bool retransmit;
 	int port;
 
-	// For TCP Keep Alive
-	bool keepAlive;
-	Timer keepAliveTimer;
 	std::vector<RobotPhaseBase* > WorkphaseList;
 
 	//================ Public Methods ==============
