@@ -98,7 +98,6 @@ int Robot::InsertNeedleToTargetDepth()
         double w_hat = curv_steering->CalcRotationalVel(theta); // Desired normalized rot speed
         double u2 = w_hat * max_rotation_speed;                 // desired rotation speed
         double du2 = u2 * delta;                                // Change in rotation angle
-
         // Update the needle rotation
         theta += du2;
         current_pose = kinematics.ForwardKinematicsBicycleModel(current_pose, du1, du2);
