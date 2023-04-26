@@ -44,9 +44,6 @@ public:
     double CalcNormalizedRotationalVel(const double &);
     void GovernRotationDir(const double &);
 
-    inline void set_alpha(const double &alpha) { this->alpha = alpha; }
-    inline void ResetRotationDir() { current_rotation_dir = RotationDirection::CW; }
-
     // Member attributes
     ExponentialModelCoefficients exp_coefficients;
     RotationDirection current_rotation_dir{CW};
