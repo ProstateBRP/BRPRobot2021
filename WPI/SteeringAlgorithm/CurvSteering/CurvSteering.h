@@ -43,7 +43,6 @@ public:
     double CalcRotationalVel(const double &);
     double CalcNormalizedRotationalVel(const double &);
     void GovernRotationDir(const double &);
-    void DetermineRotationalDir();
 
     inline void set_alpha(const double &alpha) { this->alpha = alpha; }
     inline void ResetRotationDir() { current_rotation_dir = RotationDirection::CW; }
