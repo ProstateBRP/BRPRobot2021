@@ -16,5 +16,6 @@ public:
     // Member attributes
     BicycleKinematics bicycle_kinematics;
     double curvature{0};
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 };
 #endif /*_STEERINGALGORITHM_H_*/

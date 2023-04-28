@@ -16,6 +16,11 @@ BicycleKinematics::BicycleKinematics()
 Eigen::Matrix4d BicycleKinematics::ForwardKinematicsBicycleModel(const Eigen::Matrix4d &transformation_mtx,
                                                                  const double &du1, const double &du2)
 {
+    // If both are zero will result in NaN.
+    if (du1 == 0 && du2 == 0)
+    {
+        return transformation_mtx;
+    }
     Eigen::Matrix4d converted_mtx = Eigen::Matrix4d::Identity();
     converted_mtx = ConvertToSpecialEuclideanMatrix((du1 * v1) + (du2 * v2));
     return transformation_mtx * CalcSpecialEuclideanMatrix(converted_mtx);
