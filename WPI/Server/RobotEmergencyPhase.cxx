@@ -37,6 +37,7 @@ int RobotEmergencyPhase::Initialize()
 
 void RobotEmergencyPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 
 int RobotEmergencyPhase::MessageHandler(igtl::MessageHeader *headerMsg)

@@ -8,11 +8,6 @@ OpenIGTLink::OpenIGTLink(Robot *robot, int port)
     // Port used for communication
     this->port = port;
 
-    // On new connections retransmit robot state
-    retransmit = false;
-
-    // Does the client have a keep alive functionality ?
-    keepAlive = false;
 }
 
 void *OpenIGTLink::ThreadIGT(void *igt)

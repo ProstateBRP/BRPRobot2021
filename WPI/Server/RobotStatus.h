@@ -36,7 +36,7 @@ public:
   
   void GetCurrentPosition(igtl::Matrix4x4 &currentPosition);
   void PushBackActualNeedlePos(const igtl::Matrix4x4 &matrix);
-  void PushBackKinematicTipPose();
+  void PushBackKinematicTipAsActualPose();
 
   Robot *robot;
 };

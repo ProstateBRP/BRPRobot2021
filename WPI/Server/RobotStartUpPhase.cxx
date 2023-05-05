@@ -27,14 +27,14 @@ RobotStartUpPhase::~RobotStartUpPhase()
 
 void RobotStartUpPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 
 int RobotStartUpPhase::Initialize()
 {
 
-  // Send Status after waiting for 2 seconds (mimicking initialization process)
-  igtl::Sleep(2000); // wait for 2000 msec
-
+  // Send Status after waiting for 0.5 seconds (mimicking initialization process)
+  igtl::Sleep(500);
   // Normal
   this->SendStatusMessage(this->Name(), 1, 0);
 

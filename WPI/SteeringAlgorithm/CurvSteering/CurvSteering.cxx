@@ -31,20 +31,23 @@ double CurvSteering::CalcAlpha(const double &curvature)
 */
 void CurvSteering::CalcCurvParams(const Eigen::Matrix4d &needle_pose_rbt_frame, const Eigen::Vector4d &tgt_pos_rbt_frame, const double &rbt_rot_angle_rad)
 {
-    // Update theta difference value
-    set_theta_diff(rbt_rot_angle_rad);
+    /**** Determine the target angle (theta_d) *****/
     // Find the target position wrt to the needle frame
     Eigen::Vector4d tgt_pos_needle_frame = needle_pose_rbt_frame.inverse() * tgt_pos_rbt_frame;
     // Update desired theta (defined in needle's frame)
-    this->theta_d = CalcTargetAngle(tgt_pos_needle_frame);
-    // Find the desired curvature from needle tip to the target point
-    Eigen::Vector3d desired_rot(0, 0, theta_d);
+    double theta_desired_relative = CalcTargetAngle(tgt_pos_needle_frame);
+    this->theta_d = rbt_rot_angle_rad + theta_desired_relative;
+    if (this->theta_d >= 2 * M_PI)
+    {
+        this->theta_d -= 2 * M_PI;
+    }
+    /**** Find the desired curvature from needle tip to the target point*****/
     // Rotate needle frame so that the target is placed at the y-z plane of the needle frame to enable the calculation of the
     // curvature.
-    Eigen::Matrix4d rotated_needle_frame = bicycle_kinematics.ApplyRotation(needle_pose_rbt_frame, desired_rot);
+    Eigen::Matrix4d rotated_needle_frame = bicycle_kinematics.RotateAboutZ(needle_pose_rbt_frame, theta_desired_relative);
     // Recalculate the target pos in the rotated needle frame
     Eigen::Vector4d tgt_pos_needle_frame_rotated = rotated_needle_frame.inverse() * tgt_pos_rbt_frame;
-    // Calculate the curvature
+    // Calculate the curvature (target is now on the yz plane of the needle tip frame)
     this->curvature = CalcCurvature(tgt_pos_needle_frame_rotated);
     // Check if the point is reachable and set the alpha value accordingly
     if (is_reachable(curvature))
@@ -79,20 +82,7 @@ double CurvSteering::CalcRotationalVel(const double &rbt_theta_rad)
 */
 double CurvSteering::UnidirectionalCurv(const double &rbt_theta_rad)
 {
-    double w_hat{0};
-     // Calculate theta in needle frame and convert theta to a value between 0 and 2*PI
-    double needle_theta = fmod(fabs(get_theta(rbt_theta_rad)), 2 * M_PI);
-    // Determine normalized rotation velocity
-    if (needle_theta - theta_d > M_PI)
-    {
-        w_hat = 1 - alpha * exp(-pow((2 * M_PI) - (needle_theta - theta_d), 2) / (2 * pow(c, 2)));
-    }
-    else
-    {
-        w_hat = 1 - alpha * exp(-pow(needle_theta - theta_d, 2) / (2 * pow(c, 2)));
-    }
-    // Return converted rotation velocity
-    return w_hat;
+    return CalcNormalizedRotationalVel(rbt_theta_rad);
 }
 
 /*!
@@ -102,32 +92,10 @@ double CurvSteering::UnidirectionalCurv(const double &rbt_theta_rad)
 double CurvSteering::BidirectionalCurv(const double &rbt_theta_rad)
 {
     double w_hat{0};
-    double needle_theta = get_theta(rbt_theta_rad);
-    // Check if it is time to change the direction of rotation
-    if (needle_theta > 2 * M_PI)
-    {
-        if (current_rotation_dir == RotationDirection::CW)
-        {
-            current_rotation_dir = RotationDirection::CCW;
-        }
-    }
-    else if (needle_theta < 0)
-    {
-        if (current_rotation_dir == RotationDirection::CCW)
-        {
-            current_rotation_dir = RotationDirection::CW;
-        }
-    }
-
+    // Manage direction of rotation based on the current needle angle
+    GovernRotationDir(rbt_theta_rad);
     // Determine normalized rotation velocity
-    if (needle_theta - theta_d > M_PI)
-    {
-        w_hat = 1 - alpha * exp(-pow((2 * M_PI) - (needle_theta - theta_d), 2) / (2 * pow(c, 2)));
-    }
-    else
-    {
-        w_hat = 1 - alpha * exp(-pow(needle_theta - theta_d, 2) / (2 * pow(c, 2)));
-    }
+    w_hat = CalcNormalizedRotationalVel(rbt_theta_rad);
     // Determine the final rotation direction based on the state of the robot
     if (current_rotation_dir == RotationDirection::CCW)
     {
@@ -136,5 +104,39 @@ double CurvSteering::BidirectionalCurv(const double &rbt_theta_rad)
     else
     {
         return abs(w_hat);
+    }
+}
+
+double CurvSteering::CalcNormalizedRotationalVel(const double &rbt_theta_rad)
+{
+    // Determine normalized rotation velocity
+    if (rbt_theta_rad - theta_d > M_PI)
+    {
+        return (1 - alpha * exp(-pow((2 * M_PI) - (rbt_theta_rad - theta_d), 2) / (2 * pow(c, 2))));
+    }
+    else
+    {
+        return (1 - alpha * exp(-pow(rbt_theta_rad - theta_d, 2) / (2 * pow(c, 2))));
+    }
+}
+
+/*!
+    Manages the rotation direction to ensure that the needle angle remains between 0 and 360.
+*/
+void CurvSteering::GovernRotationDir(const double &rbt_theta_rad)
+{
+    if (rbt_theta_rad > 2 * M_PI)
+    {
+        if (current_rotation_dir == RotationDirection::CW)
+        {
+            current_rotation_dir = RotationDirection::CCW;
+        }
+    }
+    else if (rbt_theta_rad < 0)
+    {
+        if (current_rotation_dir == RotationDirection::CCW)
+        {
+            current_rotation_dir = RotationDirection::CW;
+        }
     }
 }

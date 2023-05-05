@@ -7,7 +7,7 @@ BicycleKinematics::BicycleKinematics()
     e2 << 0, 1, 0;
     e3 << 0, 0, 1;
     l2 = 0;                  // Distance from the needle tip frame to the middle of the bicycle
-    max_curvature = 0.00221; // Natural curvature of the needle. This value is determined experimentally
+    max_curvature = 0.00449003; // Natural curvature of the needle. This value is determined experimentally
     v1 = Eigen::VectorXd::Zero(6);
     v1 << e3, max_curvature * e1; // Insertion velocity vector
     v2 = Eigen::VectorXd::Zero(6);
@@ -16,6 +16,11 @@ BicycleKinematics::BicycleKinematics()
 Eigen::Matrix4d BicycleKinematics::ForwardKinematicsBicycleModel(const Eigen::Matrix4d &transformation_mtx,
                                                                  const double &du1, const double &du2)
 {
+    // If both are zero will result in NaN.
+    if (du1 == 0 && du2 == 0)
+    {
+        return transformation_mtx;
+    }
     Eigen::Matrix4d converted_mtx = Eigen::Matrix4d::Identity();
     converted_mtx = ConvertToSpecialEuclideanMatrix((du1 * v1) + (du2 * v2));
     return transformation_mtx * CalcSpecialEuclideanMatrix(converted_mtx);
@@ -26,7 +31,7 @@ Eigen::Matrix4d BicycleKinematics::ForwardKinematicsBicycleModel(const Eigen::Ma
     new rotated 4x4 transformation.
     Input: 3x1 vector corresponding to desired rotation amount about x,y,z axis in degrees
 */
-Eigen::Matrix4d BicycleKinematics::ApplyRotation(const Eigen::Matrix4d &trans, const Eigen::Vector3d &theta)
+Eigen::Matrix4d BicycleKinematics::ApplyRotationEulerAngles(const Eigen::Matrix4d &trans, const Eigen::Vector3d &theta)
 {
     // Calculating Rotation about x,y,z axis
     Eigen::Matrix4d rotation_x;
@@ -46,6 +51,39 @@ Eigen::Matrix4d BicycleKinematics::ApplyRotation(const Eigen::Matrix4d &trans, c
         0., 0., 0., 1;
     return (trans * rotation_z * rotation_y * rotation_x);
 }
+
+Eigen::Matrix4d BicycleKinematics::ApplyRotationFixedAngles(const Eigen::Matrix4d &trans,const Eigen::Vector3d &theta)
+{
+    // Calculating Rotation about x,y,z axis
+    Eigen::Matrix3d rotation_x;
+    rotation_x << 1., 0., 0.,
+        0., cos(theta(0)), -sin(theta(0)),
+        0., sin(theta(0)), cos(theta(0));
+
+    Eigen::Matrix3d rotation_y;
+    rotation_y << cos(theta(1)), 0., sin(theta(1)),
+        0., 1., 0.,
+        -sin(theta(1)), 0., cos(theta(1));
+
+    Eigen::Matrix3d rotation_z;
+    rotation_z << cos(theta(2)), -sin(theta(2)), 0.,
+        sin(theta(2)), cos(theta(2)), 0.,
+        0., 0., 1.;
+    Eigen::Matrix4d result = Eigen::Matrix4d::Identity();
+    result.block(0,0,3,3) = trans.block(0,0,3,3) * rotation_x * rotation_y * rotation_z;
+    return result;
+}
+
+Eigen::Matrix4d BicycleKinematics::RotateAboutZ(const Eigen::Matrix4d &trans, const double &theta)
+{
+    Eigen::Matrix4d rotation_z;
+    rotation_z << cos(theta), -sin(theta), 0., 0.,
+        sin(theta), cos(theta), 0., 0.,
+        0., 0., 1., 0.,
+        0., 0., 0., 1;
+    return (trans * rotation_z);
+}
+
 
 /*!
     Computes the exponential map M of a 4x4 se(3) Lie algebra w^.

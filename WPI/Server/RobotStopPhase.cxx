@@ -27,6 +27,7 @@ RobotStopPhase::~RobotStopPhase()
 
 void RobotStopPhase::OnExit()
 {
+  SetPreviousWorkPhase();
 }
 
 int RobotStopPhase::Initialize()

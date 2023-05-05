@@ -41,17 +41,8 @@ public:
     double UnidirectionalCurv(const double &);
     double BidirectionalCurv(const double &);
     double CalcRotationalVel(const double &);
-    inline void set_alpha(const double &alpha) { this->alpha = alpha; }
-    inline void ResetRotationDir() { current_rotation_dir = RotationDirection::CW; }
-
-    /*!
-    Every time the curv param is being updated, the theta reference wrt to the robot-reported value needs to be updated.
-    */
-    inline void set_theta_diff(const double &curr_rbt_rot_angle)
-    {
-        this->theta_diff = curr_rbt_rot_angle;
-    }
-    inline double get_theta(const double &curr_rbt_rot_angle) { return curr_rbt_rot_angle - this->theta_diff; }
+    double CalcNormalizedRotationalVel(const double &);
+    void GovernRotationDir(const double &);
 
     // Member attributes
     ExponentialModelCoefficients exp_coefficients;
@@ -59,7 +50,6 @@ public:
     CurvMethod *curv_method;
     double theta_d{0};
     double alpha{0.0};
-    double theta_diff{0};
     double c{60 * M_PI / 180};
 };
 

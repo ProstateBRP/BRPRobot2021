@@ -29,33 +29,42 @@ RobotMoveToTargetPhase::~RobotMoveToTargetPhase()
 
 int RobotMoveToTargetPhase::Initialize()
 {
-  if (RStatus->GetTargetFlag())
+  if (RStatus->robot->GetInTargetPosFlag())
   {
     SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_OK, 0);
-    // Send current needle pose to Slicer
-    igtl::Matrix4x4 curr_pose;
-    RStatus->GetCurrentPosition(curr_pose);
-    SendTransformMessage("CURRENT_POSITION", curr_pose);
-    // Send the current kinematic tip position as the first actual tip position
-    RStatus->PushBackKinematicTipPose();
 
+    // If we did not transition from a Stop state, initialize kinematic tip estimation.
+    if (strcmp(GetPreviousWorkPhase().c_str(), "STOP") != 0)
+    {
+      // Send the current kinematic tip position as the first actual tip position
+      RStatus->PushBackKinematicTipAsActualPose();
+      // Calculate Steering Effort
+      RStatus->robot->UpdateCurvParams();
+    }
     // Enable the axis to move
     RStatus->robot->EnableMove();
   }
   else
   {
-    // If the target has not been received, return error.
-    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
+    // Robot is not in the targeting position
+    SendStatusMessage("MOVE_TO_TARGET", igtl::StatusMessage::STATUS_NOT_READY, 0);
   }
-
+  // Send current needle pose to Slicer
+  igtl::Matrix4x4 curr_pose;
+  RStatus->GetCurrentPosition(curr_pose);
+  SendTransformMessage("CURRENT_POSITION", curr_pose);
   return 1;
 }
 
 void RobotMoveToTargetPhase::OnExit()
 {
   RStatus->robot->StopRobot();
-  // Clean up the reported tip positions from the buffer
-  RStatus->robot->CleanUp();
+  // Clean up the reported tip positions from the buffer (Skip process if robot is Stopped).
+  if (strcmp("STOP", GetNextWorkPhase().c_str()) != 0)
+  {
+    RStatus->robot->CleanUp();
+  }
+  SetPreviousWorkPhase();
 }
 
 int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
@@ -65,15 +74,17 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
   {
     if (strcmp(headerMsg->GetDeviceName(), "RETRACT_NEEDLE") == 0)
     {
+      // Stop robot
+      RStatus->robot->StopRobot();
       string text;
       ReceiveString(headerMsg, text);
       SendStatusMessage("ACK_RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
       // Ask the robot to retract the needle
       RStatus->robot->RetractNeedle();
-      igtl::Sleep(2000); // Simulate the delay
+      igtl::Sleep(500); // Simulate the delay
+
       // Send acknowledgment for successful needle retraction.
       SendStatusMessage("RETRACT_NEEDLE", igtl::StatusMessage::STATUS_OK, 0);
-      RStatus->robot->StopRobot();
       return 1;
     }
   }
@@ -101,6 +112,8 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       // algorithm sends a config error status and sets the steering to max curvature towards the target.
       SendStatusMessage("TARGET", igtl::StatusMessage::STATUS_OK, 0);
       SendTransformMessage("REACHABLE_TARGET", matrix);
+      Logger &log = Logger::GetInstance();
+      log.Log(matrix, "New Target", devName.substr(4, std::string::npos), 1);
 
       return 1;
     }
@@ -116,16 +129,15 @@ int RobotMoveToTargetPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       std::stringstream ss;
       ss << "ACK_" << devName.substr(5, std::string::npos);
       SendTransformMessage(ss.str().c_str(), matrix);
-
-      // TODO: Validate the needle transform matrix
-      // Validation Steps
-
-      // Pushback the reported needle tip position
-      RStatus->PushBackActualNeedlePos(matrix);
-      RStatus->robot->UpdateCurvParams();
-
+      // Stop the robot thread and wait for 200 millisecond for the thread to sync
+      RStatus->robot->StopRobot();
       Logger &log = Logger::GetInstance();
       log.Log("OpenIGTLink Needle Tip Received and Set in Code.", devName.substr(5, std::string::npos), LOG_LEVEL_INFO, true);
+      log.Log(matrix, "Needle Position", devName.substr(4, std::string::npos), 1);
+      // Pushback the reported needle tip position and update the CURV
+      RStatus->PushBackActualNeedlePos(matrix);
+      // Re-enable the robot
+      RStatus->robot->EnableMove();
       // needle pose should be saved in a robot variable in the real robot sw.
       SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
       return 1;
