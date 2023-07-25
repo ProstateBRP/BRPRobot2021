@@ -36,8 +36,7 @@ int RobotStartUpPhase::Initialize()
   // Send Status after waiting for 0.5 seconds (mimicking initialization process)
   igtl::Sleep(500);
   // Normal
-  this->SendStatusMessage(this->Name(), 1, 0);
-
+  SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
   return 1;
 }
 

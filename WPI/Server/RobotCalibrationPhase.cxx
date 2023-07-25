@@ -79,14 +79,14 @@ int RobotCalibrationPhase::MessageHandler(igtl::MessageHeader *headerMsg)
       {
         this->RStatus->SetCalibrationMatrix(matrix);
       }
-      SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_OK, 0);
+        SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
       Logger &log = Logger::GetInstance();
       log.Log(matrix, this->Name(),devName.substr(4, std::string::npos), 1);
     }
     else
     {
       std::cerr << "ERROR: Invalid calibration matrix." << std::endl;
-      SendStatusMessage("CALIBRATION", igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
+      SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_CONFIG_ERROR, 0);
     }
 
     return 1;

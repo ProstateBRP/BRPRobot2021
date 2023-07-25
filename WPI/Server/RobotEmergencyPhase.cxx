@@ -30,7 +30,7 @@ int RobotEmergencyPhase::Initialize()
 
   // Send Status after waiting for 2 seconds (mimicking initialization process)
   igtl::Sleep(500); // wait for 1000 msec
-  this->SendStatusMessage(this->Name(), 1, 0);
+  this->SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
 
   return 1;
 }

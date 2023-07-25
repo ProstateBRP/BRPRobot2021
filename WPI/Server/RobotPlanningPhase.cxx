@@ -27,6 +27,7 @@ RobotPlanningPhase::~RobotPlanningPhase()
 
 int RobotPlanningPhase::Initialize()
 {
+  SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
   return 1;
 }
 

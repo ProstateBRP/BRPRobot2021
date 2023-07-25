@@ -31,6 +31,7 @@ RobotUndefinedPhase::~RobotUndefinedPhase()
 
 int RobotUndefinedPhase::Initialize()
 {
+  SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
   return 1;
 }
 
