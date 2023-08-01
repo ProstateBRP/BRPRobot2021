@@ -38,6 +38,7 @@ RobotCalibrationPhase::~RobotCalibrationPhase()
 
 int RobotCalibrationPhase::Initialize()
 {
+  this->SendStatusMessage(this->Name(), igtl::StatusMessage::STATUS_OK, 0);
   return 1;
 }
 
