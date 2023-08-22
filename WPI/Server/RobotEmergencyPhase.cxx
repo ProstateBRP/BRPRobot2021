@@ -42,11 +42,5 @@ void RobotEmergencyPhase::OnExit()
 
 int RobotEmergencyPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
-
-  if (RobotPhaseBase::MessageHandler(headerMsg))
-  {
-    return 1;
-  }
-
   return 0;
 }

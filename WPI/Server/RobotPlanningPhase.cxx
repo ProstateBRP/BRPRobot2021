@@ -38,11 +38,5 @@ void RobotPlanningPhase::OnExit()
 
 int RobotPlanningPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
-
-  if (RobotPhaseBase::MessageHandler(headerMsg))
-  {
-    return 1;
-  }
-
   return 0;
 }

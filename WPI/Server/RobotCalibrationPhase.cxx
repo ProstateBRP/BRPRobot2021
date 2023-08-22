@@ -50,13 +50,7 @@ void RobotCalibrationPhase::OnExit()
 // The calibration matrix is set within the RStatus object
 int RobotCalibrationPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
-
-  // As of now the MessageHandler in the PhaseBase always returns 0
-  if (RobotPhaseBase::MessageHandler(headerMsg))
-  {
-    return 1;
-  }
-
+  
   /// Check if Transform message for calibration has been received
   if (strcmp(headerMsg->GetDeviceType(), "TRANSFORM") == 0 &&
       strncmp(headerMsg->GetDeviceName(), "CLB_", 4) == 0)

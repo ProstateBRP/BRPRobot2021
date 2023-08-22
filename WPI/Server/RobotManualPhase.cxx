@@ -43,11 +43,5 @@ void RobotManualPhase::OnExit()
 // What does this function do exactly? It seems that it is always returning zero.
 int RobotManualPhase::MessageHandler(igtl::MessageHeader *headerMsg)
 {
-
-  if (RobotPhaseBase::MessageHandler(headerMsg))
-  {
-    return 1;
-  }
-
   return 0;
 }

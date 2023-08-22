@@ -66,9 +66,9 @@ int RobotPhaseBase::Process()
   }
 
   // Common messages are handled here.
-  if (!this->CheckCommonMessage(headerMsg))
+  if (!MessageHandler(headerMsg))
   {
-    MessageHandler(headerMsg);
+    this->CheckCommonMessage(headerMsg);
   }
 
   return 0;
