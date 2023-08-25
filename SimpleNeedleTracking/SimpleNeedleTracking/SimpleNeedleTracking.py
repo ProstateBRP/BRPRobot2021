@@ -192,7 +192,7 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     self.sceneViewButton_red = qt.QRadioButton('Red')
     self.sceneViewButton_yellow = qt.QRadioButton('Yellow')
     self.sceneViewButton_green = qt.QRadioButton('Green')
-    self.sceneViewButton_green.checked = 1
+    self.sceneViewButton_red.checked = 1
     self.sceneViewButtonGroup = qt.QButtonGroup()
     self.sceneViewButtonGroup.addButton(self.sceneViewButton_red)
     self.sceneViewButtonGroup.addButton(self.sceneViewButton_yellow)
@@ -484,6 +484,8 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     self.tipPrediction = self.tipPredictionSelector.currentNode()
     # Create listener to sequence node
     self.addObserver(self.secondVolume, self.secondVolume.ImageDataModifiedEvent, self.receivedImage)
+    # Initialize CurrentTrackedTipNode with current prediction value
+    self.logic.initializeTipPrediction(self.tipPrediction)
   
   def stopTracking(self):
     self.isTrackingOn = False
@@ -630,6 +632,17 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
       sitk_mask = sitkUtils.PullVolumeFromSlicer(labelmapVolumeNode)
     return sitk.Cast(sitk_mask, sitk.sitkUInt8)
 
+  def initializeTipPrediction(self, tipPredictedNode):
+    try:
+      transformMatrix = vtk.vtkMatrix4x4()
+      tipPredictedNode.GetMatrixTransformToWorld(transformMatrix)
+      self.tipTrackedNode.SetMatrixTransformToParent(transformMatrix)
+      print('Initialized CurrentTrackedTipNode')
+      return True
+    except:
+      print('Could not initilize CurrentTrackedTipNode')
+      return False
+  
   # Update the stored base images
   def updateBaseImages(self, firstBaselineVolume, secondBaselineVolume, segmentationNode, inputMode, debugFlag=False):
     # Initialize sequence counter
