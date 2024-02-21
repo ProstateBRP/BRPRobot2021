@@ -34,6 +34,7 @@ import string
 import math
 import re
 import csv
+import configparser
 from sys import platform
 
 class ProstateBRPInterface(ScriptedLoadableModule):
@@ -71,6 +72,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
 
+    config = configparser.ConfigParser()
+    config.read(f'{os.path.dirname(os.path.realpath(__file__))}/defaults.ini')
+    hostname = config['GENERAL']['hostname']
+    port = config['GENERAL']['port']
+
     # Server collapsible button
     serverCollapsibleButton = ctk.ctkCollapsibleButton()
     serverCollapsibleButton.text = "IGTLink Connections"
@@ -81,7 +87,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Slicer<->Robot IGTLink connection interface
     self.snrPortTextboxLabel = qt.QLabel('Robot server port:')
-    self.snrPortTextbox = qt.QLineEdit("18936")
+    self.snrPortTextbox = qt.QLineEdit(port)
     self.snrPortTextbox.setReadOnly(False)
     self.snrPortTextbox.setMaximumWidth(75)
 
@@ -89,7 +95,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
 
     self.snrHostnameTextboxLabel = qt.QLabel('Robot server hostname:')
-    self.snrHostnameTextbox = qt.QLineEdit("127.0.0.1")
+    self.snrHostnameTextbox = qt.QLineEdit(hostname)
     self.snrHostnameTextbox.setReadOnly(False)
     self.snrHostnameTextbox.setMaximumWidth(250)
     serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
@@ -811,20 +817,19 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.previousTrackedTipMatrix.Zero()
     self.sendTrackedTipTransformCheckbox = qt.QCheckBox("Send tracked tip position to Robot")
     self.sendTrackedTipTransformCheckbox.setChecked(False)
-    self.sendTrackedTipTransformCheckbox.stateChanged.connect(self.toggleTrackedTipTimer)
     needleTrackingPanelLayout.addWidget(self.sendTrackedTipTransformCheckbox)
-    self.sendTrackedTipTransformTimer = qt.QTimer()
-    self.sendTrackedTipTransformTimer.timeout.connect(self.onSendTrackedTipTransform) 
+    #self.sendTrackedTipTransformTimer = qt.QTimer()
+    #self.sendTrackedTipTransformTimer.timeout.connect(self.onSendTrackedTipTransform) 
 
     # self.sendTrackedNeedleTipTransform = qt.QPushButton("Send Tracked Needle Tip")
     # self.sendTrackedNeedleTipTransform.toolTip = "Send Tracked Needle Tip"
     # needleTrackingPanelLayout.addWidget(self.sendTrackedNeedleTipTransform)
     # self.sendTrackedNeedleTipTransform.connect('clicked()', self.onSendTrackedTipTransform)
 
-    self.stopTrackedNeedleTipTransform = qt.QPushButton("Stop Sending Tracked Tip")
-    self.stopTrackedNeedleTipTransform.toolTip = "Stop Tracked Needle Tip"
-    needleTrackingPanelLayout.addWidget(self.stopTrackedNeedleTipTransform)
-    self.stopTrackedNeedleTipTransform.connect('clicked()', self.stopTrackedTipTimer)       
+    # self.stopTrackedNeedleTipTransform = qt.QPushButton("Stop Sending Tracked Tip")
+    # self.stopTrackedNeedleTipTransform.toolTip = "Stop Tracked Needle Tip"
+    # needleTrackingPanelLayout.addWidget(self.stopTrackedNeedleTipTransform)
+    # self.stopTrackedNeedleTipTransform.connect('clicked()', self.stopTrackedTipTimer)       
 
     # Needle view panel collapsible button
     self.modelViewPanelCollapsibleButton = ctk.ctkCollapsibleButton()
@@ -1085,7 +1090,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
               self.calibrationCollapsibleButton.collapsed = True
               self.planningCollapsibleButton.collapsed = True
               self.RetractNeedleButton.enabled = True
-              self.startTrackedTipTimer()
+
+              # Start Needle Tip Tracking Function
+              #self.startTrackedTipTimer()
+              self.needleTipTransformComboBox.currentNode().AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onSendTrackedTipTransform)
 
               # Remove nodes now that phase change achieved
               timestampID = name[4:]
@@ -1152,7 +1160,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.getTransformFPSBox.enabled = True
     
     # Close socket
-    self.openIGTNode.Stop()
+    if self.openIGTNode:
+      self.openIGTNode.Stop()
     self.snrPortTextboxLabel.setStyleSheet('color: black')
     self.snrHostnameTextboxLabel.setStyleSheet('color: black')
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
@@ -2388,22 +2397,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     slicer.cli.run(slicer.modules.maskscalarvolume, None, params, wait_for_completion=True)
     return maskedVolume
 
-  def toggleTrackedTipTimer(self):
-    pass
-  #   if self.sendTrackedTipTransformCheckbox.isChecked():
-  #     self.sendTrackedTipTransformTimer.start(int(1000/int(self.getTransformFPSBox.value)))
-  #   else:
-  #     self.sendTrackedTipTransformTimer.stop()
-  #     self.previousTrackedTipMatrix.Zero()
-
-  def startTrackedTipTimer(self):
-    if self.sendTrackedTipTransformCheckbox.isChecked():
-      self.sendTrackedTipTransformTimer.start(int(1000/int(self.getTransformFPSBox.value)))
-  
-  def stopTrackedTipTimer(self):
-    self.sendTrackedTipTransformTimer.stop()
-
-  def onSendTrackedTipTransform(self):
+  def onSendTrackedTipTransform(self, caller, event):
     if (self.sendTrackedTipTransformCheckbox.isChecked()):
       trackedTipMatrix = vtk.vtkMatrix4x4()
       self.needleTipTransformComboBox.currentNode().GetMatrixTransformToWorld(trackedTipMatrix)
@@ -2428,5 +2422,71 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
           #slicer.mrmlScene.RemoveNode(TrackedTipTransformNodeTemp)
           self.previousTrackedTipMatrix.DeepCopy(trackedTipMatrix)
       elif (reachedTargetString == "1"):
-        self.sendTrackedTipTransformTimer.stop()
+        caller.RemoveObserver(caller.observerTag)
 
+class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
+
+  def setUp(self):
+    slicer.mrmlScene.Clear()
+    widget = ProstateBRPInterfaceWidget()
+    hostname = slicer.modules.prostatebrpinterface.widgetRepresentation().self().snrHostnameTextbox.text
+    port = slicer.modules.prostatebrpinterface.widgetRepresentation().self().snrPortTextbox.text
+    widget.snrHostnameTextbox.setText(hostname)
+    widget.snrPortTextbox.setText(port)
+    return widget
+  
+  def runTest(self):
+    
+    self.test_NormalOperation()
+
+    # self.setUp()
+    # self.test_ImproperCalibration()
+
+    # self.setUp()
+    # self.test_OutOfBounds()
+
+    # self.setUp()
+    # self.test_EmergencyStop()
+  
+  def test_NormalOperation(self):
+    self.delayDisplay("Starting Normal Operation Test")
+    widget = self.setUp()
+    
+    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+    widget.onCreateRobotClientButtonClicked()
+    self.delayDisplay("Sending START_UP")
+    widget.onStartupButtonClicked()
+    
+
+  def test_ImproperCalibration(self):
+    self.delayDisplay("Starting Improper Calibration Test")
+    widget = self.setUp()
+
+    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+    widget.onCreateRobotClientButtonClicked()
+
+  def test_OutOfBounds(self):
+    self.delayDisplay("Starting Out of Bounds Test")
+    widget = self.setUp()
+
+    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+    widget.onCreateRobotClientButtonClicked()
+
+  def test_EmergencyStop(self):
+    self.delayDisplay("Starting Emergency Stop Test")
+    widget = self.setUp()
+
+    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+    widget.onCreateRobotClientButtonClicked()
