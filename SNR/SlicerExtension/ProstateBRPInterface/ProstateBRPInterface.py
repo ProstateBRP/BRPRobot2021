@@ -47,7 +47,7 @@ class ProstateBRPInterface(ScriptedLoadableModule):
     self.parent.title = "Prostate BRP Interface"
     self.parent.categories = ["IGT"]
     self.parent.dependencies = []
-    self.parent.contributors = ["Rebecca Lisk, Franklin King"]
+    self.parent.contributors = ["Rebecca Lisk (SNR), Franklin King (SNR)"]
     self.parent.helpText = """
 """
     self.parent.helpText += self.getDefaultModuleDocumentationLink()
@@ -75,7 +75,9 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.needleTipTransformObserver = None
     self.plannedTargetTransformObserver = None
     self.status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANIC_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
-    self.robot_phases = ['START_UP', 'EMERGENCY', 'TARGETING', 'MOVE_TO_TARGET', 'CALIBRATION', 'PLANNING']
+    #self.robot_phases = ['START_UP', 'EMERGENCY', 'TARGETING', 'MOVE_TO_TARGET', 'CALIBRATION', 'PLANNING']
+    self.robot_phase = "NONE"
+    self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
   def cleanup(self):
     self.getTransformTimer.stop()
@@ -89,6 +91,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.registrationTranslationSliderWidget.reset()
     self.registrationOrientationSliderWidget.setMRMLTransformNode(None)
     self.registrationOrientationSliderWidget.reset()
+    self.robot_phase = "NONE"
+    self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
   def onReload(self,moduleName="ProstateBRPInterface"):
     self.getTransformTimer.stop()
@@ -102,6 +106,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.registrationTranslationSliderWidget.reset()
     self.registrationOrientationSliderWidget.setMRMLTransformNode(None)
     self.registrationOrientationSliderWidget.reset()
+    self.robot_phase = "NONE"
+    self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
     globals()[moduleName] = slicer.util.reloadScriptedModule(moduleName)
 
   def setup(self):
@@ -236,13 +242,13 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     RobotOutboundCommunicationLayout.addWidget(self.moveButton, 5, 1)
     self.moveButton.connect('clicked()', self.onMoveButtonClicked)
 
-    # Get robot status Button to ask WPI to send the current status position
-    self.GetStatusButton = qt.QPushButton("GET STATUS")
-    self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
-    self.GetStatusButton.enabled = True
-    self.GetStatusButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.GetStatusButton, 6, 0)
-    self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
+    # # Get robot status Button to ask WPI to send the current status position
+    # self.GetStatusButton = qt.QPushButton("GET STATUS")
+    # self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
+    # self.GetStatusButton.enabled = True
+    # self.GetStatusButton.setMaximumWidth(250)
+    # RobotOutboundCommunicationLayout.addWidget(self.GetStatusButton, 6, 0)
+    # self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
 
     # Retract needle button
     self.RetractNeedleButton = qt.QPushButton("RETRACT NEEDLE")
@@ -553,8 +559,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     row = 4
     column = 4
     self.targetTableWidget = qt.QTableWidget(row, column)
-    # self.targetTableWidget.setMaximumWidth(400)
+    self.targetTableWidget.setSizePolicy(qt.QSizePolicy.MinimumExpanding, qt.QSizePolicy.Minimum)
+    self.targetTableWidget.setMaximumWidth(400)
     self.targetTableWidget.setMinimumHeight(95)
+    self.targetTableWidget.setMaximumHeight(100)
     self.targetTableWidget.verticalHeader().hide() # Remove line numbers
     self.targetTableWidget.horizontalHeader().hide() # Remove column numbers
     self.targetTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
@@ -852,7 +860,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.textNode = slicer.vtkMRMLTextNode()
     self.textNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(self.textNode)
-    self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
     # Empty nodes for planning and calibration steps
     # self.outputTransform = None
@@ -977,6 +984,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
               ackNode = slicer.util.getNode(f'ACK_{timestampID}')
               slicer.mrmlScene.RemoveNode(ackNode)
               slicer.mrmlScene.RemoveNode(node)
+
+              self.robot_phase = "START_UP"
               break
             else:
               print(f'Acknowdgement for {name} not received. Unable to change phase.')
@@ -1001,6 +1010,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
               ackNode = slicer.util.getNode(f'ACK_{timestampID}')
               slicer.mrmlScene.RemoveNode(ackNode)
               slicer.mrmlScene.RemoveNode(node)
+
+              self.robot_phase = "CALIBRATION"
               break
             else:
               print(f'Acknowdgement for {name} not received. Unable to change phase.')
@@ -1026,6 +1037,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
               ackNode = slicer.util.getNode(f'ACK_{timestampID}')
               slicer.mrmlScene.RemoveNode(ackNode)
               slicer.mrmlScene.RemoveNode(node)
+
+              self.robot_phase = "PLANNING"
               break
             else:
               print(f'Acknowdgement for {name} not received. Unable to change phase.')
@@ -1048,6 +1061,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
               ackNode = slicer.util.getNode(f'ACK_{timestampID}')
               slicer.mrmlScene.RemoveNode(ackNode)
               slicer.mrmlScene.RemoveNode(node)
+
+              self.robot_phase = "TARGETING"
               break
             else:
               print(f'Acknowdgement for {name} not received. Unable to change phase.')
@@ -1078,6 +1093,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
               slicer.mrmlScene.RemoveNode(ackNode)
               slicer.mrmlScene.RemoveNode(node)
               
+              self.robot_phase = "MOVE_TO_TARGET"
               break
             else:
               print(f'Acknowdgement for {name} not received. Unable to change phase.')  
@@ -1087,6 +1103,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.RemoveNode(calledNode)                
 
   def updateACKTransformMessage(self, calledNode):
+    print(calledNode)
     ReceivedACKTransformMsg = slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")
     matrix = vtk.vtkMatrix4x4()
     calledNode.GetMatrixTransformToParent(matrix)
@@ -1116,7 +1133,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(self.openIGTNode)
     self.openIGTNode.SetTypeClient(snrHostname, int(snrPort))
     self.openIGTNode.Start()
-    print("openIGTNode: ", self.openIGTNode)
 
     if self.firstServer:
       self.createServerInitializationStep()
@@ -1276,7 +1292,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.moveButton.enabled = True
     self.targetingButton.enabled = True
     self.calibrationButton.enabled = True
-    self.GetStatusButton.enabled = True
+    #self.GetStatusButton.enabled = True
     self.RetractNeedleButton.enabled = False
     self.currentPositionButton.enabled = True
     self.currentPositionButton.setChecked(False)
@@ -1288,21 +1304,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.moveButton.enabled = False
     self.targetingButton.enabled = False
     self.calibrationButton.enabled = False
-    self.GetStatusButton.enabled = False
+    #self.GetStatusButton.enabled = False
     self.RetractNeedleButton.enabled = False
     self.currentPositionButton.enabled = False
     self.currentPositionButton.setChecked(False)
    
-  def onGetStatusButtonClicked(self):
-    # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
-    print("Send command to get current status of the robot")
-    getStatusNode = slicer.vtkMRMLIGTLQueryNode()
-    getStatusNode.SetIGTLDeviceName("STATUS")
-    getStatusNode.SetQueryType(1) # Query type "1" corresponds with "GET"; Query type "2" corresponds with "START"; Query type 3 corresponds with "STOP"
-    getStatusNode.SetIGTLName("GET")
-    slicer.mrmlScene.AddNode(getStatusNode)
-    self.openIGTNode.RegisterOutgoingMRMLNode(getStatusNode)
-    self.openIGTNode.PushNode(getStatusNode)
+  # def onGetStatusButtonClicked(self):
+  #   # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
+  #   print("Send command to get current status of the robot")
+  #   getStatusNode = slicer.vtkMRMLIGTLQueryNode()
+  #   getStatusNode.SetIGTLDeviceName("STATUS")
+  #   getStatusNode.SetQueryType(1) # Query type "1" corresponds with "GET"; Query type "2" corresponds with "START"; Query type 3 corresponds with "STOP"
+  #   getStatusNode.SetIGTLName("GET")
+  #   slicer.mrmlScene.AddNode(getStatusNode)
+  #   self.openIGTNode.RegisterOutgoingMRMLNode(getStatusNode)
+  #   self.openIGTNode.PushNode(getStatusNode)
 
   def updateGetTransform(self):
     # Send stringMessage containing the command "GET POSE" to the script via IGTLink
@@ -1415,7 +1431,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     stopNode.SetEncoding(3)
     slicer.mrmlScene.AddNode(stopNode)
     self.openIGTNode.RegisterOutgoingMRMLNode(stopNode)
-    self.openIGTNode.PushNode(stopNode);
+    self.openIGTNode.PushNode(stopNode)
     self.start = time.time()
     infoMsg =  "Sending STRING( " + timestampIDname + ",  STOP )"
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
@@ -2269,13 +2285,13 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     if self.outputTransform:
       identityMatrix = vtk.vtkMatrix4x4()
       identityMatrix.Identity()
-      self.ZFrameCalibrationTransformNode.SetMatrixTransformToParent(identityMatrix)
+      self.outputTransform.SetMatrixTransformToParent(identityMatrix)
       self.manualRegistrationTransformSliders.setMRMLTransformNode(None)
       self.manualRegistrationRotationSliders.setMRMLTransformNode(None)
       self.manualRegistrationTransformSliders.reset()
       self.manualRegistrationRotationSliders.reset()
-      self.manualRegistrationTransformSliders.setMRMLTransformNode(self.ZFrameCalibrationTransformNode)
-      self.manualRegistrationRotationSliders.setMRMLTransformNode(self.ZFrameCalibrationTransformNode)
+      self.manualRegistrationTransformSliders.setMRMLTransformNode(self.outputTransform)
+      self.manualRegistrationRotationSliders.setMRMLTransformNode(self.outputTransform)
 
   def loadTemplateConfiguration(self):
     currentFilePath = os.path.dirname(slicer.util.modulePath(self.__module__))
@@ -2744,6 +2760,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         self.translationSliderWidget.setMRMLTransformNode(self.plannedTargetTransform)
 
         # Set 3D visualization of needle to "On" when the target transform resets
+        self.targetNeedleVisibleButton.setChecked(True)
         self.onPlannedTargetNeedleVisibleButtonClicked()
 
   def onTargetTransformNodeModified(self, unusedArg2=None, unusedArg3=None):
@@ -2920,78 +2937,352 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
   def setUp(self):
     slicer.mrmlScene.Clear()
     widget = ProstateBRPInterfaceWidget()
+    print(dir(widget))
     hostname = slicer.modules.prostatebrpinterface.widgetRepresentation().self().snrHostnameTextbox.text
     port = slicer.modules.prostatebrpinterface.widgetRepresentation().self().snrPortTextbox.text
     widget.snrHostnameTextbox.setText(hostname)
     widget.snrPortTextbox.setText(port)
     return widget
   
+  def getMostRecentMessage(self, type, prefix):
+    nodes = slicer.mrmlScene.GetNodes()
+    node_of_interest = None
+    highestTimestamp = 0
+    for i in range(nodes.GetNumberOfItems()):
+      node = nodes.GetItemAsObject(i)
+      if node.GetClassName() == type and node.GetName().startswith(prefix):
+        timestamp = int(node.GetName()[4:])
+        if timestamp > highestTimestamp:
+          node_of_interest = node
+    return node_of_interest
+  
+  def compareTransformNodes(self, node1, node2):
+    # Get the transformation matrices
+    matrix1 = vtk.vtkMatrix4x4()
+    node1.GetMatrixTransformToParent(matrix1)
+    matrix2 = vtk.vtkMatrix4x4()
+    node2.GetMatrixTransformToParent(matrix2)
+    # Compare the matrices element by element
+    for i in range(4):
+      for j in range(4):
+        if abs(matrix1.GetElement(i, j) - matrix2.GetElement(i, j)) > 0.001:
+          return False
+    return True
+
   def runTest(self):
     
     self.test_NormalOperation()
-
-    # self.test_ImproperCalibration()
-
-    # self.test_OutOfBounds()
-
-    # self.test_EmergencyStop()
+    self.test_NormalOperationWithPositionQuery()
+    self.test_ImproperCalibration()
+    self.test_OutOfBounds()
+    self.test_EmergencyStop()
   
   def test_NormalOperation(self):
     widget = self.setUp()
-    self.delayDisplay("Starting Normal Operation Test")
-    #TODO: May need to call each function on a QTimer with longer delay
-    #TODO: Check for responses from robot
-    
-    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
-    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
-    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
-    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+    try:
+      self.delayDisplay("Starting Normal Operation Test")
 
-    widget.onCreateRobotClientButtonClicked()
-    self.delayDisplay("Sending START_UP")
-    widget.onStartupButtonClicked()
-    self.delayDisplay("Performing Registration")
-    widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
-    widget.onRegister()
-    self.delayDisplay("Sending CALIBRATION")
-    widget.onSendCalibrationMatrixButtonClicked()
-    self.delayDisplay("Selecting Target")
-    widget.onAddTarget()
-    widget.targetPointNodeSelector.currentNode().AddFiducial(0, 0, 0)
-    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
-    interactionNode.SetCurrentInteractionMode(interactionNode.ViewTransform)
-    self.delayDisplay("Sending PLANNING")
-    widget.onPlanningButtonClicked()
-    self.delayDisplay("Sending TARGETING")
-    widget.onTargetingButtonClicked()
+      volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+      templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+      volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
+      anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+
+      widget.onCreateRobotClientButtonClicked()
+      slicer.util.delayDisplay("Starting connection with robot", 3000)
+
+      widget.onStartupButtonClicked()
+      slicer.util.delayDisplay("Sent START_UP request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "START_UP")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      widget.onCalibrationButtonClicked()
+      slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "CALIBRATION")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      slicer.util.delayDisplay("Performing Registration", 1000)
+      widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
+      widget.onRegister()
+      
+      widget.onSendCalibrationMatrixButtonClicked()
+      slicer.util.delayDisplay("Sent Calibration Matrix", 3000)
+      self.assertTrue(self.compareTransformNodes(widget.outputTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
+      self.delayDisplay(f'Calibration Matrix matches ACK')
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      slicer.util.delayDisplay("Selecting Target", 1000)
+      widget.onAddTarget()
+      widget.targetPointNodeSelector.currentNode().AddFiducial(-20, 59, 18.2)
+      interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+      interactionNode.SetCurrentInteractionMode(interactionNode.ViewTransform)
+
+      widget.onPlanningButtonClicked()
+      slicer.util.delayDisplay("Sent PLANNING request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "PLANNING")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      widget.onTargetingButtonClicked()
+      slicer.util.delayDisplay("Sending TARGETING request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "TARGETING")
+      self.assertTrue(self.compareTransformNodes(widget.plannedTargetTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
+      self.delayDisplay(f'Target Matrix matches ACK')
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      self.delayDisplay('Test caused exception!\n' + str(e))
+      raise Exception("Exception occurred during testing")
+    
+    widget.onDisconnectFromSocketButtonClicked()
+    slicer.util.delayDisplay("Disconnected from robot", 1000)
+    widget.cleanup()
+    widget.parent.deleteLater()
+
+  def test_NormalOperationWithPositionQuery(self):
+    widget = self.setUp()
+    try:
+      self.delayDisplay("Starting Normal Operation with Position Query Test")
+
+      volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+      templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+      volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
+      anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+
+      widget.onCreateRobotClientButtonClicked()
+      slicer.util.delayDisplay("Starting connection with robot", 3000)
+
+      widget.onStartupButtonClicked()
+      slicer.util.delayDisplay("Sent START_UP request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "START_UP")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      widget.currentPositionButton.setChecked(True)
+      widget.onCurrentPositionClicked()
+      slicer.util.delayDisplay("Sent CURRENT_POSITION request", 2000)
+
+      widget.onCalibrationButtonClicked()
+      slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "CALIBRATION")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      slicer.util.delayDisplay("Performing Registration", 1000)
+      widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
+      widget.onRegister()
+      
+      widget.onSendCalibrationMatrixButtonClicked()
+      slicer.util.delayDisplay("Sent Calibration Matrix", 3000)
+      self.assertTrue(self.compareTransformNodes(widget.outputTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
+      self.delayDisplay(f'Calibration Matrix matches ACK')
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      slicer.util.delayDisplay("Selecting Target", 1000)
+      widget.onAddTarget()
+      widget.targetPointNodeSelector.currentNode().AddFiducial(-20, 59, 18.2)
+      interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+      interactionNode.SetCurrentInteractionMode(interactionNode.ViewTransform)
+
+      widget.onPlanningButtonClicked()
+      slicer.util.delayDisplay("Sent PLANNING request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "PLANNING")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      widget.onTargetingButtonClicked()
+      slicer.util.delayDisplay("Sending TARGETING request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "TARGETING")
+      self.assertTrue(self.compareTransformNodes(widget.plannedTargetTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
+      self.delayDisplay(f'Target Matrix matches ACK')
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      self.delayDisplay('Test caused exception!\n' + str(e))
+      raise Exception("Exception occurred during testing")
+    
+    widget.onDisconnectFromSocketButtonClicked()
+    slicer.util.delayDisplay("Disconnected from robot", 1000)
+    widget.cleanup()
+    widget.parent.deleteLater()
     
 
   def test_ImproperCalibration(self):
-    self.delayDisplay("Starting Improper Calibration Test")
     widget = self.setUp()
+    try:
+      self.delayDisplay("Starting Improper Calibration Test")
 
-    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
-    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
-    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
-    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
-    widget.onCreateRobotClientButtonClicked()
+      volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+      templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+      volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
+      anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+
+      widget.onCreateRobotClientButtonClicked()
+      slicer.util.delayDisplay("Starting connection with robot", 3000)
+
+      widget.onStartupButtonClicked()
+      slicer.util.delayDisplay("Sent START_UP request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "START_UP")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      widget.onCurrentPositionClicked()
+      slicer.util.delayDisplay("Sent START_UP request", 3000)
+
+      widget.onCalibrationButtonClicked()
+      slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
+      self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+      self.assertEqual(widget.robot_phase, "CALIBRATION")
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+      slicer.util.delayDisplay("Performing Registration", 1000)
+      widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
+      widget.onRegister()
+
+      slicer.util.delayDisplay("Adjusting Calibration matrix to be incorrect", 1000)
+      registrationMatrix = vtk.vtkMatrix4x4()
+      widget.outputTransform.GetMatrixTransformToParent(registrationMatrix)
+      registrationMatrix.SetElement(0,0,-1); registrationMatrix.SetElement(0,1,-1); registrationMatrix.SetElement(0,2,-1)
+      registrationMatrix.SetElement(1,0,-1); registrationMatrix.SetElement(1,1,-1); registrationMatrix.SetElement(1,2,-1)
+      registrationMatrix.SetElement(2,0,-1); registrationMatrix.SetElement(2,1,-1); registrationMatrix.SetElement(2,2,-1)
+      widget.outputTransform.SetAndObserveMatrixTransformToParent(registrationMatrix)
+      
+      widget.onSendCalibrationMatrixButtonClicked()
+      slicer.util.delayDisplay("Sent Incorrect Calibration Matrix", 3000)
+      self.assertEqual(widget.robotStatusCodeTextbox.text, "STATUS_CONFIG_ERROR")
+      self.delayDisplay(f'Error received from Robot')
+      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      self.delayDisplay('Test caused exception!\n' + str(e))
+      raise Exception("Exception occurred during testing")
+    
+    widget.onDisconnectFromSocketButtonClicked()
+    slicer.util.delayDisplay("Disconnected from robot", 1000)
+    widget.cleanup()
+    widget.parent.deleteLater()
 
   def test_OutOfBounds(self):
-    self.delayDisplay("Starting Out of Bounds Test")
-    widget = self.setUp()
+    pass
+    # widget = self.setUp()
+    # try:
+    #   self.delayDisplay("Starting Out of Bounds Test")
 
-    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
-    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
-    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
-    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
-    widget.onCreateRobotClientButtonClicked()
+    #   volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    #   templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+    #   volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
+    #   anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+
+    #   widget.onCreateRobotClientButtonClicked()
+    #   slicer.util.delayDisplay("Starting connection with robot", 3000)
+
+    #   widget.onStartupButtonClicked()
+    #   slicer.util.delayDisplay("Sent START_UP request", 3000)
+    #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+    #   self.assertEqual(widget.robot_phase, "START_UP")
+    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    #   widget.onCurrentPositionClicked()
+    #   slicer.util.delayDisplay("Sent START_UP request", 3000)
+
+    #   widget.onCalibrationButtonClicked()
+    #   slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
+    #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+    #   self.assertEqual(widget.robot_phase, "CALIBRATION")
+    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    #   slicer.util.delayDisplay("Performing Registration", 1000)
+    #   widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
+    #   widget.onRegister()
+
+    #   slicer.util.delayDisplay("Adjusting Calibration matrix to be incorrect", 1000)
+    #   registrationMatrix = vtk.vtkMatrix4x4()
+    #   widget.outputTransform.GetMatrixTransformToParent(registrationMatrix)
+    #   registrationMatrix.SetElement(0,0,-1); registrationMatrix.SetElement(0,1,-1); registrationMatrix.SetElement(0,2,-1)
+    #   registrationMatrix.SetElement(1,0,-1); registrationMatrix.SetElement(1,1,-1); registrationMatrix.SetElement(1,2,-1)
+    #   registrationMatrix.SetElement(2,0,-1); registrationMatrix.SetElement(2,1,-1); registrationMatrix.SetElement(2,2,-1)
+    #   widget.outputTransform.SetAndObserveMatrixTransformToParent(registrationMatrix)
+      
+    #   widget.onSendCalibrationMatrixButtonClicked()
+    #   slicer.util.delayDisplay("Sent Incorrect Calibration Matrix", 3000)
+    #   self.assertEqual(self.robotStatusCodeTextbox.text, "STATUS_CONFIG_ERROR")
+    #   self.delayDisplay(f'Error received from Robot')
+    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    # except Exception as e:
+    #   import traceback
+    #   traceback.print_exc()
+    #   self.delayDisplay('Test caused exception!\n' + str(e))
+    #   raise Exception("Exception occurred during testing")
+    
+    # widget.onDisconnectFromSocketButtonClicked()
+    # slicer.util.delayDisplay("Disconnected from robot", 1000)
+    # widget.cleanup()
+    # widget.parent.deleteLater()
 
   def test_EmergencyStop(self):
-    self.delayDisplay("Starting Emergency Stop Test")
-    widget = self.setUp()
+    pass
+    # widget = self.setUp()
+    # try:
+    #   self.delayDisplay("Starting Emergency Stop Test")
 
-    volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
-    templateImageNode = slicer.util.loadVolume(volumePathTemplate)
-    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
-    anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
-    widget.onCreateRobotClientButtonClicked()
+    #   volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    #   templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+    #   volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
+    #   anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+
+    #   widget.onCreateRobotClientButtonClicked()
+    #   slicer.util.delayDisplay("Starting connection with robot", 3000)
+
+    #   widget.onStartupButtonClicked()
+    #   slicer.util.delayDisplay("Sent START_UP request", 3000)
+    #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+    #   self.assertEqual(widget.robot_phase, "START_UP")
+    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    #   widget.onCurrentPositionClicked()
+    #   slicer.util.delayDisplay("Sent START_UP request", 3000)
+
+    #   widget.onCalibrationButtonClicked()
+    #   slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
+    #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
+    #   self.assertEqual(widget.robot_phase, "CALIBRATION")
+    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    #   slicer.util.delayDisplay("Performing Registration", 1000)
+    #   widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
+    #   widget.onRegister()
+
+    #   slicer.util.delayDisplay("Adjusting Calibration matrix to be incorrect", 1000)
+    #   registrationMatrix = vtk.vtkMatrix4x4()
+    #   widget.outputTransform.GetMatrixTransformToParent(registrationMatrix)
+    #   registrationMatrix.SetElement(0,0,-1); registrationMatrix.SetElement(0,1,-1); registrationMatrix.SetElement(0,2,-1)
+    #   registrationMatrix.SetElement(1,0,-1); registrationMatrix.SetElement(1,1,-1); registrationMatrix.SetElement(1,2,-1)
+    #   registrationMatrix.SetElement(2,0,-1); registrationMatrix.SetElement(2,1,-1); registrationMatrix.SetElement(2,2,-1)
+    #   widget.outputTransform.SetAndObserveMatrixTransformToParent(registrationMatrix)
+      
+    #   widget.onSendCalibrationMatrixButtonClicked()
+    #   slicer.util.delayDisplay("Sent Incorrect Calibration Matrix", 3000)
+    #   self.assertEqual(self.robotStatusCodeTextbox.text, "STATUS_CONFIG_ERROR")
+    #   self.delayDisplay(f'Error received from Robot')
+    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+
+    # except Exception as e:
+    #   import traceback
+    #   traceback.print_exc()
+    #   self.delayDisplay('Test caused exception!\n' + str(e))
+    #   raise Exception("Exception occurred during testing")
+    
+    # widget.onDisconnectFromSocketButtonClicked()
+    # slicer.util.delayDisplay("Disconnected from robot", 1000)
+    # widget.cleanup()
+    # widget.parent.deleteLater()
