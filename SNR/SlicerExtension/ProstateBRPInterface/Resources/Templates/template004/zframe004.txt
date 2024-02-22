@@ -1,0 +1,45 @@
+
+Configuration file for Z-frame version z004 - Wider seven fiducial frame
+
+The z004 z-frame model is uniquely defined by the locations of seven
+fiducials and the vectors that describe the diagonals of each face.
+
+Position of the top left-corner of the template on clinician-side (A-1) is defined as the origin for grid calculation
+Horizontal and Vertical offset (mm) between each hole in the template must also be defined
+Labels for X (horizontal) and Y (vertical) are defined as a comma-separated list
+Pixel origin and hole offsets for worksheet/guide sheet
+
+(Start point, End point)
+Fiducial 1: ((40,-30,-30), (40,-30,30))
+Fiducial 2: ((40,-30,30), (40,30,-30))
+Fiducial 3: ((40,30,-30), (40,30,30))
+Fiducial 4: ((30,30,30) , (-30,30,-30))
+Fiducial 5: ((-40,30,-30), (-40,30,30))
+Fiducial 6: ((-40,30,30), (-40,-30,-30))
+Fiducial 7: ((-40,-30,-30), (-40,-30,30))
+
+Side 1 origin: (40,30,-30)
+Base origin: (-30,30,-30)
+Side 2 origin: (-40,-30,-30)
+
+Side 1 diagonal: (0, -1, 1)
+Base diagonal: (1, 0, 1)
+Side 2 diagonal: (0, 1, 1)
+
+Template origin: (40, 56.762, 31.22)
+
+Horizontal offset: 5.0
+Vertical offset: 5.0
+
+Horizontal labels: (A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q)
+Vertical labels: (1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17)
+
+Worksheet origin 1: (96.8, 627.12)
+Worksheet horizontal offset 1: 14.8
+Worksheet vertical offset 1: 14.8
+
+Worksheet origin 2: (96.8, 311.76)
+Worksheet horizontal offset 2: 14.8
+Worksheet vertical offset 2: 14.8
+
+Grid coordinate order: (Horizontal, Vertical)

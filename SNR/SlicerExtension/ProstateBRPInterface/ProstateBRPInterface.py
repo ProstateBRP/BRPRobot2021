@@ -68,32 +68,83 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
   def __init__(self, parent=None):
     ScriptedLoadableModuleWidget.__init__(self, parent)
+    self.nodeAddedObserver = None
+    self.onACKTransformNodeModifiedObserver = None
+    self.onTargetTransformNodeModifiedObserver = None
+    self.onPositionTransformNodeModifiedObserver = None
+    self.needleTipTransformObserver = None
+    self.plannedTargetTransformObserver = None
+    self.status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANIC_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
+    self.robot_phases = ['START_UP', 'EMERGENCY', 'TARGETING', 'MOVE_TO_TARGET', 'CALIBRATION', 'PLANNING']
+
+  def cleanup(self):
+    self.getTransformTimer.stop()
+    if self.nodeAddedObserver: slicer.mrmlScene.RemoveObserver(self.nodeAddedObserver)
+    if self.onACKTransformNodeModifiedObserver: slicer.mrmlScene.RemoveObserver(self.onACKTransformNodeModifiedObserver)
+    if self.onTargetTransformNodeModifiedObserver: slicer.mrmlScene.RemoveObserver(self.onTargetTransformNodeModifiedObserver)
+    if self.onPositionTransformNodeModifiedObserver: slicer.mrmlScene.RemoveObserver(self.onPositionTransformNodeModifiedObserver)
+    if self.needleTipTransformObserver: slicer.mrmlScene.RemoveObserver(self.needleTipTransformObserver)
+    if self.plannedTargetTransformObserver: slicer.mrmlScene.RemoveObserver(self.plannedTargetTransformObserver)
+    self.registrationTranslationSliderWidget.setMRMLTransformNode(None)
+    self.registrationTranslationSliderWidget.reset()
+    self.registrationOrientationSliderWidget.setMRMLTransformNode(None)
+    self.registrationOrientationSliderWidget.reset()
+
+  def onReload(self,moduleName="ProstateBRPInterface"):
+    self.getTransformTimer.stop()
+    if self.nodeAddedObserver: slicer.mrmlScene.RemoveObserver(self.nodeAddedObserver)
+    if self.onACKTransformNodeModifiedObserver: slicer.mrmlScene.RemoveObserver(self.onACKTransformNodeModifiedObserver)
+    if self.onTargetTransformNodeModifiedObserver: slicer.mrmlScene.RemoveObserver(self.onTargetTransformNodeModifiedObserver)
+    if self.onPositionTransformNodeModifiedObserver: slicer.mrmlScene.RemoveObserver(self.onPositionTransformNodeModifiedObserver)
+    if self.needleTipTransformObserver: slicer.mrmlScene.RemoveObserver(self.needleTipTransformObserver)
+    if self.plannedTargetTransformObserver: slicer.mrmlScene.RemoveObserver(self.plannedTargetTransformObserver)
+    self.registrationTranslationSliderWidget.setMRMLTransformNode(None)
+    self.registrationTranslationSliderWidget.reset()
+    self.registrationOrientationSliderWidget.setMRMLTransformNode(None)
+    self.registrationOrientationSliderWidget.reset()
+    globals()[moduleName] = slicer.util.reloadScriptedModule(moduleName)
 
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
-
+    moduleDir = os.path.dirname(slicer.util.modulePath(self.__module__))
+    print(moduleDir)
+    defaultsFilePath = os.path.join(moduleDir, "Resources/Defaults.ini")
     config = configparser.ConfigParser()
-    config.read(f'{os.path.dirname(os.path.realpath(__file__))}/defaults.ini')
-    hostname = config['GENERAL']['hostname']
-    port = config['GENERAL']['port']
+    config.read(defaultsFilePath)
 
+    # ------------------------------------ Initialization UI ---------------------------------------
     # Server collapsible button
     serverCollapsibleButton = ctk.ctkCollapsibleButton()
-    serverCollapsibleButton.text = "IGTLink Connections"
+    serverCollapsibleButton.text = "Robot Connection"
     self.layout.addWidget(serverCollapsibleButton)
 
     # Layout within the path collapsible button
     serverFormLayout = qt.QGridLayout(serverCollapsibleButton)
 
     # Slicer<->Robot IGTLink connection interface
-    self.snrPortTextboxLabel = qt.QLabel('Robot server port:')
-    self.snrPortTextbox = qt.QLineEdit(port)
-    self.snrPortTextbox.setReadOnly(False)
-    self.snrPortTextbox.setMaximumWidth(75)
+    # Create server button
+    initializeFont = qt.QFont()
+    initializeFont.setPointSize(16)
+    initializeFont.setBold(False)
+    self.createServerButton = qt.QPushButton("Start robot client")
+    self.createServerButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    self.createServerButton.setFont(initializeFont)
+    self.createServerButton.toolTip = "Create the IGTLink client connection with robot."
+    self.createServerButton.enabled = True
+    self.createServerButton.setFixedWidth(250)
+    serverFormLayout.addWidget(self.createServerButton, 0, 0)
+    self.createServerButton.connect('clicked()', self.onCreateRobotClientButtonClicked)
 
-    serverFormLayout.addWidget(self.snrPortTextboxLabel, 0, 0)
-    serverFormLayout.addWidget(self.snrPortTextbox, 0, 1)
+    self.disconnectFromSocketButton = qt.QPushButton("Disconnect from robot")
+    self.disconnectFromSocketButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    self.disconnectFromSocketButton.setFont(initializeFont)
+    self.disconnectFromSocketButton.toolTip = "Disconnect from the socket."
+    self.disconnectFromSocketButton.enabled = False
+    self.disconnectFromSocketButton.setFixedWidth(250)
+    serverFormLayout.addWidget(self.disconnectFromSocketButton, 0, 1)
+    self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
 
+    hostname = config['GENERAL']['hostname']
     self.snrHostnameTextboxLabel = qt.QLabel('Robot server hostname:')
     self.snrHostnameTextbox = qt.QLineEdit(hostname)
     self.snrHostnameTextbox.setReadOnly(False)
@@ -101,73 +152,577 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
     serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
 
-    # Create server button
-    self.createServerButton = qt.QPushButton("Create robot client")
-    self.createServerButton.toolTip = "Create the IGTLink client connection with robot."
-    self.createServerButton.enabled = True
-    self.createServerButton.setFixedWidth(250)
-    serverFormLayout.addWidget(self.createServerButton, 2, 0)
-    self.createServerButton.connect('clicked()', self.onCreateRobotClientButtonClicked)
+    port = config['GENERAL']['port']
+    self.snrPortTextboxLabel = qt.QLabel('Robot server port:')
+    self.snrPortTextbox = qt.QLineEdit(port)
+    self.snrPortTextbox.setReadOnly(False)
+    self.snrPortTextbox.setMaximumWidth(75)
+    serverFormLayout.addWidget(self.snrPortTextboxLabel, 2, 0)
+    serverFormLayout.addWidget(self.snrPortTextbox, 2, 1)
 
-    self.disconnectFromSocketButton = qt.QPushButton("Disconnect from socket")
-    self.disconnectFromSocketButton.toolTip = "Disconnect from the socket."
-    self.disconnectFromSocketButton.enabled = False
-    self.disconnectFromSocketButton.setFixedWidth(250)
-    serverFormLayout.addWidget(self.disconnectFromSocketButton, 2, 1)
-    self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
+    # -------- Slicer <--> WPI connection GUI ---------
+
+    # Slicer <--> MRI collapsible button
+    self.RobotCommunicationCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.RobotCommunicationCollapsibleButton.text = "Robot Control"
+    self.RobotCommunicationCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.RobotCommunicationCollapsibleButton)
+
+    # Overall layout within the path collapsible button
+    RobotCommunicationLayout = qt.QVBoxLayout(self.RobotCommunicationCollapsibleButton)
+
+    # Outbound layout within the path collapsible button
+    RobotOutboundCommunicationLayout = qt.QGridLayout()
+    RobotCommunicationLayout.addLayout(RobotOutboundCommunicationLayout)
+
+    # Current Phase button
+    nameLabelphase = qt.QLabel('Current phase:')
+    self.phaseTextbox = qt.QLineEdit("")
+    self.phaseTextbox.setReadOnly(True)
+    self.phaseTextbox.setFixedWidth(250)
+    self.phaseTextbox.toolTip = "Show current phase: in Blue if in the phase, green if phase successfully achieved"
+    RobotOutboundCommunicationLayout.addWidget(nameLabelphase, 0, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.phaseTextbox, 0, 1)
+
+    # startupButton Button
+    self.startupButton = qt.QPushButton("START UP")
+    self.startupButton.toolTip = "Send the startup command to the WPI robot."
+    self.startupButton.enabled = True
+    self.startupButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.startupButton, 2, 0)
+    self.startupButton.connect('clicked()', self.onStartupButtonClicked)
+
+    # currentPosition Button
+    self.currentPositionButton = qt.QPushButton("QUERY POSITION")
+    self.currentPositionButton.toolTip = "Continuously query robot for position."
+    self.currentPositionButton.setCheckable(True)
+    self.currentPositionButton.enabled = False
+    self.currentPositionButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.currentPositionButton, 2, 1)
+    self.currentPositionButton.connect('clicked()', self.onCurrentPositionClicked)
+
+    self.currentPositionTransform = None
+    self.currentPositionBaseTransform = None
+
+    # calibrationButton Button
+    self.calibrationButton = qt.QPushButton("CALIBRATION")
+    self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
+    self.calibrationButton.enabled = False
+    self.calibrationButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.calibrationButton, 4, 0)
+    self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
+
+    # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
+    self.planningButton = qt.QPushButton("PLANNING")
+    self.planningButton.toolTip = "Send the planning command to the WPI robot."
+    self.planningButton.enabled = False
+    self.planningButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.planningButton, 4, 1)
+    self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
+
+    # targetingButton Button
+    self.targetingButton = qt.QPushButton("TARGETING")
+    self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
+    self.targetingButton.enabled = False
+    self.targetingButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.targetingButton, 5 , 0)
+    self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
+
+    # moveButton Button
+    self.moveButton = qt.QPushButton("MOVE")
+    self.moveButton.toolTip = "Send the move to target command to the WPI robot."
+    self.moveButton.enabled = False
+    self.moveButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.moveButton, 5, 1)
+    self.moveButton.connect('clicked()', self.onMoveButtonClicked)
+
+    # Get robot status Button to ask WPI to send the current status position
+    self.GetStatusButton = qt.QPushButton("GET STATUS")
+    self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
+    self.GetStatusButton.enabled = True
+    self.GetStatusButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.GetStatusButton, 6, 0)
+    self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
+
+    # Retract needle button
+    self.RetractNeedleButton = qt.QPushButton("RETRACT NEEDLE")
+    self.RetractNeedleButton.toolTip = "Send the command to ask WPI to retract the needle."
+    self.RetractNeedleButton.enabled = False
+    self.RetractNeedleButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.RetractNeedleButton, 6, 1)
+    self.RetractNeedleButton.connect('clicked()', self.onRetractNeedleButtonClicked)    
+
+    # STOP Button 
+    self.StopButton = qt.QPushButton("STOP")
+    self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
+    self.StopButton.enabled = False
+    self.StopButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.StopButton, 7, 0)
+    self.StopButton.connect('clicked()', self.onStopButtonClicked)
+
+    # EMERGENCY Button 
+    self.EmergencyButton = qt.QPushButton("EMERGENCY")
+    self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
+    self.EmergencyButton.enabled = False
+    self.EmergencyButton.setMaximumWidth(250)
+    RobotOutboundCommunicationLayout.addWidget(self.EmergencyButton, 7, 1)
+    self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
+
+    self.getTransformFPSBox = qt.QSpinBox()
+    self.getTransformFPSBox.setSingleStep(1)
+    self.getTransformFPSBox.setMaximum(144)
+    self.getTransformFPSBox.setMinimum(1)
+    self.getTransformFPSBox.setSuffix(" FPS")
+    self.getTransformFPSBox.value = 5
+    getTransformFPSLabel = qt.QLabel('Query position rate:')
+    RobotOutboundCommunicationLayout.addWidget(getTransformFPSLabel, 8, 0)
+    RobotOutboundCommunicationLayout.addWidget(self.getTransformFPSBox, 8, 1)
+
+    self.getTransformNode = None
+    self.getTransformTimer = qt.QTimer()
+    self.getTransformTimer.timeout.connect(self.updateGetTransform)
+    self.retractNeedleNode = None
+
+    self.robotMessageTextbox = qt.QLineEdit("No message received")
+    self.robotMessageTextbox.setReadOnly(True)
+    self.robotMessageTextbox.setFixedWidth(200)
+    robotMessageTextboxLabel = qt.QLabel("Message received:")
+    RobotOutboundCommunicationLayout.addWidget(robotMessageTextboxLabel, 10, 0, 1, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.robotMessageTextbox, 10, 1, 1, 1)
+
+    self.robotStatusCodeTextbox = qt.QLineEdit("No status code received")
+    self.robotStatusCodeTextbox.setReadOnly(True)
+    self.robotStatusCodeTextbox.setFixedWidth(200)
+    robotStatusCodeTextboxLabel = qt.QLabel("Status received:")
+    RobotOutboundCommunicationLayout.addWidget(robotStatusCodeTextboxLabel, 11, 0, 1, 1)
+    RobotOutboundCommunicationLayout.addWidget(self.robotStatusCodeTextbox, 11, 1, 1, 1)
+
+    RobotInboundCommunicationMatrixGroupBox = ctk.ctkCollapsibleGroupBox()
+    RobotInboundCommunicationMatrixGroupBox.title = "Transforms Received"
+    RobotInboundCommunicationMatrixGroupBox.collapsed = True
+    RobotInboundCommunicationMatrixLayout = qt.QFormLayout(RobotInboundCommunicationMatrixGroupBox)
+    RobotOutboundCommunicationLayout.addWidget(RobotInboundCommunicationMatrixGroupBox, 12, 0, 1, 2)
+
+    row = 4
+    column = 4
+    self.robotTableWidget = qt.QTableWidget(row, column)
+    self.robotTableWidget.setSizePolicy(qt.QSizePolicy.MinimumExpanding, qt.QSizePolicy.Minimum)
+    #self.robotTableWidget.setMaximumWidth(400)
+    self.robotTableWidget.setMinimumHeight(95)
+    self.robotTableWidget.verticalHeader().hide() # Remove line numbers
+    self.robotTableWidget.horizontalHeader().hide() # Remove column numbers
+    self.robotTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.robotTableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    verticalheader = self.robotTableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    RobotInboundCommunicationMatrixLayout.addRow("Target received:", self.robotTableWidget)
+
+    self.robotPositionTableWidget = qt.QTableWidget(row, column)
+    self.robotPositionTableWidget.setSizePolicy(qt.QSizePolicy.MinimumExpanding, qt.QSizePolicy.Minimum)
+    #self.robotPositionTableWidget.setMaximumWidth(400)
+    self.robotPositionTableWidget.setMinimumHeight(95)
+    self.robotPositionTableWidget.verticalHeader().hide() # Remove line numbers
+    self.robotPositionTableWidget.horizontalHeader().hide() # Remove column numbers
+    self.robotPositionTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.robotPositionTableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    verticalheader = self.robotPositionTableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    RobotInboundCommunicationMatrixLayout.addRow("Position received:", self.robotPositionTableWidget)
+
+    # -------  Calibration GUI ---------
+
+    # Outbound tranform collapsible button
+    self.calibrationCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.calibrationCollapsibleButton.text = "Registration"
+    self.calibrationCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.calibrationCollapsibleButton)
+
+    # Layout within the collapsible button
+    calibrationLayout = qt.QVBoxLayout(self.calibrationCollapsibleButton)
+
+    # Top layout within the calibration collapsible button (CalibrationLayout)
+    calibrationLayoutTop = qt.QFormLayout()
+    calibrationLayout.addLayout(calibrationLayoutTop)
+
+    registerFont = qt.QFont()
+    registerFont.setPointSize(18)
+    registerFont.setBold(False)
+    self.registrationButton = qt.QPushButton("Register")
+    self.registrationButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    self.registrationButton.setFont(registerFont)
+    self.registrationButton.toolTip = "Start registration process for Z-Frame"
+    self.registrationButton.enabled = True
+    self.registrationButton.connect('clicked()', self.onRegister)
+    calibrationLayoutTop.addRow(self.registrationButton)
+
+    # Create and send new calibration matrix button
+    sendToRobotFont = qt.QFont()
+    sendToRobotFont.setPointSize(14)
+    self.sendCalibrationMatrixButton = qt.QPushButton("Send Transform To Robot")
+    #self.sendCalibrationMatrixButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    self.sendCalibrationMatrixButton.setFont(sendToRobotFont)
+    self.sendCalibrationMatrixButton.enabled = False
+    calibrationLayoutTop.addRow(self.sendCalibrationMatrixButton)
+    self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
+
+    validRegistrationFont = qt.QFont()
+    validRegistrationFont.setPointSize(18)
+    validRegistrationFont.setBold(False)
+    self.validRegistrationLabel = qt.QLabel()
+    self.validRegistrationLabel.text = ""
+    self.validRegistrationLabel.setAlignment(qt.Qt.AlignCenter)
+    calibrationLayoutTop.addRow(self.validRegistrationLabel)
+
+    # Z-frame configuration file selection box
+    self.configFileSelectionBox = qt.QComboBox()
+    self.configFileSelectionBox.addItems(['Template 001 - Seven Fiducials', 'Template 002 - Nine Fiducials', 'Template 003 - BRP Robot - Nine Fiducials', 'Template 004 - Wide Z-frame - Seven Fiducials'])
+    self.configFileSelectionBox.setCurrentIndex(config['REGISTRATION'].getint('template_index'))
+    calibrationLayoutTop.addRow('Template Configuration:', self.configFileSelectionBox)
+
+    # Input volume selector for zFrame calibration
+    self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
+    self.zFrameVolumeSelector.setMRMLScene( slicer.mrmlScene )
+    self.zFrameVolumeSelector.objectName = 'zFrameVolumeSelector'
+    self.zFrameVolumeSelector.toolTip = "Select the ZFrame image."
+    self.zFrameVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
+    self.zFrameVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
+    self.zFrameVolumeSelector.noneEnabled = False
+    self.zFrameVolumeSelector.addEnabled = False
+    self.zFrameVolumeSelector.removeEnabled = False
+    #self.zFrameVolumeSelector.setFixedWidth(250)
+    calibrationLayoutTop.addRow('Registration image:', self.zFrameVolumeSelector)
+    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)', self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
+
+    # Add spacer to left align the reference frame toggle button and reset button
+    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
+    calibrationLayout.addSpacerItem(spacer)
+
+    registrationParametersGroupBox = ctk.ctkCollapsibleGroupBox()
+    registrationParametersGroupBox.title = "Automatic Registration Parameters"
+    registrationParametersGroupBox.collapsed = True
+    registrationParametersLayout = qt.QFormLayout(registrationParametersGroupBox)
+    calibrationLayout.addWidget(registrationParametersGroupBox)
+
+    self.defaultThresholdPercentage = config['REGISTRATION'].getfloat('threshold_percentage')
+    self.thresholdSliderWidget = ctk.ctkSliderWidget()
+    self.thresholdSliderWidget.setToolTip("Set range for threshold percentage for isolating registration fiducial markers")
+    self.thresholdSliderWidget.setDecimals(2)
+    self.thresholdSliderWidget.minimum = 0.00
+    self.thresholdSliderWidget.maximum = 1.00
+    self.thresholdSliderWidget.singleStep = 0.01
+    self.thresholdSliderWidget.value = self.defaultThresholdPercentage
+    registrationParametersLayout.addRow("Threshold Percentage:", self.thresholdSliderWidget)
+
+    self.fiducialSizeSliderWidget = ctk.ctkRangeWidget()
+    self.fiducialSizeSliderWidget.setToolTip("Set range for fiducial size for isolating registration fiducial markers")
+    self.fiducialSizeSliderWidget.setDecimals(0)
+    self.fiducialSizeSliderWidget.maximum = 5000
+    self.fiducialSizeSliderWidget.minimum = 0
+    self.fiducialSizeSliderWidget.singleStep = 1
+    self.fiducialSizeSliderWidget.maximumValue = config['REGISTRATION'].getint('fiducial_size_maxValue')
+    self.fiducialSizeSliderWidget.minimumValue = config['REGISTRATION'].getint('fiducial_size_minValue')
+    registrationParametersLayout.addRow("Fiducial Size Range:", self.fiducialSizeSliderWidget)
+
+    self.borderMarginSliderWidget = ctk.ctkSliderWidget()
+    self.borderMarginSliderWidget.setToolTip("Set range for threshold percentage for isolating registration fiducial markers")
+    self.borderMarginSliderWidget.setDecimals(0)
+    self.borderMarginSliderWidget.minimum = 0
+    self.borderMarginSliderWidget.maximum = 50
+    self.borderMarginSliderWidget.singleStep = 1
+    self.borderMarginSliderWidget.value = config['REGISTRATION'].getint('border_margin')
+    registrationParametersLayout.addRow("Border Removal Margin:", self.borderMarginSliderWidget)
+
+    self.removeOrientationCheckBox = qt.QCheckBox("Remove orientation from registration transform")
+    self.removeOrientationCheckBox.setChecked(config['REGISTRATION'].getboolean('remove_orientation'))
+    registrationParametersLayout.addRow(self.removeOrientationCheckBox)
+
+    self.removeBorderIslandsCheckBox = qt.QCheckBox("Remove segment islands on border of volume")
+    self.removeBorderIslandsCheckBox.setChecked(config['REGISTRATION'].getboolean('remove_border_islands'))
+    registrationParametersLayout.addRow(self.removeBorderIslandsCheckBox)
+
+    # self.repairFiducialImageCheckBox = qt.QCheckBox("Attempt repair of fiducial image")
+    # self.repairFiducialImageCheckBox.setChecked(config['REGISTRATION'].getboolean('repair_fiducials'))
+    # registrationParametersLayout.addRow(self.repairFiducialImageCheckBox)
+
+    self.retryFailedRegistrationCheckBox = qt.QCheckBox("Re-attempt registration with different settings upon failure")
+    self.retryFailedRegistrationCheckBox.setChecked(config['REGISTRATION'].getboolean('retry_failed'))
+    registrationParametersLayout.addRow(self.retryFailedRegistrationCheckBox)
+
+    self.manualRegistrationGroupBox = ctk.ctkCollapsibleGroupBox()
+    self.manualRegistrationGroupBox.title = "Manual Registration"
+    self.manualRegistrationGroupBox.collapsed = True
+    manualRegistrationLayout = qt.QFormLayout(self.manualRegistrationGroupBox)
+    calibrationLayout.addWidget(self.manualRegistrationGroupBox)
+
+    # Define dummy registration transform to link to transform sliders below
+    self.outputTransform = slicer.vtkMRMLLinearTransformNode()
+    self.outputTransform.SetName('outputTransform')
+    slicer.mrmlScene.AddNode(self.outputTransform)
+
+    self.registrationTranslationSliderWidget = slicer.qMRMLTransformSliders()
+    self.registrationTranslationSliderWidget.setWindowTitle("Translation")
+    self.registrationTranslationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.registrationTranslationSliderWidget.setDecimals(3)
+    manualRegistrationLayout.addWidget(self.registrationTranslationSliderWidget)
+
+    self.registrationOrientationSliderWidget = slicer.qMRMLTransformSliders()
+    self.registrationOrientationSliderWidget.setWindowTitle("Rotation")
+    self.registrationOrientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.registrationOrientationSliderWidget.setDecimals(3)
+    manualRegistrationLayout.addWidget(self.registrationOrientationSliderWidget)
+
+    manualRegistrationFooterWidget = qt.QWidget()
+    manualRegistrationLayout.addWidget(manualRegistrationFooterWidget)
+    manualRegistrationFooterLayout = qt.QHBoxLayout(manualRegistrationFooterWidget)
+
+    self.identityButton = qt.QPushButton("Identity")
+    self.identityButton.toolTip = "Set Z-Frame calibration matrix to be Identity"
+    self.identityButton.setMaximumWidth(100)
+    self.identityButton.connect('clicked()', self.onIdentity)
+    manualRegistrationFooterLayout.addWidget(self.identityButton)
+
+    manualRegisterFont = qt.QFont()
+    manualRegisterFont.setPointSize(12)
+    manualRegisterFont.setBold(False)
+    useManualRegistrationButton = qt.QPushButton("Accept Manual Registration")
+    useManualRegistrationButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    useManualRegistrationButton.setFont(manualRegisterFont)
+    useManualRegistrationButton.toolTip = "Flag module to accept manual registration"
+    useManualRegistrationButton.connect('clicked()', self.onUseManualRegistration)
+    manualRegistrationFooterLayout.addWidget(useManualRegistrationButton)
+
+    self.registrationTranslationSliderWidget.setMRMLTransformNode(self.outputTransform)
+    self.registrationOrientationSliderWidget.setMRMLTransformNode(self.outputTransform)
+
+    # Planning phase GUI ---------------------------------------
+
+    # Planning phase collapsible button
+    self.planningCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.planningCollapsibleButton.text = "Planning"
+    self.planningCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.planningCollapsibleButton)
+
+    # Overall layout within the planning collapsible button
+    # planningLayout = qt.QGridLayout(self.planningCollapsibleButton)
+    planningLayout = qt.QVBoxLayout(self.planningCollapsibleButton)
+
+    # Top layout within the planning collapsible button
+    # planningLayoutTop = qt.QGridLayout()
+    planningLayoutTop = qt.QFormLayout()
+    planningLayout.addLayout(planningLayoutTop)
+
+    addTargetFont = qt.QFont()
+    addTargetFont.setPointSize(18)
+    addTargetFont.setBold(False)
+    self.addTargetButton = qt.QPushButton("Add Target")
+    self.addTargetButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    self.addTargetButton.setFont(registerFont)
+    self.addTargetButton.toolTip = "Add a target for biopsy"
+    self.addTargetButton.enabled = True
+    self.addTargetButton.connect('clicked()', self.onAddTarget)
+    planningLayoutTop.addRow(self.addTargetButton)
+
+    self.targetPointNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
+    self.targetPointNodeSelector.objectName = 'targetPointNodeSelector'
+    self.targetPointNodeSelector.toolTip = "Select a fiducial to use as the needle insertion target point."
+    self.targetPointNodeSelector.setNodeBaseName("TARGET_POINT")
+    self.targetPointNodeSelector.defaultNodeColor = qt.QColor(170,0,0)
+    self.targetPointNodeSelector.tableWidget().hide()
+    self.targetPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
+    self.targetPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
+    planningLayoutTop.addRow("   Target point: ", self.targetPointNodeSelector)
+    self.targetPointNodeSelector.setMRMLScene(slicer.mrmlScene)
+    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)', self.targetPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
+    self.targetPointNodeSelector.connect('updateFinished()', self.onTargetPointFiducialChanged)
+
+    # Transform matrix display table
+    row = 4
+    column = 4
+    self.targetTableWidget = qt.QTableWidget(row, column)
+    # self.targetTableWidget.setMaximumWidth(400)
+    self.targetTableWidget.setMinimumHeight(95)
+    self.targetTableWidget.verticalHeader().hide() # Remove line numbers
+    self.targetTableWidget.horizontalHeader().hide() # Remove column numbers
+    self.targetTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
+    horizontalheader = self.targetTableWidget.horizontalHeader()
+    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+
+    verticalheader = self.targetTableWidget.verticalHeader()
+    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
+    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
+    planningLayoutTop.addRow("   Target transform:   ", self.targetTableWidget)
+
+    # Create a new QHBoxLayout() within planningLayout to place 2 visibility buttons next to one another
+    planningLayoutMiddle = qt.QHBoxLayout()
+    planningLayout.addLayout(planningLayoutMiddle)
+    
+    # Add spacer to right align the two visibility buttons
+    spacer = qt.QSpacerItem(132, 10, qt.QSizePolicy.Maximum)
+    planningLayoutMiddle.addSpacerItem(spacer)
+
+    # Needle model visibility icon
+    self.targetNeedleVisibleButton = qt.QPushButton()
+    eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
+    self.targetNeedleVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
+    self.targetNeedleVisibleButton.setFixedWidth(25)
+    self.targetNeedleVisibleButton.setFixedHeight(25)
+    self.targetNeedleVisibleButton.setCheckable(True)
+    planningLayoutMiddle.addWidget(self.targetNeedleVisibleButton)
+    self.targetNeedleVisibleButton.connect('clicked()', self.onPlannedTargetNeedleVisibleButtonClicked)
+
+    # Needle trajectory visibility icon
+    currentFilePath = os.path.dirname(os.path.realpath(__file__))
+    self.targetNeedleTrajectoryVisibleButton = qt.QPushButton()
+    trajectoryIcon = qt.QIcon(os.path.join(currentFilePath, "Resources/UI/Icons/trajectoryIcon.png"))
+    self.targetNeedleTrajectoryVisibleButton.setIconSize(qt.QSize(20, 20))
+    self.targetNeedleTrajectoryVisibleButton.setIcon(trajectoryIcon)
+    self.targetNeedleTrajectoryVisibleButton.setFixedWidth(25)
+    self.targetNeedleTrajectoryVisibleButton.setFixedHeight(25)
+    self.targetNeedleTrajectoryVisibleButton.setCheckable(True)
+    planningLayoutMiddle.addWidget(self.targetNeedleTrajectoryVisibleButton)
+    self.targetNeedleTrajectoryVisibleButton.connect('clicked()', self.onPlannedTrajectoryVisibleButtonClicked)
+
+    # Add spacer to right align the visibility buttons
+    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
+    planningLayoutMiddle.addSpacerItem(spacer)
+
+    # Add spacer to right align the visibility buttons
+    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
+    planningLayoutMiddle.addSpacerItem(spacer)
+
+    # Add planningLayoutSLiders to contain the translation sliders
+    planningLayoutSliders = qt.QFormLayout()
+    planningLayout.addLayout(planningLayoutSliders)
+
+    # self.plannedTargetTransform = None
+    self.plannedTargetTransform = slicer.vtkMRMLTransformNode()
+    self.plannedTargetTransform.SetName("PlannedTargetTransform")
+    self.plannedTargetTransformObserver = self.plannedTargetTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
+    slicer.mrmlScene.AddNode(self.plannedTargetTransform)
+
+    # Translation sliders
+    self.translationSliderWidget = slicer.qMRMLTransformSliders()
+    self.translationSliderWidget.Title = 'Translation'
+    self.translationSliderWidget.setMRMLTransformNode(slicer.util.getNode("PlannedTargetTransform"))
+    self.translationSliderWidget.setMRMLScene(slicer.mrmlScene)
+    # Setting of qMRMLTransformSliders.TypeOfTransform is not robust: it has to be set after setMRMLScene and
+    # has to be set twice (with setting the type to something else in between).
+    # Therefore the following 3 lines are needed, and they are needed here:
+    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.translationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
+    self.translationSliderWidget.minMaxVisible = False
+    planningLayoutSliders.addRow(self.translationSliderWidget)    
+
+    # Rotation sliders
+    self.orientationSliderWidget = slicer.qMRMLTransformSliders()
+    self.orientationSliderWidget.Title = 'Rotation'
+    self.orientationSliderWidget.setMRMLTransformNode(slicer.util.getNode("PlannedTargetTransform"))
+    self.orientationSliderWidget.setMRMLScene(slicer.mrmlScene)
+    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
+    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
+    self.orientationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
+    self.orientationSliderWidget.minMaxVisible = False
+    planningLayoutSliders.addRow(self.orientationSliderWidget)
+
+    # Needle Tracking panel collapsible button
+    self.needleTrackingPanelCollapsibleButton = ctk.ctkCollapsibleButton()
+    self.needleTrackingPanelCollapsibleButton.text = "Needle Tracking"
+    self.needleTrackingPanelCollapsibleButton.collapsed = True
+    self.layout.addWidget(self.needleTrackingPanelCollapsibleButton)
+
+    # Layout within the needle view panel collapsible button
+    needleTrackingPanelLayout = qt.QFormLayout(self.needleTrackingPanelCollapsibleButton)
+
+    self.needleTipTransformComboBox = slicer.qMRMLNodeComboBox()
+    self.needleTipTransformComboBox.nodeTypes = ["vtkMRMLLinearTransformNode"]
+    self.needleTipTransformComboBox.selectNodeUponCreation = False
+    self.needleTipTransformComboBox.noneEnabled = False
+    self.needleTipTransformComboBox.addEnabled = True
+    self.needleTipTransformComboBox.showHidden = False
+    self.needleTipTransformComboBox.setMRMLScene( slicer.mrmlScene )
+    self.needleTipTransformComboBox.setToolTip( "Tracked Needle Tip Transform" )
+    needleTrackingPanelLayout.addRow("Tracked Needle Tip Transform:", self.needleTipTransformComboBox)
+
+    self.previousTrackedTipMatrix = vtk.vtkMatrix4x4()
+    self.previousTrackedTipMatrix.Zero()
+    self.sendTrackedTipTransformCheckbox = qt.QCheckBox("Send tracked tip position to Robot")
+    self.sendTrackedTipTransformCheckbox.setChecked(False)
+    needleTrackingPanelLayout.addWidget(self.sendTrackedTipTransformCheckbox)
+   
+    # ------------------------------------ Scanner UI ---------------------------------------
+    # Server collapsible button
+    scannerServerCollapsibleButton = ctk.ctkCollapsibleButton()
+    scannerServerCollapsibleButton.text = "MRI Scanner"
+    scannerServerCollapsibleButton.collapsed = True
+    self.layout.addWidget(scannerServerCollapsibleButton)
+
+    # Layout within the path collapsible button
+    scannerServerFormLayout = qt.QGridLayout(scannerServerCollapsibleButton)
 
     # Slicer<->Scanner OpenIGTLink connection interface
+    # Create server button
+    self.createScannerServerButton = qt.QPushButton("Start MRI scanner server")
+    self.createScannerServerButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    self.createScannerServerButton.setFont(initializeFont)
+    self.createScannerServerButton.toolTip = "Create the IGTLink server connection with scanner."
+    self.createScannerServerButton.enabled = True
+    self.createScannerServerButton.setFixedWidth(250)
+    scannerServerFormLayout.addWidget(self.createScannerServerButton, 0, 0)
+    self.createScannerServerButton.connect('clicked()', self.onCreateScannerServerButtonClicked)
+
+    self.disconnectFromScannerSocketButton = qt.QPushButton("Disconnect from socket")
+    self.disconnectFromScannerSocketButton.setStyleSheet("QPushButton {background-color: #16417C}")
+    self.disconnectFromScannerSocketButton.setFont(initializeFont)
+    self.disconnectFromScannerSocketButton.toolTip = "Disconnect from the socket."
+    self.disconnectFromScannerSocketButton.enabled = False
+    self.disconnectFromScannerSocketButton.setFixedWidth(250)
+    scannerServerFormLayout.addWidget(self.disconnectFromScannerSocketButton, 0, 1)
+    self.disconnectFromScannerSocketButton.connect('clicked()', self.onDisconnectFromScannerSocketButtonClicked)    
+    
     self.scannerPortTextboxLabel = qt.QLabel('Scanner server port:')
     self.scannerPortTextbox = qt.QLineEdit("18940")
     self.scannerPortTextbox.setReadOnly(False)
     self.scannerPortTextbox.setMaximumWidth(75)
 
-    serverFormLayout.addWidget(self.scannerPortTextboxLabel, 3, 0)
-    serverFormLayout.addWidget(self.scannerPortTextbox, 3, 1)
-
-    # Create server button
-    self.createScannerServerButton = qt.QPushButton("Create MRI scanner server")
-    self.createScannerServerButton.toolTip = "Create the IGTLink server connection with scanner."
-    self.createScannerServerButton.enabled = True
-    self.createScannerServerButton.setFixedWidth(250)
-    serverFormLayout.addWidget(self.createScannerServerButton, 4, 0)
-    self.createScannerServerButton.connect('clicked()', self.onCreateScannerServerButtonClicked)
-
-    self.disconnectFromScannerSocketButton = qt.QPushButton("Disconnect from socket")
-    self.disconnectFromScannerSocketButton.toolTip = "Disconnect from the socket."
-    self.disconnectFromScannerSocketButton.enabled = False
-    self.disconnectFromScannerSocketButton.setFixedWidth(250)
-    serverFormLayout.addWidget(self.disconnectFromScannerSocketButton, 4, 1)
-    self.disconnectFromScannerSocketButton.connect('clicked()', self.onDisconnectFromScannerSocketButtonClicked)
-    
-    # ----- MRI <--> Slicer connection GUI ------
-    # Slicer <--> MRI collapsible button
-    self.MRICommunicationCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.MRICommunicationCollapsibleButton.text = "Slicer <--> MRI Scanner"
-    self.MRICommunicationCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.MRICommunicationCollapsibleButton)
-
-    # Overall layout within the path collapsible button
-    MRICommunicationLayout = qt.QVBoxLayout(self.MRICommunicationCollapsibleButton)
-
-    # Outbound layout within the path collapsible button
-    MRIOutboundCommunicationLayout = qt.QGridLayout()
-    MRICommunicationLayout.addLayout(MRIOutboundCommunicationLayout)
+    scannerServerFormLayout.addWidget(self.scannerPortTextboxLabel, 1, 0)
+    scannerServerFormLayout.addWidget(self.scannerPortTextbox, 1, 1)
     
     MRIphaseTextboxLabel = qt.QLabel('Current phase:')
     self.MRIphaseTextbox = qt.QLineEdit("")
     self.MRIphaseTextbox.setReadOnly(True)
     self.MRIphaseTextbox.setFixedWidth(250)
     self.MRIphaseTextbox.toolTip = "Show current phase: in Blue if in the phase, green if phase successfully achieved"
-    MRIOutboundCommunicationLayout.addWidget(MRIphaseTextboxLabel, 0, 0)
-    MRIOutboundCommunicationLayout.addWidget(self.MRIphaseTextbox, 0, 1)
+    scannerServerFormLayout.addWidget(MRIphaseTextboxLabel, 2, 0)
+    scannerServerFormLayout.addWidget(self.MRIphaseTextbox, 2, 1)
 
     # MRI Start scan button
     self.MRIstartScanButton = qt.QPushButton("START SEQUENCE")
     self.MRIstartScanButton.toolTip = "Begin scanning."
     self.MRIstartScanButton.enabled = True
     self.MRIstartScanButton.setMaximumWidth(250)
-    MRIOutboundCommunicationLayout.addWidget(self.MRIstartScanButton, 3, 0)
+    scannerServerFormLayout.addWidget(self.MRIstartScanButton, 3, 0)
     self.MRIstartScanButton.connect('clicked()', self.onMRIStartScanButtonClicked)
 
     # MRI Stop scan button
@@ -175,17 +730,17 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.MRIstopScanButton.toolTip = "Stop scanning."
     self.MRIstopScanButton.enabled = True
     self.MRIstopScanButton.setMaximumWidth(250)
-    MRIOutboundCommunicationLayout.addWidget(self.MRIstopScanButton, 3, 1)
+    scannerServerFormLayout.addWidget(self.MRIstopScanButton, 3, 1)
     self.MRIstopScanButton.connect('clicked()', self.onMRIStopScanButtonClicked)
 
     # Add 1 line of spacing
-    MRIOutboundCommunicationLayout.addWidget(qt.QLabel(" "), 4, 0)
+    scannerServerFormLayout.addWidget(qt.QLabel(" "), 4, 0)
 
     # Dropdown section for scan plane selection
     self.updateScanPlaneCollapsibleButton = ctk.ctkCollapsibleButton()
     self.updateScanPlaneCollapsibleButton.text = "Update Scan Plane"
     self.updateScanPlaneCollapsibleButton.collapsed = True
-    MRIOutboundCommunicationLayout.addWidget(self.updateScanPlaneCollapsibleButton, 5, 0, 1, 2)
+    scannerServerFormLayout.addWidget(self.updateScanPlaneCollapsibleButton, 5, 0, 1, 2)
 
     # Layout within the path collapsible button
     updateScanPlaneLayout = qt.QVBoxLayout(self.updateScanPlaneCollapsibleButton)
@@ -275,580 +830,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     updateScanPlaneLayoutOrientationLayout.addWidget(self.sagittalScanPlaneButton, 0, 2)
     self.sagittalScanPlaneButton.connect('clicked()', self.onSagittalScanPlaneButtonClicked)
 
-    # -------- Slicer <--> WPI connection GUI ---------
-
-    # Slicer <--> MRI collapsible button
-    self.RobotCommunicationCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.RobotCommunicationCollapsibleButton.text = "Slicer <--> Robot"
-    self.RobotCommunicationCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.RobotCommunicationCollapsibleButton)
-
-    # Overall layout within the path collapsible button
-    RobotCommunicationLayout = qt.QVBoxLayout(self.RobotCommunicationCollapsibleButton)
-
-    # Outbound layout within the path collapsible button
-    RobotOutboundCommunicationLayout = qt.QGridLayout()
-    RobotCommunicationLayout.addLayout(RobotOutboundCommunicationLayout)
-
-    # Current Phase button
-    nameLabelphase = qt.QLabel('Current phase:')
-    self.phaseTextbox = qt.QLineEdit("")
-    self.phaseTextbox.setReadOnly(True)
-    self.phaseTextbox.setFixedWidth(250)
-    self.phaseTextbox.toolTip = "Show current phase: in Blue if in the phase, green if phase successfully achieved"
-    RobotOutboundCommunicationLayout.addWidget(nameLabelphase, 0, 0)
-    RobotOutboundCommunicationLayout.addWidget(self.phaseTextbox, 0, 1)
-
-    # startupButton Button
-    self.startupButton = qt.QPushButton("START UP")
-    self.startupButton.toolTip = "Send the startup command to the WPI robot."
-    self.startupButton.enabled = True
-    self.startupButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.startupButton, 2, 0)
-    self.startupButton.connect('clicked()', self.onStartupButtonClicked)
-
-    # currentPosition On Button
-    self.currentPositionOnButton = qt.QPushButton("CURRENT POSITION ON")
-    self.currentPositionOnButton.toolTip = "Continuously query robot for position."
-    self.currentPositionOnButton.enabled = False
-    self.currentPositionOnButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.currentPositionOnButton, 3, 0)
-    self.currentPositionOnButton.connect('clicked()', self.onCurrentPositionOnClicked)
-
-    # currentPosition Off Button
-    self.currentPositionOffButton = qt.QPushButton("CURRENT POSITION OFF")
-    self.currentPositionOffButton.toolTip = "Turn off continuously querying robot for position."
-    self.currentPositionOffButton.enabled = False
-    self.currentPositionOffButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.currentPositionOffButton, 3, 1)
-    self.currentPositionOffButton.connect('clicked()', self.onCurrentPositionOffClicked)
-
-    self.currentPositionTransform = None
-    self.currentPositionBaseTransform = None
-
-    # calibrationButton Button
-    self.calibrationButton = qt.QPushButton("CALIBRATION")
-    self.calibrationButton.toolTip = "Send the calibration command to the WPI robot."
-    self.calibrationButton.enabled = False
-    self.calibrationButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.calibrationButton, 4, 0)
-    self.calibrationButton.connect('clicked()', self.onCalibrationButtonClicked)
-
-    # planningButton Button # TODO Check protocol: should it print sucess after CURRENT_STATUS is sent?
-    self.planningButton = qt.QPushButton("PLANNING")
-    self.planningButton.toolTip = "Send the planning command to the WPI robot."
-    self.planningButton.enabled = False
-    self.planningButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.planningButton, 4, 1)
-    self.planningButton.connect('clicked()', self.onPlanningButtonClicked)
-
-    # targetingButton Button
-    self.targetingButton = qt.QPushButton("TARGETING")
-    self.targetingButton.toolTip = "Send the targeting command to the WPI robot."
-    self.targetingButton.enabled = False
-    self.targetingButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.targetingButton, 5 , 0)
-    self.targetingButton.connect('clicked()', self.onTargetingButtonClicked)
-
-    # moveButton Button
-    self.moveButton = qt.QPushButton("MOVE")
-    self.moveButton.toolTip = "Send the move to target command to the WPI robot."
-    self.moveButton.enabled = False
-    self.moveButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.moveButton, 5, 1)
-    self.moveButton.connect('clicked()', self.onMoveButtonClicked)
-
-    # Get robot status Button to ask WPI to send the current status position
-    self.GetStatusButton = qt.QPushButton("GET STATUS")
-    self.GetStatusButton.toolTip = "Send the command to ask WPI to send the current robot status."
-    self.GetStatusButton.enabled = False
-    self.GetStatusButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.GetStatusButton, 6, 0)
-    self.GetStatusButton.connect('clicked()', self.onGetStatusButtonClicked)
-
-    # Retract needle button
-    self.RetractNeedleButton = qt.QPushButton("RETRACT NEEDLE")
-    self.RetractNeedleButton.toolTip = "Send the command to ask WPI to retract the needle."
-    self.RetractNeedleButton.enabled = False
-    self.RetractNeedleButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.RetractNeedleButton, 6, 1)
-    self.RetractNeedleButton.connect('clicked()', self.onRetractNeedleButtonClicked)    
-
-    # STOP Button 
-    self.StopButton = qt.QPushButton("STOP")
-    self.StopButton.toolTip = "Send the command to ask the operator to stop the WPI robot."
-    self.StopButton.enabled = False
-    self.StopButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.StopButton, 7, 0)
-    self.StopButton.connect('clicked()', self.onStopButtonClicked)
-
-    # EMERGENCY Button 
-    self.EmergencyButton = qt.QPushButton("EMERGENCY")
-    self.EmergencyButton.toolTip = "Send emergency command to WPI robot."
-    self.EmergencyButton.enabled = False
-    self.EmergencyButton.setMaximumWidth(250)
-    RobotOutboundCommunicationLayout.addWidget(self.EmergencyButton, 7, 1)
-    self.EmergencyButton.connect('clicked()', self.onEmergencyButtonClicked)
-
-    self.getTransformFPSBox = qt.QSpinBox()
-    self.getTransformFPSBox.setSingleStep(1)
-    self.getTransformFPSBox.setMaximum(144)
-    self.getTransformFPSBox.setMinimum(1)
-    self.getTransformFPSBox.setSuffix(" FPS")
-    self.getTransformFPSBox.value = 5
-    getTransformFPSLabel = qt.QLabel('Position query rate:')
-    RobotOutboundCommunicationLayout.addWidget(getTransformFPSLabel, 8, 0)
-    RobotOutboundCommunicationLayout.addWidget(self.getTransformFPSBox, 8, 1)
-
-    self.getTransformNode = None
-    self.getTransformTimer = qt.QTimer()
-    self.getTransformTimer.timeout.connect(self.updateGetTransform)
-    self.retractNeedleNode = None
-
-    # Inbound layout within the path collapsible button
-    RobotInboundCommunicationLayout = qt.QGridLayout()
-    RobotCommunicationLayout.addLayout(RobotInboundCommunicationLayout)
-   
-    # Add 1 line of spacing
-    RobotInboundCommunicationLayout.addWidget(qt.QLabel(" "), 0, 0)
-
-    self.robotMessageTextbox = qt.QLineEdit("No message received")
-    self.robotMessageTextbox.setReadOnly(True)
-    self.robotMessageTextbox.setFixedWidth(200)
-    robotMessageTextboxLabel = qt.QLabel("   Message received:")
-    RobotInboundCommunicationLayout.addWidget(robotMessageTextboxLabel, 1, 0)
-    RobotInboundCommunicationLayout.addWidget(self.robotMessageTextbox, 1, 1)
-
-    self.robotStatusCodeTextbox = qt.QLineEdit("No status code received")
-    self.robotStatusCodeTextbox.setReadOnly(True)
-    self.robotStatusCodeTextbox.setFixedWidth(200)
-    robotStatusCodeTextboxLabel = qt.QLabel("   Status received:")
-    RobotInboundCommunicationLayout.addWidget(robotStatusCodeTextboxLabel, 2, 0)
-    RobotInboundCommunicationLayout.addWidget(self.robotStatusCodeTextbox, 2, 1)
-
-    row = 4
-    column = 4
-    self.robotTableWidget = qt.QTableWidget(row, column)
-    #self.robotTableWidget.setMaximumWidth(400)
-    self.robotTableWidget.setMinimumHeight(95)
-    self.robotTableWidget.verticalHeader().hide() # Remove line numbers
-    self.robotTableWidget.horizontalHeader().hide() # Remove column numbers
-    self.robotTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.robotTableWidget.horizontalHeader()
-    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    verticalheader = self.robotTableWidget.verticalHeader()
-    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    robotTableWidgetLabel = qt.QLabel("   Target received:")
-    RobotInboundCommunicationLayout.addWidget(robotTableWidgetLabel, 3, 0)
-    RobotInboundCommunicationLayout.addWidget(self.robotTableWidget, 3, 1)
-
-    self.robotPositionTableWidget = qt.QTableWidget(row, column)
-    #self.robotPositionTableWidget.setMaximumWidth(400)
-    self.robotPositionTableWidget.setMinimumHeight(95)
-    self.robotPositionTableWidget.verticalHeader().hide() # Remove line numbers
-    self.robotPositionTableWidget.horizontalHeader().hide() # Remove column numbers
-    self.robotPositionTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.robotPositionTableWidget.horizontalHeader()
-    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    verticalheader = self.robotPositionTableWidget.verticalHeader()
-    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    robotPositionTableLabel = qt.QLabel("   Position received:")
-    RobotInboundCommunicationLayout.addWidget(robotPositionTableLabel, 4, 0)
-    RobotInboundCommunicationLayout.addWidget(self.robotPositionTableWidget, 4, 1)
-
-    # -------  Calibration GUI ---------
-
-    # Outbound tranform collapsible button
-    self.calibrationCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.calibrationCollapsibleButton.text = "Calibration"
-    self.calibrationCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.calibrationCollapsibleButton)
-
-    # Layout within the collapsible button
-    calibrationLayout = qt.QVBoxLayout(self.calibrationCollapsibleButton)
-
-    # Top layout within the calibration collapsible button (CalibrationLayout)
-    calibrationLayoutTop = qt.QFormLayout()
-    calibrationLayout.addLayout(calibrationLayoutTop)
-
-    # Z-frame configuration file selection box
-    self.configFileSelectionBox = qt.QComboBox()
-    self.configFileSelectionBox.addItems(["Z-frame z003", "Z-frame z002", "Z-frame z001"])
-    self.configFileSelectionBox.setFixedWidth(250)
-    #self.configFileSelectionBox.setPlaceholderText(qt.QStringLiteral("Select ZFrame Configuration"))
-    self.configFileSelectionBox.currentIndexChanged.connect(self.onConfigFileSelectionChanged)
-    calibrationLayoutTop.addRow('   Zframe config:', self.configFileSelectionBox)
-
-    # Input volume selector for zFrame calibration
-    self.zFrameVolumeSelector = slicer.qMRMLNodeComboBox()
-    self.zFrameVolumeSelector.objectName = 'zFrameVolumeSelector'
-    self.zFrameVolumeSelector.toolTip = "Select the ZFrame image."
-    self.zFrameVolumeSelector.nodeTypes = ['vtkMRMLVolumeNode']
-    self.zFrameVolumeSelector.hideChildNodeTypes = ['vtkMRMLAnnotationNode']  # hide all annotation nodes
-    self.zFrameVolumeSelector.noneEnabled = False
-    self.zFrameVolumeSelector.addEnabled = False
-    self.zFrameVolumeSelector.removeEnabled = False
-    self.zFrameVolumeSelector.setFixedWidth(250)
-    calibrationLayoutTop.addRow('   ZFrame image:', self.zFrameVolumeSelector)
-    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-                        self.zFrameVolumeSelector, 'setMRMLScene(vtkMRMLScene*)')
-
-    # Calibration matrix display
-    row = 4
-    column = 4
-    self.calibrationTableWidget = qt.QTableWidget(row, column)
-    # self.calibrationTableWidget.setEditTriggers(qt.QtWidgets.QTableWidget.AllEditTriggers)
-    self.calibrationTableWidget.setMinimumHeight(95)
-    self.calibrationTableWidget.verticalHeader().hide() # Remove line numbers
-    self.calibrationTableWidget.horizontalHeader().hide() # Remove column numbers
-    # self.calibrationTableWidget.setEditTriggers(qt.QtWidgets.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.calibrationTableWidget.horizontalHeader()
-    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-
-    verticalheader = self.calibrationTableWidget.verticalHeader()
-    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    calibrationLayoutTop.addRow("   Calibration matrix: ", self.calibrationTableWidget)
-
-    # Create a new QHBoxLayout() within calibrationLayoutTop to place 3 buttons next to one another
-    calibrationLayoutMiddle = qt.QHBoxLayout()
-    calibrationLayout.addLayout(calibrationLayoutMiddle)
-
-    # Add spacer to right align the Add ROI, Initiate Calibration, and Send Transform buttons
-    spacer = qt.QSpacerItem(130, 10, qt.QSizePolicy.Maximum)
-    calibrationLayoutMiddle.addSpacerItem(spacer)
-
-    # Add ROI button
-    self.addROIButton = qt.QPushButton("Add ROI")
-    self.addROIButton.enabled = True
-    calibrationLayoutMiddle.addWidget(self.addROIButton)
-    self.addROIButton.connect('clicked()', self.onAddROI)
-
-    # Create new calibration matrix button
-    self.createCalibrationMatrixButton = qt.QPushButton("Initiate Calibration")
-    self.createCalibrationMatrixButton.enabled = False
-    calibrationLayoutMiddle.addWidget(self.createCalibrationMatrixButton)
-    self.createCalibrationMatrixButton.connect('clicked()', self.initiateZFrameCalibration)
-
-    # Create and send new calibration matrix button
-    self.sendCalibrationMatrixButton = qt.QPushButton("Send Transform")
-    # self.sendCalibrationMatrixButton.enabled = False
-    self.sendCalibrationMatrixButton.enabled = True
-    calibrationLayoutMiddle.addWidget(self.sendCalibrationMatrixButton)
-    self.sendCalibrationMatrixButton.connect('clicked()', self.onSendCalibrationMatrixButtonClicked)
-
-    # Add spacer to left align the reference frame toggle button and reset button
-    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
-    calibrationLayout.addSpacerItem(spacer)
-
-    # Bottom layout within the calibration collapsible button (CalibrationLayout)
-    calibrationLayoutBottom = qt.QFormLayout()
-    calibrationLayout.addLayout(calibrationLayoutBottom)
-
-    # Manual registration section
-    self.manualRegistrationCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.manualRegistrationCollapsibleButton.text = "Manual Registration"
-    self.manualRegistrationCollapsibleButton.collapsed = True
-    # self.manualRegistrationCollapsibleButton.setStyleSheet("background-color:rgba(238,238,238,1); border: none")
-    calibrationLayoutBottom.addWidget(self.manualRegistrationCollapsibleButton)
-
-    # Layout within the path collapsible button
-    manualRegistrationLayout = qt.QFormLayout(self.manualRegistrationCollapsibleButton)
-
-    # Define dummy registration transform to link to transform sliders below
-    self.outputTransform = slicer.vtkMRMLTransformNode()
-    self.outputTransform = slicer.vtkMRMLLinearTransformNode()
-    self.outputTransform.SetName('outputTransform')
-    slicer.mrmlScene.AddNode(self.outputTransform)
-
-    # Translation sliders
-    self.registrationTranslationSliderWidget = slicer.qMRMLTransformSliders()
-    self.registrationTranslationSliderWidget.Title = 'Translation'
-    self.registrationTranslationSliderWidget.setMRMLTransformNode(slicer.util.getNode("outputTransform"))
-    self.registrationTranslationSliderWidget.setMRMLScene(slicer.mrmlScene)
-    self.registrationTranslationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
-    self.registrationTranslationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
-    self.registrationTranslationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
-    self.registrationTranslationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
-    self.registrationTranslationSliderWidget.minMaxVisible = False
-    manualRegistrationLayout.addRow(self.registrationTranslationSliderWidget)    
-
-    # Rotation sliders
-    self.registrationOrientationSliderWidget = slicer.qMRMLTransformSliders()
-    self.registrationOrientationSliderWidget.Title = 'Rotation'
-    self.registrationOrientationSliderWidget.setMRMLTransformNode(slicer.util.getNode("outputTransform"))
-    self.registrationOrientationSliderWidget.setMRMLScene(slicer.mrmlScene)
-    self.registrationOrientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
-    self.registrationOrientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
-    self.registrationOrientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
-    self.registrationOrientationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
-    self.registrationOrientationSliderWidget.minMaxVisible = False
-    manualRegistrationLayout.addRow(self.registrationOrientationSliderWidget)    
-
-    # Advanced Registration Options section
-    self.advancedRegistrationCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.advancedRegistrationCollapsibleButton.text = "Advanced Registration Options"
-    self.advancedRegistrationCollapsibleButton.collapsed = True
-    calibrationLayoutBottom.addWidget(self.advancedRegistrationCollapsibleButton)
-
-    # Layout within the path collapsible button
-    advancedRegistrationLayout = qt.QFormLayout(self.advancedRegistrationCollapsibleButton)
-
-    # Start and end slices for calibration step
-    self.startSliceSliderWidget = qt.QSpinBox()
-    self.endSliceSliderWidget = qt.QSpinBox()
-    self.startSliceSliderWidget.setValue(0)
-    self.endSliceSliderWidget.setValue(20)
-    self.startSliceSliderWidget.setMaximumWidth(40)
-    self.endSliceSliderWidget.setMaximumWidth(40)
-    advancedRegistrationLayout.addRow('Minimum slice:', self.startSliceSliderWidget)
-    advancedRegistrationLayout.addRow('Maximum slice:', self.endSliceSliderWidget)
-
-    # Select a fiducial list of points for manual identification of the locations of the zframe fiducials
-    self.manualZframeFiducialsSelector = slicer.qSlicerSimpleMarkupsWidget()
-    self.manualZframeFiducialsSelector.objectName = 'zframeFiducialsList'
-    self.manualZframeFiducialsSelector.toolTip = "Place a markup on each fiducial on one frame of the registration scan."
-    self.manualZframeFiducialsSelector.setNodeBaseName("ZF")
-    self.manualZframeFiducialsSelector.defaultNodeColor = qt.QColor(230,0,0)
-    self.manualZframeFiducialsSelector.tableWidget().show()
-    self.manualZframeFiducialsSelector.markupsSelectorComboBox().noneEnabled = False
-    self.manualZframeFiducialsSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceMultipleMarkups
-    advancedRegistrationLayout.addRow("Zframe fiducials list: ", self.manualZframeFiducialsSelector)
-    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-                        self.manualZframeFiducialsSelector, 'setMRMLScene(vtkMRMLScene*)')
-
-    # Retry Registration button
-    self.retryRegistration = qt.QPushButton("Retry Registration with Manual Selection")
-    self.retryRegistration.enabled = True
-    advancedRegistrationLayout.addWidget(self.retryRegistration)
-    self.retryRegistration.connect('clicked()', self.onRetryRegistrationButtonClicked)
-
-
-    # Planning phase GUI ---------------------------------------
-
-    # Planning phase collapsible button
-    self.planningCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.planningCollapsibleButton.text = "Planning"
-    self.planningCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.planningCollapsibleButton)
-
-    # Overall layout within the planning collapsible button
-    # planningLayout = qt.QGridLayout(self.planningCollapsibleButton)
-    planningLayout = qt.QVBoxLayout(self.planningCollapsibleButton)
-
-    # Top layout within the planning collapsible button
-    # planningLayoutTop = qt.QGridLayout()
-    planningLayoutTop = qt.QFormLayout()
-    planningLayout.addLayout(planningLayoutTop)
-
-    self.targetPointNodeSelector = slicer.qSlicerSimpleMarkupsWidget()
-    self.targetPointNodeSelector.objectName = 'targetPointNodeSelector'
-    self.targetPointNodeSelector.toolTip = "Select a fiducial to use as the needle insertion target point."
-    self.targetPointNodeSelector.setNodeBaseName("TARGET_POINT")
-    self.targetPointNodeSelector.defaultNodeColor = qt.QColor(170,0,0)
-    self.targetPointNodeSelector.tableWidget().hide()
-    self.targetPointNodeSelector.markupsSelectorComboBox().noneEnabled = False
-    self.targetPointNodeSelector.markupsPlaceWidget().placeMultipleMarkups = slicer.qSlicerMarkupsPlaceWidget.ForcePlaceSingleMarkup
-    planningLayoutTop.addRow("   Target point: ", self.targetPointNodeSelector)
-    self.parent.connect('mrmlSceneChanged(vtkMRMLScene*)',
-                        self.targetPointNodeSelector, 'setMRMLScene(vtkMRMLScene*)')
-    self.targetPointNodeSelector.connect('updateFinished()', self.onTargetPointFiducialChanged)
-
-    # Transform matrix display table
-    row = 4
-    column = 4
-    self.targetTableWidget = qt.QTableWidget(row, column)
-    # self.targetTableWidget.setMaximumWidth(400)
-    self.targetTableWidget.setMinimumHeight(95)
-    self.targetTableWidget.verticalHeader().hide() # Remove line numbers
-    self.targetTableWidget.horizontalHeader().hide() # Remove column numbers
-    self.targetTableWidget.setEditTriggers(qt.QTableWidget.NoEditTriggers) # Make table read-only
-    horizontalheader = self.targetTableWidget.horizontalHeader()
-    horizontalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    horizontalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-
-    verticalheader = self.targetTableWidget.verticalHeader()
-    verticalheader.setSectionResizeMode(0, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(1, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(2, qt.QHeaderView.Stretch)
-    verticalheader.setSectionResizeMode(3, qt.QHeaderView.Stretch)
-    planningLayoutTop.addRow("   Target transform:   ", self.targetTableWidget)
-
-    # Create a new QHBoxLayout() within planningLayout to place 2 visibility buttons next to one another
-    planningLayoutMiddle = qt.QHBoxLayout()
-    planningLayout.addLayout(planningLayoutMiddle)
-    
-    # Add spacer to right align the two visibility buttons
-    spacer = qt.QSpacerItem(132, 10, qt.QSizePolicy.Maximum)
-    planningLayoutMiddle.addSpacerItem(spacer)
-
-    # Needle model visibility icon
-    self.targetNeedleVisibleButton = qt.QPushButton()
-    eyeIconInvisible = qt.QPixmap(":/Icons/Small/SlicerInvisible.png")
-    self.targetNeedleVisibleButton.setIcon(qt.QIcon(eyeIconInvisible))
-    self.targetNeedleVisibleButton.setFixedWidth(25)
-    self.targetNeedleVisibleButton.setFixedHeight(25)
-    self.targetNeedleVisibleButton.setCheckable(True)
-    planningLayoutMiddle.addWidget(self.targetNeedleVisibleButton)
-    self.targetNeedleVisibleButton.connect('clicked()', self.onPlannedTargetNeedleVisibleButtonClicked)
-
-    # Needle trajectory visibility icon
-    currentFilePath = os.path.dirname(os.path.realpath(__file__))
-    self.targetNeedleTrajectoryVisibleButton = qt.QPushButton()
-    trajectoryIcon = qt.QIcon(os.path.join(currentFilePath, "Resources/UI/Icons/trajectoryIcon.png"))
-    self.targetNeedleTrajectoryVisibleButton.setIconSize(qt.QSize(20, 20))
-    self.targetNeedleTrajectoryVisibleButton.setIcon(trajectoryIcon)
-    self.targetNeedleTrajectoryVisibleButton.setFixedWidth(25)
-    self.targetNeedleTrajectoryVisibleButton.setFixedHeight(25)
-    self.targetNeedleTrajectoryVisibleButton.setCheckable(True)
-    planningLayoutMiddle.addWidget(self.targetNeedleTrajectoryVisibleButton)
-    self.targetNeedleTrajectoryVisibleButton.connect('clicked()', self.onPlannedTrajectoryVisibleButtonClicked)
-
-    # Add spacer to right align the visibility buttons
-    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
-    planningLayoutMiddle.addSpacerItem(spacer)
-
-    # Add planningLayoutSLiders to contain the translation sliders
-    planningLayoutSliders = qt.QFormLayout()
-    planningLayout.addLayout(planningLayoutSliders)
-
-    # self.plannedTargetTransform = None
-    self.plannedTargetTransform = slicer.vtkMRMLTransformNode()
-    self.plannedTargetTransform.SetName("PlannedTargetTransform")
-    self.plannedTargetTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
-    slicer.mrmlScene.AddNode(self.plannedTargetTransform)
-
-    # Translation sliders
-    self.translationSliderWidget = slicer.qMRMLTransformSliders()
-    self.translationSliderWidget.Title = 'Translation'
-    self.translationSliderWidget.setMRMLTransformNode(slicer.util.getNode("PlannedTargetTransform"))
-    self.translationSliderWidget.setMRMLScene(slicer.mrmlScene)
-    # Setting of qMRMLTransformSliders.TypeOfTransform is not robust: it has to be set after setMRMLScene and
-    # has to be set twice (with setting the type to something else in between).
-    # Therefore the following 3 lines are needed, and they are needed here:
-    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
-    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
-    self.translationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
-    self.translationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
-    self.translationSliderWidget.minMaxVisible = False
-    planningLayoutSliders.addRow(self.translationSliderWidget)    
-
-    # Rotation sliders
-    self.orientationSliderWidget = slicer.qMRMLTransformSliders()
-    self.orientationSliderWidget.Title = 'Rotation'
-    self.orientationSliderWidget.setMRMLTransformNode(slicer.util.getNode("PlannedTargetTransform"))
-    self.orientationSliderWidget.setMRMLScene(slicer.mrmlScene)
-    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
-    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.TRANSLATION
-    self.orientationSliderWidget.TypeOfTransform = slicer.qMRMLTransformSliders.ROTATION
-    self.orientationSliderWidget.CoordinateReference = slicer.qMRMLTransformSliders.LOCAL
-    self.orientationSliderWidget.minMaxVisible = False
-    planningLayoutSliders.addRow(self.orientationSliderWidget)    
-
-    # Bottom layout within the planning collapsible button 
-    # (includes the reference frame toggle button and the reset button)
-    #planningLayoutBottom = qt.QGridLayout()
-    planningLayoutBottom = qt.QHBoxLayout()
-    planningLayout.addLayout(planningLayoutBottom)
-
-    # Button to toggle translation in local reference frame
-    self.referenceFrameToggleButton = qt.QPushButton()
-    globalReferenceIcon = qt.QIcon(":Icons/RotateFirst.png")
-    self.referenceFrameToggleButton.setIcon(globalReferenceIcon)
-    self.referenceFrameToggleButton.setMaximumWidth(50)
-    self.referenceFrameToggleButton.setMaximumHeight(25)
-    self.referenceFrameToggleButton.toolTip = "Translation in global or local (rotated) reference frame"
-    self.referenceFrameToggleButton.setCheckable(True)
-    planningLayoutBottom.addWidget(self.referenceFrameToggleButton, 0, 0)
-    self.referenceFrameToggleButton.connect('clicked()', self.onTargetReferenceFrameButtonToggled)
-
-    # Button to reset needle to original target point & upright position
-    self.resetNeedlePositionButton = qt.QPushButton("Reset")
-    self.resetNeedlePositionButton.enabled = True
-    self.resetNeedlePositionButton.toolTip = "Reset the needle model back to the target fiducial"
-    self.resetNeedlePositionButton.setMaximumWidth(50)
-    self.resetNeedlePositionButton.setMaximumHeight(25)
-    planningLayoutBottom.addWidget(self.resetNeedlePositionButton, 0, 1)
-    self.resetNeedlePositionButton.connect('clicked()', self.onTargetPointFiducialChanged)
-
-    # Add spacer to left align the reference frame toggle button and reset button
-    spacer = qt.QSpacerItem(150, 10, qt.QSizePolicy.Expanding)
-    planningLayoutBottom.addSpacerItem(spacer)
-
-    # Needle Tracking panel collapsible button
-    self.needleTrackingPanelCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.needleTrackingPanelCollapsibleButton.text = "Needle Tracking"
-    self.needleTrackingPanelCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.needleTrackingPanelCollapsibleButton)
-
-    # Layout within the needle view panel collapsible button
-    needleTrackingPanelLayout = qt.QFormLayout(self.needleTrackingPanelCollapsibleButton)
-
-    self.needleTipTransformComboBox = slicer.qMRMLNodeComboBox()
-    self.needleTipTransformComboBox.nodeTypes = ["vtkMRMLLinearTransformNode"]
-    self.needleTipTransformComboBox.selectNodeUponCreation = False
-    self.needleTipTransformComboBox.noneEnabled = False
-    self.needleTipTransformComboBox.addEnabled = True
-    self.needleTipTransformComboBox.showHidden = False
-    self.needleTipTransformComboBox.setMRMLScene( slicer.mrmlScene )
-    self.needleTipTransformComboBox.setToolTip( "Tracked Needle Tip Transform" )
-    needleTrackingPanelLayout.addRow("Tracked Needle Tip Transform:", self.needleTipTransformComboBox)
-
-    self.previousTrackedTipMatrix = vtk.vtkMatrix4x4()
-    self.previousTrackedTipMatrix.Zero()
-    self.sendTrackedTipTransformCheckbox = qt.QCheckBox("Send tracked tip position to Robot")
-    self.sendTrackedTipTransformCheckbox.setChecked(False)
-    needleTrackingPanelLayout.addWidget(self.sendTrackedTipTransformCheckbox)
-    #self.sendTrackedTipTransformTimer = qt.QTimer()
-    #self.sendTrackedTipTransformTimer.timeout.connect(self.onSendTrackedTipTransform) 
-
-    # self.sendTrackedNeedleTipTransform = qt.QPushButton("Send Tracked Needle Tip")
-    # self.sendTrackedNeedleTipTransform.toolTip = "Send Tracked Needle Tip"
-    # needleTrackingPanelLayout.addWidget(self.sendTrackedNeedleTipTransform)
-    # self.sendTrackedNeedleTipTransform.connect('clicked()', self.onSendTrackedTipTransform)
-
-    # self.stopTrackedNeedleTipTransform = qt.QPushButton("Stop Sending Tracked Tip")
-    # self.stopTrackedNeedleTipTransform.toolTip = "Stop Tracked Needle Tip"
-    # needleTrackingPanelLayout.addWidget(self.stopTrackedNeedleTipTransform)
-    # self.stopTrackedNeedleTipTransform.connect('clicked()', self.stopTrackedTipTimer)       
-
-    # Needle view panel collapsible button
-    self.modelViewPanelCollapsibleButton = ctk.ctkCollapsibleButton()
-    self.modelViewPanelCollapsibleButton.text = "Model View"
-    self.modelViewPanelCollapsibleButton.collapsed = True
-    self.layout.addWidget(self.modelViewPanelCollapsibleButton)
-
-    # Layout within the needle view panel collapsible button
-    modelViewPanelLayout = qt.QGridLayout(self.modelViewPanelCollapsibleButton)
-
-    # Model view panel GUI and functionality
-      # Planned target transform (PointerModel = plannedTarget)    
-      # Reachable target transform (PointerModel = reachableTarget)
-      # Current location transform (PointerModel = currentLocation)
-    self.treeView = slicer.qMRMLSubjectHierarchyTreeView()
-    self.treeView.nodeTypes = ["vtkMRMLModelNode"]
-    # if just needle models are desired in the model view panel -- use setNameFilter()
-    modelViewPanelLayout.addWidget(self.treeView, 0, 0)
-
+    # ------------------------------------ Log UI ---------------------------------------
     # Info messages collapsible button
     self.infoCollapsibleButton = ctk.ctkCollapsibleButton()
     self.infoCollapsibleButton.text = "Command Log"
@@ -873,16 +855,12 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
     # Empty nodes for planning and calibration steps
-    self.zFrameROI = None
-    self.zFrameROIAddedObserverTag = None
     # self.outputTransform = None
     # self.plannedTargetTransform = None
     self.reachableTargetTransform = None
     self.currentPositionTransform = None
     self.otsuFilter = sitk.OtsuThresholdImageFilter()
     self.zFrameFidsString = '' # For manual selection of zframe fiducial locations
-    self.manualRegistration = False
-    self.manuallySelectSlices = False
     self.templateVolume = None
     self.zFrameCroppedVolume = None
     self.zFrameLabelVolume = None
@@ -893,8 +871,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.zFrameModelNode = None
     self.robotModelNode = None
 
-    self.status_codes = ['STATUS_INVALID', 'STATUS_OK', 'STATUS_UNKNOWN_ERROR', 'STATUS_PANIC_MODE', 'STATUS_NOT_FOUND', 'STATUS_ACCESS_DENIED', 'STATUS_BUSY', 'STATUS_TIME_OUT', 'STATUS_OVERFLOW','STATUS_CHECKSUM_ERROR','STATUS_CONFIG_ERROR','STATUS_RESOURCE_ERROR','STATUS_UNKNOWN_INSTRUCTION','STATUS_NOT_READY','STATUS_MANUAL_MODE','STATUS_DISABLED','STATUS_NOT_PRESENT','STATUS_UNKNOWN_VERSION','STATUS_HARDWARE_FAILURE','STATUS_SHUT_DOWN','STATUS_NUM_TYPES']
-    self.robot_phases = ['START_UP', 'EMERGENCY', 'TARGETING', 'MOVE_TO_TARGET', 'CALIBRATION', 'PLANNING']
+  def removeNodeByName(self, nodeName):
+    nodes = slicer.util.getNodes(nodeName)
+    for node in nodes.values():
+      slicer.mrmlScene.RemoveNode(node)
 
   def createServerInitializationStep(self):
     # Prevent re-initialization
@@ -929,10 +909,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     slicer.mrmlScene.AddNode(ReceivedPositionTransformMsg)    
 
     # Add observers on the message type nodes
-    slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onMRMLNodeAdded) # Check newly added MRML nodes from OpenIGTLink to modify StringMsg
-    ReceivedACKTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onACKTransformNodeModified)
-    ReceivedTargetTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformNodeModified)
-    ReceivedPositionTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onPositionTransformNodeModified)
+    self.nodeAddedObserver = slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, self.onMRMLNodeAdded) # Check newly added MRML nodes from OpenIGTLink to modify StringMsg
+    self.onACKTransformNodeModifiedObserver = ReceivedACKTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onACKTransformNodeModified)
+    self.onTargetTransformNodeModifiedObserver = ReceivedTargetTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onTargetTransformMessageNodeModified)
+    self.onPositionTransformNodeModifiedObserver = ReceivedPositionTransformMsg.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onPositionTransformNodeModified)
 
     # Create a node for sending transforms
     SendTransformNode = slicer.vtkMRMLLinearTransformNode()
@@ -1016,9 +996,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
               self.calibrationCollapsibleButton.collapsed = False
               self.RetractNeedleButton.enabled = False
 
-              # Initate ROI selection automatically
-              self.onAddROI()
-
               # Remove nodes now that phase change achieved
               timestampID = name[4:]
               ackNode = slicer.util.getNode(f'ACK_{timestampID}')
@@ -1093,7 +1070,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
               # Start Needle Tip Tracking Function
               #self.startTrackedTipTimer()
-              self.needleTipTransformComboBox.currentNode().AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onSendTrackedTipTransform)
+              self.needleTipTransformObserver = self.needleTipTransformComboBox.currentNode().AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onSendTrackedTipTransform)
 
               # Remove nodes now that phase change achieved
               timestampID = name[4:]
@@ -1158,12 +1135,12 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Stop querying robot position
     self.getTransformTimer.stop()
     self.getTransformFPSBox.enabled = True
+    self.currentPositionButton.setChecked(False)
     
     # Close socket
     if self.openIGTNode:
       self.openIGTNode.Stop()
-    self.snrPortTextboxLabel.setStyleSheet('color: black')
-    self.snrHostnameTextboxLabel.setStyleSheet('color: black')
+
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
     self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
@@ -1179,15 +1156,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Clear tables
     for i in range(4):
       for j in range(4):
-        self.calibrationTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         self.robotTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         self.robotPositionTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
-        #self.MRItableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
         self.targetTableWidget.setItem(i,j,qt.QTableWidgetItem(" "))
    
-    # Delete all nodes from the scene
     slicer.mrmlScene.RemoveNode(self.openIGTNode)
-    #slicer.mrmlScene.Clear(0)
 
   def onCreateScannerServerButtonClicked(self):
     self.createScannerServerButton.enabled = False
@@ -1215,6 +1188,8 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.createScannerServerButton.enabled = True
     self.disconnectFromScannerSocketButton.enabled = False
     self.scannerPortTextbox.setReadOnly(False)
+    self.scannerPortTextboxLabel.setStyleSheet('color: black')
+    self.scannerPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: black }""")
 
     # GUI changes to enable/disable button functionality
     self.disconnectFromScannerSocketButton.enabled = False
@@ -1293,12 +1268,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     # Append to Slicer module GUI command logging box
     currentInfoText = self.infoTextbox.toPlainText()
-    # self.infoTextbox.append(f"\n\
-    #                             [{str(round(outputMatrix.GetElement(0,0),2))}, {str(round(outputMatrix.GetElement(0,1),2))}, {str(round(outputMatrix.GetElement(0,2),2))}, {str(round(outputMatrix.GetElement(0,3),2))}]\n\
-    #                             [{str(round(outputMatrix.GetElement(1,0),2))}, {str(round(outputMatrix.GetElement(1,1),2))}, {str(round(outputMatrix.GetElement(1,2),2))}, {str(round(outputMatrix.GetElement(1,3),2))}]\n\
-    #                             [{str(round(outputMatrix.GetElement(2,0),2))}, {str(round(outputMatrix.GetElement(2,1),2))}, {str(round(outputMatrix.GetElement(2,2),2))}, {str(round(outputMatrix.GetElement(2,3),2))}]\n\
-    #                             [{str(round(outputMatrix.GetElement(3,0),2))}, {str(round(outputMatrix.GetElement(3,1),2))}, {str(round(outputMatrix.GetElement(3,2),2))}, {str(round(outputMatrix.GetElement(3,3),2))}]\n")
-    # self.infoTextbox.verticalScrollBar().setValue(self.infoTextbox.verticalScrollBar().maximum)                                
 
   def activateButtons(self):
     self.planningButton.enabled = True
@@ -1307,9 +1276,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.moveButton.enabled = True
     self.targetingButton.enabled = True
     self.calibrationButton.enabled = True
+    self.GetStatusButton.enabled = True
     self.RetractNeedleButton.enabled = False
-    self.currentPositionOnButton.enabled = True
-    self.currentPositionOffButton.enabled = False
+    self.currentPositionButton.enabled = True
+    self.currentPositionButton.setChecked(False)
 
   def deactivateButtons(self):
     self.planningButton.enabled = False
@@ -1318,41 +1288,11 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.moveButton.enabled = False
     self.targetingButton.enabled = False
     self.calibrationButton.enabled = False
+    self.GetStatusButton.enabled = False
     self.RetractNeedleButton.enabled = False
-    self.currentPositionOnButton.enabled = False
-    self.currentPositionOffButton.enabled = False
+    self.currentPositionButton.enabled = False
+    self.currentPositionButton.setChecked(False)
    
-  def onConfigFileSelectionChanged(self):
-    configFileSelection = self.configFileSelectionBox.currentText
-    print("Z-frame configuration file: ", configFileSelection)
-
-    # Locate the filepath of the selected configuration file
-    currentFilePath = os.path.dirname(os.path.realpath(__file__))
-    if configFileSelection == 'Z-frame z001':
-      self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe001.txt")
-    elif configFileSelection == 'Z-frame z002':
-      self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe002.txt")
-    elif configFileSelection == 'Z-frame z003':
-      self.zframeConfigFilePath = os.path.join(currentFilePath, "Resources/zframe/zframe003.txt")
-
-    with open(self.zframeConfigFilePath,"r") as f:
-      configFileLines = f.readlines()
-
-    # Parse zFrame configuration file here to identify the dimensions and topology of the zframe
-    # Save the origins and diagonal vectors of each of the 3 sides of the zframe in a 2D array
-    self.frameTopology = []
-    for line in configFileLines:
-      if line.startswith('Side 1') or line.startswith('Side 2'): 
-        vec = [float(s) for s in re.findall(r'-?\d+\.?\d*', line)]
-        vec.pop(0)
-        self.frameTopology.append(vec)
-      elif line.startswith('Base'):
-        vec = [float(s) for s in re.findall(r'-?\d+\.?\d*', line)]
-        self.frameTopology.append(vec)
-
-    # Convert frameTopology points to a string, for the sake of passing it as a string argument to the ZframeRegistration CLI 
-    self.frameTopologyString = ' '.join([str(elem) for elem in self.frameTopology])
-
   def onGetStatusButtonClicked(self):
     # Send stringMessage containing the command "GET STATUS" to the script via IGTLink
     print("Send command to get current status of the robot")
@@ -1485,6 +1425,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Stop querying robot position
     self.getTransformTimer.stop()
     self.getTransformFPSBox.enabled = True
+    self.currentPositionButton.setChecked(False)
 
     # Send stringMessage containing the command "STOP" to the script via IGTLink
     print("Sending Emergency command")
@@ -1506,6 +1447,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Stop querying robot position
     self.getTransformTimer.stop()
     self.getTransformFPSBox.enabled = True
+    self.currentPositionButton.setChecked(False)
 
     # Send stringMessage containing the command "START_UP" via IGTLink
     # Create a text node representing a pending request to change phase
@@ -1523,21 +1465,15 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
     self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
 
-  def onCurrentPositionOnClicked(self):
-    # Start querying robot position
-    self.getTransformTimer.start(int(1000/int(self.getTransformFPSBox.value)))
-    self.getTransformFPSBox.enabled = False
-
-    self.currentPositionOffButton.enabled = True
-    self.currentPositionOnButton.enabled = False
-
-  def onCurrentPositionOffClicked(self):
-    # Stop querying robot position
-    self.getTransformTimer.stop()
-    self.getTransformFPSBox.enabled = True
-
-    self.currentPositionOffButton.enabled = False
-    self.currentPositionOnButton.enabled = True    
+  def onCurrentPositionClicked(self):
+    if self.currentPositionButton.isChecked():
+      # Start querying robot position
+      self.getTransformTimer.start(int(1000/int(self.getTransformFPSBox.value)))
+      self.getTransformFPSBox.enabled = False
+    else:
+      # Stop querying robot position
+      self.getTransformTimer.stop()
+      self.getTransformFPSBox.enabled = True
 
   def onPlannedTargetNeedleVisibleButtonClicked(self):
     # If button is checked
@@ -1801,7 +1737,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       infoMsg =  "TRANSFORM received from WPI matches transform sent"
       transformNode.appendReceivedMessageToCommandLog(infoMsg)
 
-  def onTargetTransformNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
+  def onTargetTransformMessageNodeModified(transformNode, unusedArg2=None, unusedArg3=None):
     ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("REACHABLE_TARGET")
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
@@ -1871,7 +1807,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.append.Update()
 
     locatorModelNode.SetAndObservePolyData(self.append.GetOutput())
-    self.treeView.setMRMLScene(slicer.mrmlScene)
 
   def LoadCurrentPositionModel(self, pointerModelName, pointerModelBaseName):
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
@@ -1888,6 +1823,22 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     baseModelDisplayNode = currentPositionBaseModelNode.GetDisplayNode()
     baseModelDisplayNode.SetOpacity(0.6)
     baseModelDisplayNode.SetColor(0.0, 0.5, 0.5)
+
+  def removeOrientationComponent(self, transformNode):
+    # Get the transformation matrix
+    matrix = vtk.vtkMatrix4x4()
+    transformNode.GetMatrixTransformToParent(matrix)
+
+    # Set the orientation part of the matrix to identity
+    for i in range(3):
+        for j in range(3):
+            if i == j:
+                matrix.SetElement(i, j, 1)
+            else:
+                matrix.SetElement(i, j, 0)
+
+    # Update the transform node
+    transformNode.SetMatrixTransformToParent(matrix)
 
   def AddNeedleTrajectoryLine(self, modelNodeName):
     points = vtk.vtkPoints()
@@ -1907,214 +1858,788 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     modelDisplay.SetOpacity(1)
     modelDisplay.SetVisibility2D(1)
 
-  def onRetryRegistrationButtonClicked(self):
-    # Get list of points & check that it is the correct number of points for the selected zframe (z001: 7 points, z002-z003: 9 points)
-    pointListNode = self.manualZframeFiducialsSelector.currentNode()
-    if pointListNode is not None:
-      self.manualRegistration = True
-      zFrameConfig = self.configFileSelectionBox.currentText
-      numFids = pointListNode.GetNumberOfMarkups()
-      zFrameFids = []
-      validPointSelection = False
-  
-      if numFids == 7 and zFrameConfig == "Z-frame z001": validPointSelection = True
-      elif numFids == 9 and zFrameConfig == "Z-frame z002": validPointSelection = True
-      elif numFids == 9 and zFrameConfig == "Z-frame z003": validPointSelection = True
-  
-      if validPointSelection:
-        # Convert pointListNode to an array to use as an input parameter for registration
-        for i in range(numFids):
-          # First, convert RAS coordinates of the markups fiducials to IJK coordinates
-          point_Ras = [0, 0, 0, 1]
-          pointListNode.GetNthFiducialWorldCoordinates(i, point_Ras)
-  
-          # If volume node is transformed, apply that transform to get volume's RAS coordinates
-          transformRasToVolumeRas = vtk.vtkGeneralTransform()
-          slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(None, self.inputVolume .GetParentTransformNode(), transformRasToVolumeRas)
-          point_VolumeRas = transformRasToVolumeRas.TransformPoint(point_Ras[0:3])
-  
-          # Get voxel coordinates from physical coordinates
-          volumeRasToIjk = vtk.vtkMatrix4x4()
-          self.inputVolume.GetRASToIJKMatrix(volumeRasToIjk)
-          point_Ijk = [0, 0, 0, 1]
-          volumeRasToIjk.MultiplyPoint(np.append(point_VolumeRas,1.0), point_Ijk)
-          point_Ijk = [ int(round(c)) for c in point_Ijk[0:3] ]
-          zFrameFids.append([point_Ijk[0], point_Ijk[1]])
-  
-        # Call initiateZFrameCalibration to re-run registration, this time with predefined zFrameFids list
-        self.zFrameFidsString = ' '.join([str(elem) for elem in zFrameFids]) # Convert to string
-        self.initiateZFrameCalibration()
-        
-    else:
-      self.manuallySelectSlices = True
-      self.initiateZFrameCalibration()
-      # print("Please select the correct number of points for the selected zFrame configuration and try again.") 
+  def createMaskedVolumeBySize(self, inputVolume, repair):
+    loopRegistration = True
+    while loopRegistration:
+      thresholdPercent = self.thresholdSliderWidget.value 
+      minimumSize = self.fiducialSizeSliderWidget.minimumValue
+      maximumSize = self.fiducialSizeSliderWidget.maximumValue
+      zframeConfig = self.zframeConfig
 
-  def initiateZFrameCalibration(self):
-    # Begin by identifying the zframe dropdown selection & parsing the config file to package topological dimensions into a ZframeRegistration argument
-    self.onConfigFileSelectionChanged()
+      # Create segmentation node
+      segmentationNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
+      segmentationNode.CreateDefaultDisplayNodes()
+      segmentationNode.SetReferenceImageGeometryParameterFromVolumeNode(inputVolume)
+
+      # Create segment
+      segmentId = segmentationNode.GetSegmentation().AddEmptySegment("base")
+
+      # Get access to the segment editor effect
+      segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
+      segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
+      segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+      segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
+      segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
+      segmentEditorWidget.setSegmentationNode(segmentationNode)
+      segmentEditorWidget.setMasterVolumeNode(inputVolume)
+      segmentEditorWidget.setCurrentSegmentID(segmentId)
+
+      # Thresholding
+      inputVolume.GetImageData().GetScalarTypeMax()
+      segmentEditorWidget.setActiveEffectByName("Threshold")
+      effect = segmentEditorWidget.activeEffect()
+      segmentEditorWidget.setCurrentSegmentID(segmentId)
+      effect.setParameter("MinimumThreshold", int((inputVolume.GetImageData().GetScalarRange()[1]-inputVolume.GetImageData().GetScalarRange()[0]) * thresholdPercent + inputVolume.GetImageData().GetScalarRange()[0]))
+      effect.setParameter("MaximumThreshold", int(inputVolume.GetImageData().GetScalarRange()[1]))
+      effect.self().onApply()
+
+      # Islands removal
+      segmentEditorWidget.setActiveEffectByName("Islands")
+      effect = segmentEditorWidget.activeEffect()
+      effect.setParameter("Operation", "REMOVE_SMALL_ISLANDS")
+      effect.setParameter("MinimumSize", minimumSize)
+      effect.self().onApply()
+
+      # Copy
+      clonedSegmentId = segmentationNode.GetSegmentation().AddEmptySegment("cloned")
+      segmentEditorWidget.setActiveEffectByName("Logical operators")
+      effect = segmentEditorWidget.activeEffect()
+      segmentEditorWidget.setCurrentSegmentID(clonedSegmentId)
+      effect.setParameter("Operation", "COPY")
+      effect.setParameter("ModifierSegmentID", segmentId)
+      effect.self().onApply()
+
+      # Isolate largest islands
+      segmentEditorWidget.setActiveEffectByName("Islands")
+      effect = segmentEditorWidget.activeEffect()
+      effect.setParameter("MinimumSize", maximumSize)
+      effect.self().onApply()
+
+      # Subtract from base segment to leave only islands in size range
+      segmentEditorWidget.setActiveEffectByName("Logical operators")
+      effect = segmentEditorWidget.activeEffect()
+      segmentEditorWidget.setCurrentSegmentID(segmentId)
+      effect.setParameter("Operation", "SUBTRACT")
+      effect.setParameter("ModifierSegmentID", clonedSegmentId)
+      effect.self().onApply()
+
+      segmentationNode.GetSegmentation().RemoveSegment(clonedSegmentId)
+      
+      # Remove all islands on the edges of the image
+      if self.removeBorderIslandsCheckBox.isChecked():
+        borderVoxels = True
+        while borderVoxels:
+          tempLabelmapVolume = slicer.mrmlScene.AddNewNodeByClass('vtkMRMLLabelMapVolumeNode', 'TempLabelMapVolume')
+          slicer.modules.segmentations.logic().ExportVisibleSegmentsToLabelmapNode(segmentationNode, tempLabelmapVolume, inputVolume)
+          tempLabelMapArray = slicer.util.arrayFromVolume(tempLabelmapVolume)
+          slicer.mrmlScene.RemoveNode(tempLabelmapVolume)
+
+          mask = np.zeros_like(tempLabelMapArray, dtype=bool)
+          margin = int(self.borderMarginSliderWidget.value)
+          # mask[0, :, :] = True # Front
+          # mask[-1, :, :] = True # Back
+          mask[:, 0:margin, :] = True
+          mask[:, (-margin-1):-1, :] = True
+          mask[:, :, 0:margin] = True
+          mask[:, :, (-margin-1):-1] = True
+
+          tempLabelMapArray[~mask] = 0
+          indices = np.argwhere(tempLabelMapArray == 1)
+          if len(indices) <= 0:
+            borderVoxels = False
+          else:
+            segmentEditorWidget.setActiveEffectByName("Islands")
+            effect = segmentEditorWidget.activeEffect()
+            effect.setParameter("Operation", "REMOVE_SELECTED_ISLAND")
+            self.removeSelectedIsland(effect, [indices[0][2], indices[0][1], indices[0][0]])
+
+      # Export segmentation to label map
+      self.removeNodeByName('MaskedCalibrationLabelMapVolume')
+      labelMapVolumeNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLLabelMapVolumeNode", "MaskedCalibrationLabelMapVolume")
+      slicer.modules.segmentations.logic().ExportVisibleSegmentsToLabelmapNode(segmentationNode, labelMapVolumeNode, inputVolume)
+
+       # Clean up
+      segmentEditorWidget.setActiveEffectByName("No editing")
+      segmentEditorWidget.deleteLater()
+      segmentEditorWidget = None
+      slicer.mrmlScene.RemoveNode(segmentationNode)
+      slicer.mrmlScene.RemoveNode(segmentEditorNode)
+
+      # Count number of Islands and attempt repair if one is missing
+      # Does not support 9 fiducial frame
+      # if repair:
+      #   if not zframeConfig == 'z003':
+      #     loopRegistration = self.countAndRepairFiducials(labelMapVolumeNode)
+      #   else: 
+      #     loopRegistration = False
+      # else:
+      #   loopRegistration = False
+      loopRegistration = False
+
+    # Convert label map to scalar volume
+    scalarVolumeNode = None
+    self.removeNodeByName('MaskedCalibrationVolume')
+    scalarVolumeNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLScalarVolumeNode", "MaskedCalibrationVolume")
+    slicer.modules.volumes.logic().CreateScalarVolumeFromVolume(slicer.mrmlScene, scalarVolumeNode, labelMapVolumeNode)
+    self.increaseThresholdForRepair = False
+    slicer.mrmlScene.RemoveNode(labelMapVolumeNode)
+
+    return scalarVolumeNode
+  
+  def cropVolume(self, volumeNode, xSize, ySize):
+    imageData = volumeNode.GetImageData()
+    dims = imageData.GetDimensions()
+
+    xMargin = (dims[0] - xSize, dims[0] - xSize)
+    if xMargin[0] % 2 == 1:
+      xMargin = (xMargin[0]//2+1, xMargin[1]//2)
+    else:
+      xMargin = (xMargin[0]//2, xMargin[1]//2)
+    yMargin = (dims[1] - ySize, dims[1] - ySize)
+    if yMargin[0] % 2 == 1:
+      yMargin = (yMargin[0]//2+1, yMargin[1]//2)
+    else:
+      yMargin = (yMargin[0]//2, yMargin[1]//2)
+
+    # Create a vtkExtractVOI filter to crop the image data
+    extractVoi = vtk.vtkExtractVOI()
+    extractVoi.SetInputData(imageData)
+    extractVoi.SetVOI(xMargin[0], dims[0] - xMargin[1] - 1, yMargin[0], dims[1] - yMargin[1] - 1, 0, dims[2] - 1)
+    extractVoi.Update()
+    volumeNode.SetAndObserveImageData(extractVoi.GetOutput())
+
+  def removeSelectedIsland(self, scriptedEffect, ijk):
+    # Generate merged labelmap of all visible segments
+    segmentationNode = scriptedEffect.parameterSetNode().GetSegmentationNode()
+
+    selectedSegmentLabelmap = scriptedEffect.selectedSegmentLabelmap()
+    # We need to know exactly the value of the segment voxels, apply threshold to make force the selected label value
+    labelValue = 1
+    backgroundValue = 0
+    thresh = vtk.vtkImageThreshold()
+    thresh.SetInputData(selectedSegmentLabelmap)
+    thresh.ThresholdByLower(0)
+    thresh.SetInValue(backgroundValue)
+    thresh.SetOutValue(labelValue)
+    thresh.SetOutputScalarType(selectedSegmentLabelmap.GetScalarType())
+    thresh.Update()
+
+    # Create oriented image data from output
+    inputLabelImage = slicer.vtkOrientedImageData()
+    inputLabelImage.ShallowCopy(thresh.GetOutput())
+    selectedSegmentLabelmapImageToWorldMatrix = vtk.vtkMatrix4x4()
+    selectedSegmentLabelmap.GetImageToWorldMatrix(selectedSegmentLabelmapImageToWorldMatrix)
+    inputLabelImage.SetImageToWorldMatrix(selectedSegmentLabelmapImageToWorldMatrix)
+
+    pixelValue = inputLabelImage.GetScalarComponentAsFloat(ijk[0], ijk[1], ijk[2], 0)
+
+    try:
+      floodFillingFilter = vtk.vtkImageThresholdConnectivity()
+      floodFillingFilter.SetInputData(inputLabelImage)
+      seedPoints = vtk.vtkPoints()
+      origin = inputLabelImage.GetOrigin()
+      spacing = inputLabelImage.GetSpacing()
+      seedPoints.InsertNextPoint(origin[0] + ijk[0] * spacing[0], origin[1] + ijk[1] * spacing[1], origin[2] + ijk[2] * spacing[2])
+      floodFillingFilter.SetSeedPoints(seedPoints)
+      floodFillingFilter.ThresholdBetween(pixelValue, pixelValue)
+
+      if pixelValue != 0:  # if clicked on empty part then there is nothing to remove or keep
+        floodFillingFilter.SetInValue(1)
+        floodFillingFilter.SetOutValue(0)
+
+        floodFillingFilter.Update()
+        modifierLabelmap = scriptedEffect.defaultModifierLabelmap()
+        modifierLabelmap.DeepCopy(floodFillingFilter.GetOutput())
+
+        scriptedEffect.modifySelectedSegmentByLabelmap(modifierLabelmap, slicer.qSlicerSegmentEditorAbstractEffect.ModificationModeRemove)
+    except IndexError:
+      print("Island processing failed")
+
+  # def countAndRepairFiducials(self, labelMapVolumeNode):
+  #   # Returns False if redoing registration with different parameters
+  #   if labelMapVolumeNode.GetImageData().GetScalarRange()[1] == 0:
+  #     numberOfSegments = 0
+  #   else:
+  #     segmentationNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentationNode")
+  #     segmentationNode.CreateDefaultDisplayNodes()
+  #     slicer.modules.segmentations.logic().ImportLabelmapToSegmentationNode(labelMapVolumeNode, segmentationNode)
+
+  #     segmentEditorWidget = slicer.qMRMLSegmentEditorWidget()
+  #     segmentEditorWidget.setMRMLScene(slicer.mrmlScene)
+  #     segmentEditorNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLSegmentEditorNode")
+  #     segmentEditorNode.SetOverwriteMode(slicer.vtkMRMLSegmentEditorNode.OverwriteNone)
+  #     segmentEditorWidget.setMRMLSegmentEditorNode(segmentEditorNode)
+  #     segmentEditorWidget.setSegmentationNode(segmentationNode)
+  #     segmentEditorWidget.setMasterVolumeNode(labelMapVolumeNode)
+
+  #     segmentEditorWidget.setActiveEffectByName("Islands")
+  #     effect = segmentEditorWidget.activeEffect()
+  #     effect.setParameter("Operation", "SPLIT_ISLANDS_TO_SEGMENTS")
+  #     effect.setParameter("MinimumSize", 0)
+  #     effect.self().onApply()
+
+  #     numberOfSegments = segmentationNode.GetSegmentation().GetNumberOfSegments()
+
+  #     # Cleanup
+  #     segmentEditorWidget.setActiveEffectByName("No editing")
+  #     slicer.mrmlScene.RemoveNode(segmentationNode)
+  #     slicer.mrmlScene.RemoveNode(segmentEditorNode)
+  #     segmentEditorWidget.deleteLater()
+  #     segmentEditorWidget = None
+
+  #   # Attempt repair
+  #   result = ""
+  #   print(f'Segments detected: {numberOfSegments}')
+
+  #   if numberOfSegments > 0:
+  #     # Determine if the image is salvageable
+  #     # Isolate middle slice
+  #     imageData = labelMapVolumeNode.GetImageData()
+  #     centroid = self.findCentroidOfVolume(labelMapVolumeNode)
+  #     middleSlice = int(centroid[2])
+  #     dims = imageData.GetDimensions()
+  #     numpy_array = vtk.util.numpy_support.vtk_to_numpy(imageData.GetPointData().GetScalars())
+  #     numpy_array = numpy_array.reshape(dims[2], dims[1], dims[0])
+  #     numpy_array = numpy_array.transpose(2,1,0)
+  #     slice_array = numpy_array[:, :, middleSlice]
+
+  #     # Calculate bounding box to see if the dimensions are about right and that there are only 1-2 missing fiducials
+  #     rangeNumber = 15 # how much wiggle room to allow for bounding box
+  #     leftColumn, rightColumn, topRow, bottomRow = self.calculateBoundingBox(slice_array)
+  #     width = (rightColumn - leftColumn) * labelMapVolumeNode.GetSpacing()[0]
+  #     height = (bottomRow - topRow) * labelMapVolumeNode.GetSpacing()[1]
+  #     # print(f'leftColumn {leftColumn}')
+  #     # print(f'rightColumn {rightColumn}')
+  #     # print(f'topRow {topRow}')
+  #     # print(f'bottomRow {bottomRow}')
+  #     expectedWidth = abs(self.frameTopology[0][0] - self.frameTopology[2][0])
+  #     expectedHeight = abs(self.frameTopology[0][1] - self.frameTopology[2][1])
+  #     widthCorrect = (expectedWidth - rangeNumber) <= width <= (expectedWidth + rangeNumber)
+  #     heightCorrect = (expectedWidth - rangeNumber) <= width <= (expectedWidth + rangeNumber)
+
+  #     if numberOfSegments == 7:
+  #       if widthCorrect and heightCorrect:
+  #         print("7 fiducials detected; bounding box dimensions correct")
+  #         return False
+  #       else:
+  #         print("7 fiducials detected; however, bounding box dimensions are wrong")
+  #     if (numberOfSegments == 6 or numberOfSegments == 5) and widthCorrect and heightCorrect:
+  #       print("5-6 fiducials detected; bounding box dimensions correct; trying to repair")
+  #       result = self.repairMissingFiducial(slice_array, numpy_array, leftColumn, rightColumn, topRow, bottomRow, middleSlice, labelMapVolumeNode)
+  #       if result == "success":
+  #         return False
+  #   if not self.increaseThresholdForRepair:
+  #     if not (self.thresholdSliderWidget.value <= self.thresholdSliderWidget.minimum):
+  #       self.thresholdSliderWidget.value = self.thresholdSliderWidget.value - 0.01
+  #       print(f'Less than 6 or more than 7 fiducials detected; decreasing threshold percentage to {self.thresholdSliderWidget.value}')
+  #       return True
+  #     else:
+  #       self.increaseThresholdForRepair = True
+  #       self.thresholdSliderWidget.value = self.defaultThresholdPercentage + 0.02
+  #       print(f'Switching to increasing to {self.thresholdSliderWidget.value}')
+  #       return True
+  #   else:
+  #     # Try again with the assumption that the thresholding was too lenient
+  #     if not (self.thresholdSliderWidget.value >= (self.thresholdSliderWidget.maximum/5)):
+  #       self.thresholdSliderWidget.value = self.thresholdSliderWidget.value + 0.02
+  #       print(f'Less than 6 or more than 7 fiducials detected; increasing threshold percentage to {self.thresholdSliderWidget.value}')
+  #       return True
+  #     else:
+  #       print("Fiducial repair failed")
+  #       self.thresholdSliderWidget.value = self.defaultThresholdPercentage
+  #       return False
+
+  def calculateBoundingBox(self, slice_array):
+    leftColumn = 0
+    rightColumn = slice_array.shape[0]
+    topRow = 0
+    bottomRow = slice_array.shape[1]
+    for row in range(0, slice_array.shape[0]):
+      if np.any(slice_array[row,:] > 0):
+        leftColumn = row
+        break
+    for row in range(slice_array.shape[0]-1, -1, -1):
+      if np.any(slice_array[row,:] > 0):
+        rightColumn = row
+        break
+    for column in range(0, slice_array.shape[1]):
+      if np.any(slice_array[:,column] > 0):
+        topRow = column
+        break
+    for column in range(slice_array.shape[1]-1, -1, -1):
+      if np.any(slice_array[:,column] > 0):
+        bottomRow = column
+        break
+    return leftColumn, rightColumn, topRow, bottomRow
+
+  # def repairMissingFiducial(self, slice_array, numpy_array, leftColumn, rightColumn, topRow, bottomRow, middleSlice, labelMapVolumeNode):
+  #   # Identify missing fiducial
+  #   # Shrink margins of image
+  #   cropped = slice_array[leftColumn:rightColumn, topRow:bottomRow]
+
+  #   # Probe array for values to look for missing value
+  #   missingFiducial = 0
+  #   r = 10
+  #   thickness = 8
+  #   adjust = 4
+  #   length = 4
+  #   diagLength = int(math.sqrt(length**2 + length**2))
+  #   # Corners
+  #   # Top Left
+  #   if not np.any(cropped[0:r, 0:r] > 0):
+  #     print("Attempting repair of top left fiducial")
+  #     startLine = (leftColumn + adjust, topRow + adjust, middleSlice - (length//2))
+  #     endLine = (leftColumn + adjust, topRow + adjust, middleSlice + (length//2))
+  #     numpy_array = self.drawThickLine(startLine, endLine, thickness, numpy_array)
+  #     missingFiducial += 1
+  #   # Top Right
+  #   if not np.any(cropped[cropped.shape[0]-r:cropped.shape[0],0:r] > 0):
+  #     print("Attempting repair of top right fiducial")
+  #     startLine = (leftColumn + cropped.shape[0] - adjust, topRow + adjust, middleSlice - (length//2))
+  #     endLine = (leftColumn + cropped.shape[0] - adjust, topRow + adjust, middleSlice + (length//2))
+  #     numpy_array = self.drawThickLine(startLine, endLine, thickness, numpy_array)
+  #     missingFiducial += 1
+  #   # Bottom Left
+  #   if not np.any(cropped[0:r,cropped.shape[1]-r:cropped.shape[1]] > 0):
+  #     print("Attempting repair of bottom left fiducial")
+  #     startLine = (leftColumn + adjust, topRow + cropped.shape[1] - adjust, middleSlice - (length//2))
+  #     endLine = (leftColumn + adjust, topRow + cropped.shape[1] - adjust, middleSlice + (length//2))
+  #     numpy_array = self.drawThickLine(startLine, endLine, thickness, numpy_array)
+  #     missingFiducial += 1
+  #   # Bottom Right
+  #   if not np.any(cropped[cropped.shape[0]-r:cropped.shape[0],cropped.shape[1]-r:cropped.shape[1]] > 0):
+  #     print("Attempting repair of bottom right fiducial")
+  #     startLine = (leftColumn + cropped.shape[0] - adjust, topRow + cropped.shape[1] - adjust, middleSlice - (length//2))
+  #     endLine = (leftColumn + cropped.shape[0] - adjust, topRow + cropped.shape[1] - adjust, middleSlice + (length//2))
+  #     numpy_array = self.drawThickLine(startLine, endLine, thickness, numpy_array)
+  #     missingFiducial += 1
+
+  #   # Sides
+  #   # Middle Left
+  #   if not np.any(cropped[0:r, cropped.shape[1]//2-r//2:cropped.shape[1]//2+r//2] > 0):
+  #     print("Attempting repair of middle left fiducial")
+  #     startLine = (leftColumn + adjust, topRow + cropped.shape[1]//2 - (diagLength//2), middleSlice - (diagLength//2))
+  #     endLine = (leftColumn + adjust, topRow + cropped.shape[1]//2 + (diagLength//2), middleSlice + (diagLength//2))
+  #     numpy_array = self.drawThickLine(startLine, endLine, thickness, numpy_array)
+  #     missingFiducial += 1
+  #   # Middle Top  
+  #   if not np.any(cropped[cropped.shape[0]//2-r//2:cropped.shape[0]//2+r//2, 0:r] > 0):
+  #     print("Attempting repair of middle top fiducial")
+  #     startLine = (leftColumn + cropped.shape[0]//2 + (diagLength//2), topRow + adjust, middleSlice - (diagLength//2))
+  #     endLine = (leftColumn + cropped.shape[0]//2 - (diagLength//2), topRow + adjust, middleSlice + (diagLength//2))
+  #     numpy_array = self.drawThickLine(startLine, endLine, thickness, numpy_array)
+  #     missingFiducial += 1
+  #   # Middle Right  
+  #   if not np.any(cropped[cropped.shape[0]-r:cropped.shape[0], cropped.shape[1]//2-r//2:cropped.shape[1]//2+r//2] > 0):
+  #     print("Attempting repair of middle right fiducial")
+  #     startLine = (leftColumn + cropped.shape[0] - adjust, topRow + cropped.shape[1]//2 + (diagLength//2), middleSlice - (diagLength//2))
+  #     endLine = (leftColumn + cropped.shape[0] - adjust, topRow +  cropped.shape[1]//2 - (diagLength//2), middleSlice + (diagLength//2))
+  #     numpy_array = self.drawThickLine(startLine, endLine, thickness, numpy_array)
+  #     missingFiducial += 1
+
+  #   if 2 >= missingFiducial >= 1:
+  #     imageData = self.numpy_to_vtk_image_data(numpy_array)
+  #     labelMapVolumeNode.SetAndObserveImageData(imageData)
+  #     return "success"
+  #   else:
+  #     return "anomaly"
+
+  # def drawThickLine(self, start, end, thickness, numpy_array):
+  #   for dx in range(-thickness//2, thickness//2+1):
+  #     for dy in range(-thickness//2, thickness//2+1):
+  #         for dz in range(-thickness//2, thickness//2+1):
+  #           rr, cc, zz = line_nd([start[0]+dx, start[1]+dy, start[2]+dz], [end[0]+dx, end[1]+dy, end[2]+dz], endpoint=True)
+  #           numpy_array[rr, cc, zz] = 1
+  #   return numpy_array
+
+  def findCentroidOfVolume(self, inputVolume):
+    imageData = inputVolume.GetImageData()
+    dimensions = imageData.GetDimensions()
+    spacing = imageData.GetSpacing()
+    origin = imageData.GetOrigin()
+    # Convert vtkImageData to numpy array
+    voxels = vtk.util.numpy_support.vtk_to_numpy(imageData.GetPointData().GetScalars())
+    voxels = voxels.reshape(dimensions, order='F')
+    # Calculate the center of mass
+    indices = np.indices(dimensions).reshape(3, -1)
+    center_of_mass = np.average(indices, axis=1, weights=voxels.ravel())
+    return center_of_mass
+
+  def onIdentity(self):
+    if self.outputTransform:
+      identityMatrix = vtk.vtkMatrix4x4()
+      identityMatrix.Identity()
+      self.ZFrameCalibrationTransformNode.SetMatrixTransformToParent(identityMatrix)
+      self.manualRegistrationTransformSliders.setMRMLTransformNode(None)
+      self.manualRegistrationRotationSliders.setMRMLTransformNode(None)
+      self.manualRegistrationTransformSliders.reset()
+      self.manualRegistrationRotationSliders.reset()
+      self.manualRegistrationTransformSliders.setMRMLTransformNode(self.ZFrameCalibrationTransformNode)
+      self.manualRegistrationRotationSliders.setMRMLTransformNode(self.ZFrameCalibrationTransformNode)
+
+  def loadTemplateConfiguration(self):
+    currentFilePath = os.path.dirname(slicer.util.modulePath(self.__module__))
+    self.zframeConfig = ""
+    if self.configFileSelectionBox.currentIndex == 0:
+      self.ZFRAME_MODEL_PATH = 'template001/zframe001-model.vtk'
+      self.zframeConfig = 'z001'
+      zframeConfigFilePath = os.path.join(currentFilePath, "Resources/Templates/template001/zframe001.txt")
+    elif self.configFileSelectionBox.currentIndex == 1:
+      self.ZFRAME_MODEL_PATH = 'template002/zframe002-model.vtk'
+      self.zframeConfig = 'z002'
+      zframeConfigFilePath = os.path.join(currentFilePath, "Resources/Templates/template002/zframe002.txt")
+    elif self.configFileSelectionBox.currentIndex == 2:
+      self.ZFRAME_MODEL_PATH = 'template003/zframe003-model.vtk'
+      self.zframeConfig = 'z003'
+      zframeConfigFilePath = os.path.join(currentFilePath, "Resources/Templates/template003/zframe003.txt")
+    else: #self.configFileSelectionBox.currentIndex == 3:
+      self.ZFRAME_MODEL_PATH = 'template004/zframe004-model.vtk'
+      self.zframeConfig = 'z004'
+      zframeConfigFilePath = os.path.join(currentFilePath, "Resources/Templates/template004/zframe004.txt")
+    
+    with open(zframeConfigFilePath,"r") as f:
+      configFileLines = f.readlines()
+
+    # Parse zFrame configuration file here to identify the dimensions and topology of the zframe
+    # Save the origins and diagonal vectors of each of the 3 sides of the zframe in an array
+    self.frameTopology = []
+    self.zFrameFiducials = []
+    for line in configFileLines:
+      if line.startswith('Side 1') or line.startswith('Side 2'): 
+        vec = [float(s) for s in re.findall(r'-?\d+\.?\d*', line)]
+        vec.pop(0)
+        self.frameTopology.append(vec)
+      elif line.startswith('Base'):
+        vec = [float(s) for s in re.findall(r'-?\d+\.?\d*', line)]
+        self.frameTopology.append(vec)
+      elif line.startswith('Fiducial'):
+        vec = [float(s) for s in re.findall(r'(-?\d+)(?!:)', line)]
+        self.zFrameFiducials.append(vec)
+
+    # Convert frameTopology points to a string, for the sake of passing it as a string argument to the ZframeRegistration CLI 
+    self.frameTopologyString = ' '.join([str(elem) for elem in self.frameTopology])
+
+  def onRegister(self):
+    self.loadTemplateConfiguration()
 
     # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
-    self.inputVolume = self.zFrameVolumeSelector.currentNode()
-
-    if self.inputVolume is not None:
-      seriesNumber = self.inputVolume.GetName().split(":")[0]
-      name = seriesNumber + "-ZFrameTransform"
-      
-      # Create an empty transform for the calibration matrix output
-      if self.outputTransform:
-        slicer.mrmlScene.RemoveNode(self.outputTransform)
-        self.outputTransform = None
-      self.outputTransform = slicer.vtkMRMLLinearTransformNode()
-      self.outputTransform.SetName(name)
-      slicer.mrmlScene.AddNode(self.outputTransform)
-      self.registrationTranslationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
-      self.registrationOrientationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
-      self.outputTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onRegistrationTransformManuallyModified)
-
-      print ("Initating calibration matrix calculation with zFrame image.")
-      
-      # Get start and end slices from the StartSliceSliderWidget
-      self.startSlice = int(self.startSliceSliderWidget.value)
-      self.endSlice = int(self.endSliceSliderWidget.value)
-      maxSlice = self.inputVolume.GetImageData().GetDimensions()[2]
-      if self.endSlice == 0 or self.endSlice > maxSlice:
-        # Use the image end slice
-        self.endSlice = maxSlice
-        self.endSliceSliderWidget.value = float(self.endSlice)
-
-      if self.manuallySelectSlices:
-        self.startSlice = int(self.startSliceSliderWidget.text)
-        self.endSlice = int(self.endSliceSliderWidget.text)
-        
-      # If the user manually selected a list of fiducials to use in registration (zFrameFids), set the start and end slices s.t. 
-      # only the image frame with the fiducials on it is used in the calculation
-      if self.manualRegistration:
-        # Get volume voxel coordinates from markup control point RAS coordinates
-        # to determine slice index for registration with manual fiducial selection
-        # Get point coordinate in RAS
-        pointListNode= self.manualZframeFiducialsSelector.currentNode()
-        markupsIndex = 0
-        point_Ras = [0, 0, 0, 1]
-        pointListNode.GetNthFiducialWorldCoordinates(markupsIndex, point_Ras)
-
-        # If volume node is transformed, apply that transform to get volume's RAS coordinates
-        transformRasToVolumeRas = vtk.vtkGeneralTransform()
-        slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(None, self.inputVolume .GetParentTransformNode(), transformRasToVolumeRas)
-        point_VolumeRas = transformRasToVolumeRas.TransformPoint(point_Ras[0:3])
-
-        # Get voxel coordinates from physical coordinates
-        volumeRasToIjk = vtk.vtkMatrix4x4()
-        self.inputVolume.GetRASToIJKMatrix(volumeRasToIjk)
-        point_Ijk = [0, 0, 0, 1]
-        volumeRasToIjk.MultiplyPoint(np.append(point_VolumeRas,1.0), point_Ijk)
-        point_Ijk = [ int(round(c)) for c in point_Ijk[0:3] ]
-        voxelCoordinate = point_Ijk[2]
-
-        self.startSlice = voxelCoordinate
-        self.endSlice = voxelCoordinate + 1
-
-      # Check for the ZFrame ROI node and if it exists, use it for the start and end slices
-      if self.zFrameROI is not None:
-        print ("Found zFrame ROI: ", self.zFrameROI.GetID())
-        self.zFrameROI.SetDisplayVisibility(1)
-        center = [0.0, 0.0, 0.0]
-        self.zFrameROI.GetXYZ(center)
-        bounds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-        self.zFrameROI.GetRASBounds(bounds)
-        pMin = [bounds[0], bounds[2], bounds[4], 1]
-        pMax = [bounds[1], bounds[3], bounds[5], 1]
-        rasToIJKMatrix = vtk.vtkMatrix4x4()
-        self.inputVolume.GetRASToIJKMatrix(rasToIJKMatrix)
-        pos = [0,0,0,1]
-        rasToIJKMatrix.MultiplyPoint(pMin, pos)
-
-        # Only use the ZFrame ROI node to define the start and end slices if the user did NOT 
-        # manually select zframe fiducials in Advanced Registration Options
-        if not self.manualRegistration and not self.manuallySelectSlices:
-          self.startSlice = int(pos[2])
-          rasToIJKMatrix.MultiplyPoint(pMax, pos)
-          self.endSlice = int(pos[2])
-          # Check if slices are in bounds
-          if self.startSlice < 0:
-            self.startSlice = 0
-          if self.endSlice < 0:
-            self.endSlice = 0
-          endZ = self.inputVolume.GetImageData().GetDimensions()[2]
-          endZ = endZ - 1
-          if self.startSlice > endZ:
-            self.startSlice = endZ
-          if self.endSlice > endZ:
-            self.endSlice = endZ
-
-        self.startSliceSliderWidget.value = float(self.startSlice)
-        self.endSliceSliderWidget.value = float(self.endSlice)
-
-        if self.configFileSelectionBox.currentText == "Z-frame z001":
-          self.ZFRAME_MODEL_PATH = 'zframe001-model.vtk'
-          zframeConfig = 'z001'
-        elif self.configFileSelectionBox.currentText == "Z-frame z002":
-          self.ZFRAME_MODEL_PATH = 'zframe002-model.vtk'
-          zframeConfig = 'z002'
-        else: # if self.configFileSelectionBox.currentText == "Z-frame z003":
-          self.ZFRAME_MODEL_PATH = 'zframe003-model.vtk'
-          zframeConfig = 'z003'
-
-        self.ZFRAME_MODEL_NAME = 'ZFrameModel'
-        
-        # Run ZFrame Open Source Registration
-        self.loadZFrameModel()
-        self.loadRobotModel()
-
-        # Begin zFrameRegistrationWithROI logic
-        zFrameTemplateVolume = self.inputVolume
-        coverTemplateROI = self.zFrameROI
-
-        self.zFrameCroppedVolume = self.createCroppedVolume(zFrameTemplateVolume, coverTemplateROI)
-        self.zFrameLabelVolume = self.createLabelMapFromCroppedVolume(self.zFrameCroppedVolume, "labelmap")
-        self.zFrameMaskedVolume = self.createMaskedVolume(zFrameTemplateVolume, self.zFrameLabelVolume)
-        self.zFrameMaskedVolume.SetName(zFrameTemplateVolume.GetName() + "-label")
-        if self.startSlice is None or self.endSlice is None:
-          self.startSlice, center, self.endSlice = self.getROIMinCenterMaxSliceNumbers(coverTemplateROI)
-          self.otsuOutputVolume = self.applyITKOtsuFilter(self.zFrameMaskedVolume)
-          self.dilateMask(self.otsuOutputVolume)
-          self.startSlice, self.endSlice = self.getStartEndWithConnectedComponents(self.otsuOutputVolume, center)
-
-        # Run zFrameRegistration CLI module
-        # params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
-        #            'outputTransform': self.outputTransform}
-        params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
-                  'outputTransform': self.outputTransform, 'zframeConfig': zframeConfig, 'frameTopology': self.frameTopologyString, 
-                  'zFrameFids': self.zFrameFidsString}
-        slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
-
-        self.zFrameModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
-        self.robotModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
-        self.zFrameModelNode.GetDisplayNode().SetVisibility2D(True)
-        self.zFrameModelNode.SetDisplayVisibility(True)
-        self.robotModelNode.SetDisplayVisibility(True)
-
-        # Update the calibration matrix table with the calculated matrix 
-        outputMatrix = vtk.vtkMatrix4x4()
-        self.outputTransform.GetMatrixTransformToParent(outputMatrix)
-        for i in range(4):
-          for j in range(4):
-            self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(outputMatrix.GetElement(i, j),2))))
-
-        # Remove unnecessary nodes from the Slicer scene
-        self.clearVolumeNodes()
-
-        # Reset registration to automatic
-        self.manualRegistration = False
-      
-        # Enable the sendCalibrationMatrixButton
-        self.sendCalibrationMatrixButton.enabled = True
-      
-      else:
-        print("No ROI found. Please indicate the region of interest using the 'Add ROI' button.")
-        
-    else:
+    if not self.zFrameVolumeSelector.currentNode():
       print("No zFrame image found. Cannot calculate the calibration matrix.")
+      return
+    
+    print ("Initating calibration matrix calculation with zFrame image.")
+
+    result = False
+    result = self.registerZFrame()
+    self.increaseThresholdForRetry = False
+
+    self.loadZFrameModel()
+    self.loadRobotModel()
+
+    self.zFrameModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
+    self.robotModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
+    self.zFrameModelNode.GetDisplayNode().SetVisibility2D(True)
+    self.zFrameModelNode.SetDisplayVisibility(True)
+    self.robotModelNode.SetDisplayVisibility(True)
+
+    if result:
+      self.onRegistrationSuccess()
+    else:
+      self.onRegistrationFailure()
+
+  def registerZFrame(self):
+    inputVolume = self.zFrameVolumeSelector.currentNode()
+    seriesNumber = inputVolume.GetName().split(":")[0]
+    name = seriesNumber + "-ZFrameTransform"
+
+    # Create an empty transform for the calibration matrix output
+    if self.outputTransform:
+      slicer.mrmlScene.RemoveNode(self.outputTransform)
+      self.outputTransform = None
+    self.outputTransform = slicer.vtkMRMLLinearTransformNode()
+    self.outputTransform.SetName(name)
+    slicer.mrmlScene.AddNode(self.outputTransform)
+    self.registrationTranslationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
+    self.registrationOrientationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
+
+    if not inputVolume:
+      return False
+    
+    # First try without repair methods
+    loopRegistration = True
+    while loopRegistration:
+      zFrameMaskedVolume = self.createMaskedVolumeBySize(inputVolume, False)
+      if zFrameMaskedVolume.GetImageData().GetScalarRange()[1] > 0:
+        # Crop if not 256x256
+        zFrameMaskedVolumeDims = zFrameMaskedVolume.GetImageData().GetDimensions()
+        if zFrameMaskedVolumeDims[0] != 256 and zFrameMaskedVolumeDims[1] != 256:
+          self.cropVolume(zFrameMaskedVolume, 256, 256)
+        
+        centerOfMassSlice = int(self.findCentroidOfVolume(zFrameMaskedVolume)[2])
+        # Run zFrameRegistration CLI module
+        params = {'inputVolume': zFrameMaskedVolume, 'startSlice': centerOfMassSlice-3, 'endSlice': centerOfMassSlice+3,
+                  'outputTransform': self.outputTransform, 'zframeConfig': self.zframeConfig, 'frameTopology': self.frameTopologyString, 
+                  'zFrameFids': ''}
+        cliNode = slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
+        if cliNode.GetStatus() & cliNode.ErrorsMask:
+          print(cliNode.GetErrorText())
+        if self.removeOrientationCheckBox.isChecked():
+          self.removeOrientationComponent(self.outputTransform)
+      else:
+        print("Masked volume empty")
+      regResult = self.checkRegistrationResult(self.outputTransform, zFrameMaskedVolume, self.zFrameFiducials)
+      if not regResult:
+        # Try to process at different thresholds
+        if self.retryFailedRegistrationCheckBox.isChecked():
+          if not self.increaseThresholdForRetry:
+            if not (self.thresholdSliderWidget.value <= self.thresholdSliderWidget.minimum):
+              self.thresholdSliderWidget.value = self.thresholdSliderWidget.value - 0.02
+              print(f'Retrying; decreasing threshold percentage to {self.thresholdSliderWidget.value}')
+              loopRegistration = True
+            else:
+              self.increaseThresholdForRetry = True
+              self.thresholdSliderWidget.value = self.defaultThresholdPercentage + 0.04
+              print(f'Retrying; increasing threshold percentage to {self.thresholdSliderWidget.value}')
+              loopRegistration = True
+          else:
+            if not (self.thresholdSliderWidget.value >= (self.thresholdSliderWidget.maximum/5)):
+              self.thresholdSliderWidget.value = self.thresholdSliderWidget.value + 0.04
+              print(f'Retrying; increasing threshold percentage to {self.thresholdSliderWidget.value}')
+              loopRegistration = True
+            else:
+              print("Retries failed; Moving on to repair attempt")
+              self.thresholdSliderWidget.value = self.defaultThresholdPercentage
+              loopRegistration = False
+        else:
+          loopRegistration = False
+      else:
+        loopRegistration = False
+        return True
+      
+    # if self.repairFiducialImageCheckBox.isChecked():
+    #   zFrameMaskedVolume = self.createMaskedVolumeBySize(inputVolume, True)
+    #   if zFrameMaskedVolume.GetImageData().GetScalarRange()[1] > 0:
+    #     # Crop if not 256x256
+    #     zFrameMaskedVolumeDims = zFrameMaskedVolume.GetImageData().GetDimensions()
+    #     # TODO: Pad images smaller than 256 by 256
+    #     if zFrameMaskedVolumeDims[0] != 256 and zFrameMaskedVolumeDims[1] != 256:
+    #       self.cropVolume(zFrameMaskedVolume, 256, 256)
+        
+    #     centerOfMassSlice = int(self.findCentroidOfVolume(zFrameMaskedVolume)[2])
+    #     # Run zFrameRegistration CLI module
+    #     params = {'inputVolume': zFrameMaskedVolume, 'startSlice': centerOfMassSlice-3, 'endSlice': centerOfMassSlice+3,
+    #               'outputTransform': outputTransform, 'zframeConfig': self.zframeConfig, 'frameTopology': self.frameTopologyString, 
+    #               'zFrameFids': ''}
+    #     cliNode = slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
+    #     if cliNode.GetStatus() & cliNode.ErrorsMask:
+    #       print(cliNode.GetErrorText())
+    #     if self.removeOrientationCheckBox.isChecked():
+    #       self.removeOrientationComponent(outputTransform)
+    #   else:
+    #     print("Masked volume empty")
+
+    #   regResult = self.checkRegistrationResult(outputTransform, zFrameMaskedVolume, self.zFrameFiducials)
+    #   return regResult, outputTransform
+    
+    return False
+
+  def checkRegistrationResult(self, outputTransform, fiducialVolume, zFrameFiducials):
+    # Check the midpoint of each ZFrame fiducial and some points around it for a detected fiducial
+    zFrameMidpoints = []
+    for zFrameFiducial in zFrameFiducials:
+      zFrameMidpoints.append([(zFrameFiducial[0] + zFrameFiducial[3]) / 2, (zFrameFiducial[1] + zFrameFiducial[4]) / 2, (zFrameFiducial[2] + zFrameFiducial[5]) / 2])
+    for zFrameMidpoint in zFrameMidpoints:
+      zFrameMidpoint = zFrameMidpoint + [1]
+
+      outputMatrix = vtk.vtkMatrix4x4()
+      outputTransform.GetMatrixTransformToParent(outputMatrix)
+      transformedMidpoint = [0, 0, 0, 1]
+      outputMatrix.MultiplyPoint(zFrameMidpoint, transformedMidpoint)
+
+      rasToIjkMatrix = vtk.vtkMatrix4x4()
+      fiducialVolume.GetRASToIJKMatrix(rasToIjkMatrix)
+      ijkMidpoint = [0, 0, 0, 1]
+      rasToIjkMatrix.MultiplyPoint(transformedMidpoint, ijkMidpoint)
+
+      fiducialImageData = fiducialVolume.GetImageData()
+      # Check if point is in extent of volume
+      extent = fiducialImageData.GetExtent()
+      if not (extent[0] <= ijkMidpoint[0] <= extent[1] and extent[2] <= ijkMidpoint[1] <= extent[3] and extent[4] <= ijkMidpoint[2] <= extent[5]):
+        return False
+      # Check point and surrounding points
+      fiducialFound = False
+      if fiducialImageData.GetScalarComponentAsDouble(int(ijkMidpoint[0]), int(ijkMidpoint[1]), int(ijkMidpoint[2]), 0) > 0: fiducialFound = True
+      if fiducialImageData.GetScalarComponentAsDouble(int(ijkMidpoint[0])-2, int(ijkMidpoint[1]), int(ijkMidpoint[2]), 0) > 0: fiducialFound = True
+      if fiducialImageData.GetScalarComponentAsDouble(int(ijkMidpoint[0])+2, int(ijkMidpoint[1]), int(ijkMidpoint[2]), 0) > 0: fiducialFound = True
+      if fiducialImageData.GetScalarComponentAsDouble(int(ijkMidpoint[0]), int(ijkMidpoint[1])-2, int(ijkMidpoint[2]), 0) > 0: fiducialFound = True
+      if fiducialImageData.GetScalarComponentAsDouble(int(ijkMidpoint[0]), int(ijkMidpoint[1])+2, int(ijkMidpoint[2]), 0) > 0: fiducialFound = True
+      if fiducialImageData.GetScalarComponentAsDouble(int(ijkMidpoint[0]), int(ijkMidpoint[1]), int(ijkMidpoint[2])-2, 0) > 0: fiducialFound = True
+      if fiducialImageData.GetScalarComponentAsDouble(int(ijkMidpoint[0]), int(ijkMidpoint[1]), int(ijkMidpoint[2])+2, 0) > 0: fiducialFound = True
+      if not fiducialFound:
+        return False
+    return True    
+
+  def onUseManualRegistration(self):
+    self.sendCalibrationMatrixButton.enabled = True
+
+  # def initiateZFrameCalibration(self):
+  #   # Begin by identifying the zframe dropdown selection & parsing the config file to package topological dimensions into a ZframeRegistration argument
+  #   self.onConfigFileSelectionChanged()
+
+  #   # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
+  #   self.inputVolume = self.zFrameVolumeSelector.currentNode()
+
+  #   if self.inputVolume is not None:
+  #     seriesNumber = self.inputVolume.GetName().split(":")[0]
+  #     name = seriesNumber + "-ZFrameTransform"
+      
+  #     # Create an empty transform for the calibration matrix output
+  #     if self.outputTransform:
+  #       slicer.mrmlScene.RemoveNode(self.outputTransform)
+  #       self.outputTransform = None
+  #     self.outputTransform = slicer.vtkMRMLLinearTransformNode()
+  #     self.outputTransform.SetName(name)
+  #     slicer.mrmlScene.AddNode(self.outputTransform)
+  #     self.registrationTranslationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
+  #     self.registrationOrientationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
+  #     self.outputTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onRegistrationTransformManuallyModified)
+
+  #     print ("Initating calibration matrix calculation with zFrame image.")
+      
+  #     # Get start and end slices from the StartSliceSliderWidget
+  #     self.startSlice = int(self.startSliceSliderWidget.value)
+  #     self.endSlice = int(self.endSliceSliderWidget.value)
+  #     maxSlice = self.inputVolume.GetImageData().GetDimensions()[2]
+  #     if self.endSlice == 0 or self.endSlice > maxSlice:
+  #       # Use the image end slice
+  #       self.endSlice = maxSlice
+  #       self.endSliceSliderWidget.value = float(self.endSlice)
+
+  #     if self.manuallySelectSlices:
+  #       self.startSlice = int(self.startSliceSliderWidget.text)
+  #       self.endSlice = int(self.endSliceSliderWidget.text)
+        
+  #     # If the user manually selected a list of fiducials to use in registration (zFrameFids), set the start and end slices s.t. 
+  #     # only the image frame with the fiducials on it is used in the calculation
+  #     if self.manualRegistration:
+  #       # Get volume voxel coordinates from markup control point RAS coordinates
+  #       # to determine slice index for registration with manual fiducial selection
+  #       # Get point coordinate in RAS
+  #       pointListNode= self.manualZframeFiducialsSelector.currentNode()
+  #       markupsIndex = 0
+  #       point_Ras = [0, 0, 0, 1]
+  #       pointListNode.GetNthFiducialWorldCoordinates(markupsIndex, point_Ras)
+
+  #       # If volume node is transformed, apply that transform to get volume's RAS coordinates
+  #       transformRasToVolumeRas = vtk.vtkGeneralTransform()
+  #       slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(None, self.inputVolume .GetParentTransformNode(), transformRasToVolumeRas)
+  #       point_VolumeRas = transformRasToVolumeRas.TransformPoint(point_Ras[0:3])
+
+  #       # Get voxel coordinates from physical coordinates
+  #       volumeRasToIjk = vtk.vtkMatrix4x4()
+  #       self.inputVolume.GetRASToIJKMatrix(volumeRasToIjk)
+  #       point_Ijk = [0, 0, 0, 1]
+  #       volumeRasToIjk.MultiplyPoint(np.append(point_VolumeRas,1.0), point_Ijk)
+  #       point_Ijk = [ int(round(c)) for c in point_Ijk[0:3] ]
+  #       voxelCoordinate = point_Ijk[2]
+
+  #       self.startSlice = voxelCoordinate
+  #       self.endSlice = voxelCoordinate + 1
+
+  #     # Check for the ZFrame ROI node and if it exists, use it for the start and end slices
+  #     if self.zFrameROI is not None:
+  #       print ("Found zFrame ROI: ", self.zFrameROI.GetID())
+  #       self.zFrameROI.SetDisplayVisibility(1)
+  #       center = [0.0, 0.0, 0.0]
+  #       self.zFrameROI.GetXYZ(center)
+  #       bounds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  #       self.zFrameROI.GetRASBounds(bounds)
+  #       pMin = [bounds[0], bounds[2], bounds[4], 1]
+  #       pMax = [bounds[1], bounds[3], bounds[5], 1]
+  #       rasToIJKMatrix = vtk.vtkMatrix4x4()
+  #       self.inputVolume.GetRASToIJKMatrix(rasToIJKMatrix)
+  #       pos = [0,0,0,1]
+  #       rasToIJKMatrix.MultiplyPoint(pMin, pos)
+
+  #       # Only use the ZFrame ROI node to define the start and end slices if the user did NOT 
+  #       # manually select zframe fiducials in Advanced Registration Options
+  #       if not self.manualRegistration and not self.manuallySelectSlices:
+  #         self.startSlice = int(pos[2])
+  #         rasToIJKMatrix.MultiplyPoint(pMax, pos)
+  #         self.endSlice = int(pos[2])
+  #         # Check if slices are in bounds
+  #         if self.startSlice < 0:
+  #           self.startSlice = 0
+  #         if self.endSlice < 0:
+  #           self.endSlice = 0
+  #         endZ = self.inputVolume.GetImageData().GetDimensions()[2]
+  #         endZ = endZ - 1
+  #         if self.startSlice > endZ:
+  #           self.startSlice = endZ
+  #         if self.endSlice > endZ:
+  #           self.endSlice = endZ
+
+  #       self.startSliceSliderWidget.value = float(self.startSlice)
+  #       self.endSliceSliderWidget.value = float(self.endSlice)
+
+  #       if self.configFileSelectionBox.currentText == "Z-frame z001":
+  #         self.ZFRAME_MODEL_PATH = 'zframe001-model.vtk'
+  #         zframeConfig = 'z001'
+  #       elif self.configFileSelectionBox.currentText == "Z-frame z002":
+  #         self.ZFRAME_MODEL_PATH = 'zframe002-model.vtk'
+  #         zframeConfig = 'z002'
+  #       else: # if self.configFileSelectionBox.currentText == "Z-frame z003":
+  #         self.ZFRAME_MODEL_PATH = 'zframe003-model.vtk'
+  #         zframeConfig = 'z003'
+
+  #       self.ZFRAME_MODEL_NAME = 'ZFrameModel'
+        
+  #       # Run ZFrame Open Source Registration
+  #       self.loadZFrameModel()
+  #       self.loadRobotModel()
+
+  #       # Begin zFrameRegistrationWithROI logic
+  #       zFrameTemplateVolume = self.inputVolume
+  #       coverTemplateROI = self.zFrameROI
+
+  #       self.zFrameCroppedVolume = self.createCroppedVolume(zFrameTemplateVolume, coverTemplateROI)
+  #       self.zFrameLabelVolume = self.createLabelMapFromCroppedVolume(self.zFrameCroppedVolume, "labelmap")
+  #       self.zFrameMaskedVolume = self.createMaskedVolume(zFrameTemplateVolume, self.zFrameLabelVolume)
+  #       self.zFrameMaskedVolume.SetName(zFrameTemplateVolume.GetName() + "-label")
+  #       if self.startSlice is None or self.endSlice is None:
+  #         self.startSlice, center, self.endSlice = self.getROIMinCenterMaxSliceNumbers(coverTemplateROI)
+  #         self.otsuOutputVolume = self.applyITKOtsuFilter(self.zFrameMaskedVolume)
+  #         self.dilateMask(self.otsuOutputVolume)
+  #         self.startSlice, self.endSlice = self.getStartEndWithConnectedComponents(self.otsuOutputVolume, center)
+
+  #       # Run zFrameRegistration CLI module
+  #       # params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
+  #       #            'outputTransform': self.outputTransform}
+  #       params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
+  #                 'outputTransform': self.outputTransform, 'zframeConfig': zframeConfig, 'frameTopology': self.frameTopologyString, 
+  #                 'zFrameFids': self.zFrameFidsString}
+  #       slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
+
+  #       self.zFrameModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
+  #       self.robotModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
+  #       self.zFrameModelNode.GetDisplayNode().SetVisibility2D(True)
+  #       self.zFrameModelNode.SetDisplayVisibility(True)
+  #       self.robotModelNode.SetDisplayVisibility(True)
+
+  #       # Remove unnecessary nodes from the Slicer scene
+  #       self.clearVolumeNodes()
+
+  #       # Reset registration to automatic
+  #       self.manualRegistration = False
+      
+  #       # Enable the sendCalibrationMatrixButton
+  #       self.sendCalibrationMatrixButton.enabled = True
+      
+  #     else:
+  #       print("No ROI found. Please indicate the region of interest using the 'Add ROI' button.")
+        
+  #   else:
+  #     print("No zFrame image found. Cannot calculate the calibration matrix.")
 
   def modified_gram_schmidt(self, A):
     m, n = A.shape
@@ -2128,14 +2653,33 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       R[j, j] = np.linalg.norm(v)
       Q[:, j] = v / R[j, j]
     return Q, R
+  
+  def onRegistrationSuccess(self):
+    print("Registration Successful")
+    self.increaseThresholdForRepair = False
+
+    self.validRegistrationLabel.text= "Registration Successful"
+    self.validRegistrationLabel.setStyleSheet("QLabel {background-color: #1A9A30}")
+
+    # Enable the sendCalibrationMatrixButton
+    self.sendCalibrationMatrixButton.enabled = True
+
+  def onRegistrationFailure(self):
+    print("Registration Failure")
+    self.increaseThresholdForRepair = False
+    self.manualRegistrationGroupBox.collapsed = False
+
+    self.validRegistrationLabel.text= "Registration Failed"
+    self.validRegistrationLabel.setStyleSheet("QLabel {background-color: #660000}")
+
+    # Disable the sendCalibrationMatrixButton
+    self.sendCalibrationMatrixButton.enabled = False
 
   def onSendCalibrationMatrixButtonClicked(self):
     # Package the contents of the Calibration Matrix into a 4x4 matrix
     outputMatrix = vtk.vtkMatrix4x4()
     
-    for i in range(4):
-      for j in range(4):
-        outputMatrix.SetElement(i, j, float(self.calibrationTableWidget.item(i, j).text()))
+    self.outputTransform.GetMatrixTransformToParent(outputMatrix)
     
     # Make rotational component orthonormal
     nonorthonormalArray = np.array([[outputMatrix.GetElement(0,0), outputMatrix.GetElement(0,1), outputMatrix.GetElement(0,2)], [outputMatrix.GetElement(1,0), outputMatrix.GetElement(1,1), outputMatrix.GetElement(1,2)], [outputMatrix.GetElement(2,0), outputMatrix.GetElement(2,1), outputMatrix.GetElement(2,2)]])
@@ -2157,12 +2701,27 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "ROBOT")
       self.appendTransformToCommandLog(outputMatrix)
-
-      if self.zFrameROI:
-        self.zFrameROI.SetDisplayVisibility(0)
     else:
       print("OpenIGTLink connector is not active. Cannot send the registration transform.")
-    
+
+  def onAddTarget(self):
+    nodes = slicer.mrmlScene.GetNodesByClass('vtkMRMLMarkupsFiducialNode')
+    count = 0
+    for i in range(nodes.GetNumberOfItems()):
+      node = nodes.GetItemAsObject(i)
+      if node.GetName().startswith("TARGET_POINT"):
+        count += 1
+
+    biopsyFiducialListNode = slicer.mrmlScene.AddNewNodeByClass("vtkMRMLMarkupsFiducialNode", f'TARGET_POINT_{count+1}')
+    slicer.modules.markups.logic().StartPlaceMode(False)
+
+    # Set the current node in the selection node
+    selectionNode = slicer.mrmlScene.GetNodeByID("vtkMRMLSelectionNodeSingleton")
+    selectionNode.SetReferenceActivePlaceNodeClassName(biopsyFiducialListNode.GetClassName())
+    selectionNode.SetActivePlaceNodeID(biopsyFiducialListNode.GetID())
+
+    self.targetPointNodeSelector.setCurrentNode(biopsyFiducialListNode)
+
   # Function to reset the 4x4 target transform to an identity matrix at the position of the new fiducial when the target point fiducial is updated
   def onTargetPointFiducialChanged(self):
     targetPointNode = self.targetPointNodeSelector.currentNode()
@@ -2185,7 +2744,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         self.translationSliderWidget.setMRMLTransformNode(self.plannedTargetTransform)
 
         # Set 3D visualization of needle to "On" when the target transform resets
-        self.targetNeedleVisibleButton.setChecked(True)
         self.onPlannedTargetNeedleVisibleButtonClicked()
 
   def onTargetTransformNodeModified(self, unusedArg2=None, unusedArg3=None):
@@ -2197,14 +2755,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     for i in range(nbRows):
       for j in range(nbColumns):
         self.targetTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(targetTransformMatrix.GetElement(i,j),2))))
-
-  def onRegistrationTransformManuallyModified(self, unusedArg2=None, unusedArg3=None):
-    # Update the registration transform manually when the Manual Registration sliders are used
-    outputMatrix = vtk.vtkMatrix4x4()
-    self.outputTransform.GetMatrixTransformToParent(outputMatrix)
-    for i in range(4):
-      for j in range(4):
-        self.calibrationTableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(outputMatrix.GetElement(i, j),2))))
 
   def sendTargetTransform(self):
     if self.plannedTargetTransform:
@@ -2231,77 +2781,18 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     else:
       print("plannedTargetTransform has not been generated yet. Use the Planning GUI to plan the target location.")
 
-# # ------------------------- FUNCTIONS FOR ROI BOUNDING BOX STEP ---------------------------
-
-  def onAddROI(self):
-    self.addROIAddedObserver()
-    # Go into place ROI mode
-    selectionNode =  slicer.util.getNode('vtkMRMLSelectionNodeSingleton')
-    selectionNode.SetReferenceActivePlaceNodeClassName("vtkMRMLAnnotationROINode")
-    annotationLogic = slicer.modules.annotations.logic()
-    annotationLogic.StartPlaceMode(False)
-
-  def removeZFrameROIAddedObserver(self):
-    if self.zFrameROIAddedObserverTag is not None:
-      if slicer.mrmlScene is not None:
-        slicer.mrmlScene.RemoveObserver(self.zFrameROIAddedObserverTag)
-      self.zFrameROIAddedObserverTag = None
-
-  def addROIAddedObserver(self):
-    @vtk.calldata_type(vtk.VTK_OBJECT)
-    def onNodeAdded(caller, event, calldata):
-      node = calldata
-      if isinstance(node, slicer.vtkMRMLAnnotationROINode):
-        self.removeZFrameROIAddedObserver()
-        self.zFrameROI = node
-        self.zFrameROI.SetName("Registration ROI")
-      # Enable createCalibrationMatrixButton when ROI is added
-      self.createCalibrationMatrixButton.enabled = True
-
-    # Remove any previous node added observer
-    self.removeZFrameROIAddedObserver()
-    # Remove previous ROI if any
-    if self.zFrameROI is not None:
-      slicer.mrmlScene.RemoveNode(self.zFrameROI)
-      self.zFrameROI = None
-    self.zFrameROIAddedObserverTag = slicer.mrmlScene.AddObserver(slicer.vtkMRMLScene.NodeAddedEvent, onNodeAdded)
-
 # # ------------------------- FUNCTIONS FOR CALIBRATION STEP ---------------------------
 
-  def clearVolumeNodes(self):
-    if self.zFrameCroppedVolume:
-      slicer.mrmlScene.RemoveNode(self.zFrameCroppedVolume)
-      self.zFrameCroppedVolume = None
-    if self.zFrameLabelVolume:
-      slicer.mrmlScene.RemoveNode(self.zFrameLabelVolume)
-      self.zFrameLabelVolume = None
-    if self.zFrameMaskedVolume:
-      slicer.mrmlScene.RemoveNode(self.zFrameMaskedVolume)
-      self.zFrameMaskedVolume = None
-    if self.otsuOutputVolume:
-      slicer.mrmlScene.RemoveNode(self.otsuOutputVolume)
-      self.otsuOutputVolume = None
-
-  def clearOldCalculationNodes(self):
-    #if self.openSourceRegistration.inputVolume:
-    if self.inputVolume:
-      self.inputVolume = None
-    if self.zFrameModelNode:
-      self.zFrameModelNode = None
-    if self.zFrameModelNode:
-      self.robotModelNode = None      
-    if self.outputTransform:
-      self.outputTransform = None
-  
   def loadZFrameModel(self):
     if self.zFrameModelNode:
       slicer.mrmlScene.RemoveNode(self.zFrameModelNode)
       self.zFrameModelNode = None
     currentFilePath = os.path.dirname(os.path.realpath(__file__))
-    zFrameModelPath = os.path.join(currentFilePath, "Resources", "zframe", self.ZFRAME_MODEL_PATH)
+    zFrameModelPath = os.path.join(currentFilePath, "Resources", "Templates", self.ZFRAME_MODEL_PATH)
+    print(zFrameModelPath)
     self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath)
     # _, self.zFrameModelNode = slicer.util.loadModel(zFrameModelPath)
-    self.zFrameModelNode.SetName(self.ZFRAME_MODEL_NAME)
+    self.zFrameModelNode.SetName('ZFrameModel')
     modelDisplayNode = self.zFrameModelNode.GetDisplayNode()
     modelDisplayNode.SetColor(0.9,0.9,0.4)
     self.zFrameModelNode.SetDisplayVisibility(False)
@@ -2439,26 +2930,40 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     
     self.test_NormalOperation()
 
-    # self.setUp()
     # self.test_ImproperCalibration()
 
-    # self.setUp()
     # self.test_OutOfBounds()
 
-    # self.setUp()
     # self.test_EmergencyStop()
   
   def test_NormalOperation(self):
-    self.delayDisplay("Starting Normal Operation Test")
     widget = self.setUp()
+    self.delayDisplay("Starting Normal Operation Test")
+    #TODO: May need to call each function on a QTimer with longer delay
+    #TODO: Check for responses from robot
     
     volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
     templateImageNode = slicer.util.loadVolume(volumePathTemplate)
-    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+    volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
     anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+
     widget.onCreateRobotClientButtonClicked()
     self.delayDisplay("Sending START_UP")
     widget.onStartupButtonClicked()
+    self.delayDisplay("Performing Registration")
+    widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
+    widget.onRegister()
+    self.delayDisplay("Sending CALIBRATION")
+    widget.onSendCalibrationMatrixButtonClicked()
+    self.delayDisplay("Selecting Target")
+    widget.onAddTarget()
+    widget.targetPointNodeSelector.currentNode().AddFiducial(0, 0, 0)
+    interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+    interactionNode.SetCurrentInteractionMode(interactionNode.ViewTransform)
+    self.delayDisplay("Sending PLANNING")
+    widget.onPlanningButtonClicked()
+    self.delayDisplay("Sending TARGETING")
+    widget.onTargetingButtonClicked()
     
 
   def test_ImproperCalibration(self):

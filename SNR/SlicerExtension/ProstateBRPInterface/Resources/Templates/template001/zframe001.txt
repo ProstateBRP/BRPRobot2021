@@ -27,4 +27,20 @@ Side 1 diagonal: (0, -1, 1)
 Base diagonal: (1, 0, 1)
 Side 2 diagonal: (0, 1, 1)
 
+Template origin: (35, 25, 30)
 
+Horizontal offset: 5.0
+Vertical offset: 5.0
+
+Horizontal labels: (-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7)
+Vertical labels: (A,B,C,D,E,F,G,H,I,J,K,L,M,N)
+
+Worksheet origin 1: (96.8, 627.12)
+Worksheet horizontal offset 1: 14.8
+Worksheet vertical offset 1: 14.8
+
+Worksheet origin 2: (96.8, 311.76)
+Worksheet horizontal offset 2: 14.8
+Worksheet vertical offset 2: 14.8
+
+Grid coordinate order: (Vertical, Horizontal)
