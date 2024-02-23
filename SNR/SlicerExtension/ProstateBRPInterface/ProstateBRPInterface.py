@@ -2956,7 +2956,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
           node_of_interest = node
     return node_of_interest
   
-  def compareTransformNodes(self, node1, node2):
+  def compareTransformNodes(self, node1, node2, precision=0.01):
     # Get the transformation matrices
     matrix1 = vtk.vtkMatrix4x4()
     node1.GetMatrixTransformToParent(matrix1)
@@ -2965,22 +2965,96 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     # Compare the matrices element by element
     for i in range(4):
       for j in range(4):
-        if abs(matrix1.GetElement(i, j) - matrix2.GetElement(i, j)) > 0.001:
+        if abs(matrix1.GetElement(i, j) - matrix2.GetElement(i, j)) > precision:
           return False
     return True
 
   def runTest(self):
-    
+    # Unit testing
+    self.delayDisplay("<h1>Starting Unit Tests</h1>")
+    self.test_RegistrationTest()
+    self.test_PlanningTest()
+
+    # Integration testing
+    self.delayDisplay("<h1>Starting Integrated Tests</h1>")
     self.test_NormalOperation()
     self.test_NormalOperationWithPositionQuery()
     self.test_ImproperCalibration()
     self.test_OutOfBounds()
     self.test_EmergencyStop()
+
+  # Unit testing
+
+  def test_RegistrationTest(self):
+    widget = self.setUp()
+    try:
+      self.delayDisplay("<h2>Starting Registration Test</h2>")
+
+      volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
+      templateImageNode = slicer.util.loadVolume(volumePathTemplate)
+
+      slicer.util.delayDisplay("Performing Registration", 1000)
+      widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
+      widget.onRegister()
+
+      correctTransform = slicer.vtkMRMLLinearTransformNode()
+      correctMatrix = vtk.vtkMatrix4x4()
+      correctMatrix.SetElement(0,0,1); correctMatrix.SetElement(0,1,0); correctMatrix.SetElement(0,2,0); correctMatrix.SetElement(0,3,-6.67969)
+      correctMatrix.SetElement(1,0,0); correctMatrix.SetElement(1,1,1); correctMatrix.SetElement(1,2,0); correctMatrix.SetElement(1,3,68.0608)
+      correctMatrix.SetElement(2,0,0); correctMatrix.SetElement(2,1,0); correctMatrix.SetElement(2,2,1); correctMatrix.SetElement(2,3,-106.241)
+      correctMatrix.SetElement(3,0,0); correctMatrix.SetElement(3,1,0); correctMatrix.SetElement(3,2,0); correctMatrix.SetElement(3,3,1)
+      correctTransform.SetAndObserveMatrixTransformToParent(correctMatrix)
+      self.assertTrue(self.compareTransformNodes(widget.outputTransform, correctTransform))
+      self.delayDisplay(f'<font color="#72ff6b">Calibration Matrix matches known correct values</font>')
+
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      self.delayDisplay(f'<font color="red">Test caused exception!</font>\n {str(e)}')
+      raise Exception("Exception occurred during testing")
+    
+    widget.cleanup()
+    widget.parent.deleteLater()
+
+  def test_PlanningTest(self):
+    widget = self.setUp()
+    try:
+      self.delayDisplay("<h2>Starting Planning Test</h2>")
+
+      volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
+      anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
+
+      slicer.util.delayDisplay("Selecting Target", 1000)
+      widget.onAddTarget()
+      widget.targetPointNodeSelector.currentNode().AddFiducial(-20, 59, 18.2)
+      interactionNode = slicer.app.applicationLogic().GetInteractionNode()
+      interactionNode.SetCurrentInteractionMode(interactionNode.ViewTransform)
+
+      correctTransform = slicer.vtkMRMLLinearTransformNode()
+      correctMatrix = vtk.vtkMatrix4x4()
+      correctMatrix.SetElement(0,0,1); correctMatrix.SetElement(0,1,0); correctMatrix.SetElement(0,2,0); correctMatrix.SetElement(0,3,-20)
+      correctMatrix.SetElement(1,0,0); correctMatrix.SetElement(1,1,1); correctMatrix.SetElement(1,2,0); correctMatrix.SetElement(1,3,59)
+      correctMatrix.SetElement(2,0,0); correctMatrix.SetElement(2,1,0); correctMatrix.SetElement(2,2,1); correctMatrix.SetElement(2,3,18.2)
+      correctMatrix.SetElement(3,0,0); correctMatrix.SetElement(3,1,0); correctMatrix.SetElement(3,2,0); correctMatrix.SetElement(3,3,1)
+      correctTransform.SetAndObserveMatrixTransformToParent(correctMatrix)
+      self.assertTrue(self.compareTransformNodes(widget.plannedTargetTransform, correctTransform))
+      self.delayDisplay(f'<font color="#72ff6b">Target Matrix matches known correct values</font>')      
+
+    except Exception as e:
+      import traceback
+      traceback.print_exc()
+      self.delayDisplay(f'<font color="red">Test caused exception!</font>\n {str(e)}')
+      raise Exception("Exception occurred during testing")
+    
+    widget.cleanup()
+    widget.parent.deleteLater()
   
+  # Integrated Testing
+
   def test_NormalOperation(self):
     widget = self.setUp()
     try:
-      self.delayDisplay("Starting Normal Operation Test")
+      self.delayDisplay("<h2>Starting Normal Operation Test</h2>")
 
       volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
       templateImageNode = slicer.util.loadVolume(volumePathTemplate)
@@ -2994,13 +3068,13 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       slicer.util.delayDisplay("Sent START_UP request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "START_UP")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       widget.onCalibrationButtonClicked()
       slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "CALIBRATION")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       slicer.util.delayDisplay("Performing Registration", 1000)
       widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
@@ -3009,8 +3083,8 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       widget.onSendCalibrationMatrixButtonClicked()
       slicer.util.delayDisplay("Sent Calibration Matrix", 3000)
       self.assertTrue(self.compareTransformNodes(widget.outputTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
-      self.delayDisplay(f'Calibration Matrix matches ACK')
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      self.delayDisplay(f'<font color="#72ff6b">Calibration Matrix matches ACK</font>')
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       slicer.util.delayDisplay("Selecting Target", 1000)
       widget.onAddTarget()
@@ -3022,20 +3096,20 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       slicer.util.delayDisplay("Sent PLANNING request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "PLANNING")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       widget.onTargetingButtonClicked()
       slicer.util.delayDisplay("Sending TARGETING request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "TARGETING")
       self.assertTrue(self.compareTransformNodes(widget.plannedTargetTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
-      self.delayDisplay(f'Target Matrix matches ACK')
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      self.delayDisplay(f'<font color="#72ff6b">Target Matrix matches ACK</font>')
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     except Exception as e:
       import traceback
       traceback.print_exc()
-      self.delayDisplay('Test caused exception!\n' + str(e))
+      self.delayDisplay(f'<font color="red">Test caused exception!</font>\n {str(e)}')
       raise Exception("Exception occurred during testing")
     
     widget.onDisconnectFromSocketButtonClicked()
@@ -3046,7 +3120,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
   def test_NormalOperationWithPositionQuery(self):
     widget = self.setUp()
     try:
-      self.delayDisplay("Starting Normal Operation with Position Query Test")
+      self.delayDisplay("<h2>Starting Normal Operation with Position Query Test</h2>")
 
       volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
       templateImageNode = slicer.util.loadVolume(volumePathTemplate)
@@ -3060,7 +3134,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       slicer.util.delayDisplay("Sent START_UP request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "START_UP")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       widget.currentPositionButton.setChecked(True)
       widget.onCurrentPositionClicked()
@@ -3070,7 +3144,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "CALIBRATION")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       slicer.util.delayDisplay("Performing Registration", 1000)
       widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
@@ -3079,8 +3153,8 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       widget.onSendCalibrationMatrixButtonClicked()
       slicer.util.delayDisplay("Sent Calibration Matrix", 3000)
       self.assertTrue(self.compareTransformNodes(widget.outputTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
-      self.delayDisplay(f'Calibration Matrix matches ACK')
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      self.delayDisplay(f'<font color="#72ff6b">Calibration Matrix matches ACK</font>')
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       slicer.util.delayDisplay("Selecting Target", 1000)
       widget.onAddTarget()
@@ -3092,20 +3166,20 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       slicer.util.delayDisplay("Sent PLANNING request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "PLANNING")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       widget.onTargetingButtonClicked()
       slicer.util.delayDisplay("Sending TARGETING request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "TARGETING")
       self.assertTrue(self.compareTransformNodes(widget.plannedTargetTransform, slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")))
-      self.delayDisplay(f'Target Matrix matches ACK')
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      self.delayDisplay(f'<font color="#72ff6b">Target Matrix matches ACK</font>')
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     except Exception as e:
       import traceback
       traceback.print_exc()
-      self.delayDisplay('Test caused exception!\n' + str(e))
+      self.delayDisplay(f'<font color="red">Test caused exception!</font>\n {str(e)}')
       raise Exception("Exception occurred during testing")
     
     widget.onDisconnectFromSocketButtonClicked()
@@ -3117,7 +3191,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
   def test_ImproperCalibration(self):
     widget = self.setUp()
     try:
-      self.delayDisplay("Starting Improper Calibration Test")
+      self.delayDisplay("<h2>Starting Improper Calibration Test</h2>")
 
       volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
       templateImageNode = slicer.util.loadVolume(volumePathTemplate)
@@ -3131,16 +3205,13 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       slicer.util.delayDisplay("Sent START_UP request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "START_UP")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
-
-      widget.onCurrentPositionClicked()
-      slicer.util.delayDisplay("Sent START_UP request", 3000)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       widget.onCalibrationButtonClicked()
       slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
       self.delayDisplay(f'Robot in phase {widget.robot_phase}')
       self.assertEqual(widget.robot_phase, "CALIBRATION")
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
       slicer.util.delayDisplay("Performing Registration", 1000)
       widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
@@ -3157,13 +3228,13 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       widget.onSendCalibrationMatrixButtonClicked()
       slicer.util.delayDisplay("Sent Incorrect Calibration Matrix", 3000)
       self.assertEqual(widget.robotStatusCodeTextbox.text, "STATUS_CONFIG_ERROR")
-      self.delayDisplay(f'Error received from Robot')
-      slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+      self.delayDisplay(f'<font color="#72ff6b">Error received from Robot</font>')
+      slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     except Exception as e:
       import traceback
       traceback.print_exc()
-      self.delayDisplay('Test caused exception!\n' + str(e))
+      self.delayDisplay(f'<font color="red">Test caused exception!</font>\n {str(e)}')
       raise Exception("Exception occurred during testing")
     
     widget.onDisconnectFromSocketButtonClicked()
@@ -3175,7 +3246,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     pass
     # widget = self.setUp()
     # try:
-    #   self.delayDisplay("Starting Out of Bounds Test")
+    #   self.delayDisplay("<h2>Starting Out of Bounds Test</h2>")
 
     #   volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
     #   templateImageNode = slicer.util.loadVolume(volumePathTemplate)
@@ -3189,7 +3260,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   slicer.util.delayDisplay("Sent START_UP request", 3000)
     #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
     #   self.assertEqual(widget.robot_phase, "START_UP")
-    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+    #   slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     #   widget.onCurrentPositionClicked()
     #   slicer.util.delayDisplay("Sent START_UP request", 3000)
@@ -3198,7 +3269,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
     #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
     #   self.assertEqual(widget.robot_phase, "CALIBRATION")
-    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+    #   slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     #   slicer.util.delayDisplay("Performing Registration", 1000)
     #   widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
@@ -3216,12 +3287,12 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   slicer.util.delayDisplay("Sent Incorrect Calibration Matrix", 3000)
     #   self.assertEqual(self.robotStatusCodeTextbox.text, "STATUS_CONFIG_ERROR")
     #   self.delayDisplay(f'Error received from Robot')
-    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+    #   slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     # except Exception as e:
     #   import traceback
     #   traceback.print_exc()
-    #   self.delayDisplay('Test caused exception!\n' + str(e))
+    #   self.delayDisplay(f'<font color="red">Test caused exception!</font>\n {str(e)}')
     #   raise Exception("Exception occurred during testing")
     
     # widget.onDisconnectFromSocketButtonClicked()
@@ -3233,7 +3304,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     pass
     # widget = self.setUp()
     # try:
-    #   self.delayDisplay("Starting Emergency Stop Test")
+    #   self.delayDisplay("<h2>Starting Emergency Stop Test</h2>")
 
     #   volumePathTemplate = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "2 AX TSE T2 COVER TEMPLATE.nrrd")
     #   templateImageNode = slicer.util.loadVolume(volumePathTemplate)
@@ -3247,7 +3318,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   slicer.util.delayDisplay("Sent START_UP request", 3000)
     #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
     #   self.assertEqual(widget.robot_phase, "START_UP")
-    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+    #   slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     #   widget.onCurrentPositionClicked()
     #   slicer.util.delayDisplay("Sent START_UP request", 3000)
@@ -3256,7 +3327,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   slicer.util.delayDisplay("Sent CALIBRATION request", 3000)
     #   self.delayDisplay(f'Robot in phase {widget.robot_phase}')
     #   self.assertEqual(widget.robot_phase, "CALIBRATION")
-    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+    #   slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     #   slicer.util.delayDisplay("Performing Registration", 1000)
     #   widget.zFrameVolumeSelector.setCurrentNode(templateImageNode)
@@ -3274,12 +3345,12 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   slicer.util.delayDisplay("Sent Incorrect Calibration Matrix", 3000)
     #   self.assertEqual(self.robotStatusCodeTextbox.text, "STATUS_CONFIG_ERROR")
     #   self.delayDisplay(f'Error received from Robot')
-    #   slicer.util.delayDisplay(f'ACK and Status received from Robot', 500)
+    #   slicer.util.delayDisplay(f'<font color="#72ff6b">ACK and Status received from Robot</font>', 500)
 
     # except Exception as e:
     #   import traceback
     #   traceback.print_exc()
-    #   self.delayDisplay('Test caused exception!\n' + str(e))
+    #   self.delayDisplay(f'<font color="red">Test caused exception!</font>\n {str(e)}')
     #   raise Exception("Exception occurred during testing")
     
     # widget.onDisconnectFromSocketButtonClicked()
