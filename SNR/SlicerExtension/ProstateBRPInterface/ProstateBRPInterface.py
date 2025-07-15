@@ -956,19 +956,20 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.phaseTextbox.setStyleSheet("color: rgb(0, 0, 255);") # Sets phase name in blue
 
   def onStatusMessage(self, calledNode):
+    print(calledNode.GetCode(), calledNode.GetSubCode())
     statusMessageStatusString = calledNode.GetName()
     statusMessageError = calledNode.GetErrorName()
     statusMessageCode = calledNode.GetCode()
     self.robotStatusCodeTextbox.setText(self.status_codes[statusMessageCode])
     infoMsg =  "Received STATUS from Robot: ( " + statusMessageStatusString + ", " + self.status_codes[statusMessageCode] + " )"
     self.appendReceivedMessageToCommandLog(infoMsg)
-
     cmdNodes = slicer.util.getNodes("CMD_*")
     if statusMessageStatusString == "CURRENT_STATUS":
       print(f'CURRENT_STATUS: {self.status_codes[statusMessageCode]}')
     elif statusMessageStatusString == "START_UP":
       if statusMessageCode == 1:
         for name, node in cmdNodes.items():
+          print(node.GetText() == "START_UP", node.GetAttribute("ACK"))
           if node.GetText() == "START_UP":
             if node.GetAttribute("ACK") == "1":
               print("Robot sucessfully achieved: ", statusMessageStatusString)
@@ -1131,7 +1132,7 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     # Initialize the IGTLink Slicer-side server component
     self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
     slicer.mrmlScene.AddNode(self.openIGTNode)
-    self.openIGTNode.SetTypeClient(snrHostname, int(snrPort))
+    self.openIGTNode.SetTypeServer(int(snrPort)) #snrHostname,
     self.openIGTNode.Start()
 
     if self.firstServer:
