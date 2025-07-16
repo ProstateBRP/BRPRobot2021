@@ -25,12 +25,13 @@ classdef Robot < handle
     %   - Skips actual motor control
     %   - Allows testing of control algorithms and flow
 
+    
+
     properties (Access = private)
         %% ===================================================================
         %  BASIC ROBOT STATE PROPERTIES
         %% ===================================================================
         current_mode = 'stop'                          % Current robot operation mode
-        is_start_up = false                            % Current robot started up or not
         starting_position                               % Initial robot position
         target_position_robot                           % Target position in robot frame
         is_target_reached                              % Flag indicating if target is reached
@@ -244,7 +245,6 @@ classdef Robot < handle
                 obj.g = [];
                 disp('SIMULATION MODE: Hardware objects set to dummy values')
             end
-            obj.is_start_up = true;
         end
 
         %% ===================================================================
@@ -252,7 +252,8 @@ classdef Robot < handle
         %% ===================================================================
         function robot_not_ready = is_startup(obj)
             %IS_STARTUP Check if the robot has been startup properly
-            robot_not_ready = ~ obj.is_start_up;
+            robot_not_ready = strcmp(obj.current_mode, 'stop');
+
             if robot_not_ready
                 disp('Robot is not ready')
             else
@@ -619,6 +620,7 @@ classdef Robot < handle
             % Initialize control variables
             omega_temp = obj.omega;
             omega = omega_temp;
+            
             obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
 
             %% State estimation using Kalman filter
