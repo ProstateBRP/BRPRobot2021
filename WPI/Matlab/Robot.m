@@ -72,7 +72,7 @@ classdef Robot < handle
         %% ===================================================================
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
-        stop_count_insertion = -66647                  % Insertion stop count threshold
+        stop_count_insertion = -10000%-191841                 % Insertion stop count threshold
         voltage_insertion = 2.2                       % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
@@ -145,6 +145,7 @@ classdef Robot < handle
         Needle_pose_sensor                           % Sensor-based needle position
         Needle_pose_sensor_realtime                  % Real-time needle pose
         Needle_pose_act                              % Actual needle pose for control
+        simulation_start_time                        % Simulation start time for timing calculations
     end
 
     methods
@@ -177,7 +178,7 @@ classdef Robot < handle
 
             %% Initialize computed properties
             obj.theta0 = obj.Needle_pose_ini(6);
-            obj.Time_SimEnd = 10 / obj.Stabbing_Vel;
+            obj.Time_SimEnd = 20 / obj.Stabbing_Vel;
             obj.Freq_ctrl = round(obj.Freq_ctrl_sec / obj.Time_resolution);
             obj.Freq_sens = round(obj.Freq_sens_sec / obj.Time_resolution);
             obj.delay_step_CtrlFreq = round(obj.delay_step_sec / obj.Freq_ctrl_sec);
@@ -228,7 +229,8 @@ classdef Robot < handle
             %% Hardware initialization
             if ~obj.simulation_mode
                 disp('Setup Start: Motor Control')
-                obj.arduino = arduino_comm_init_motor('COM3');
+                obj.arduino = arduino_comm_init_motor("COM3");
+                pause(1)
                 obj.g = init_galil();
                 
                 % Access Relay
@@ -355,6 +357,7 @@ classdef Robot < handle
         function move_to_end(obj)
             %MOVE_TO_END Main insertion function for open loop control
             sim_time = tic;
+            obj.simulation_start_time = sim_time; % Store for timing calculations
             start(obj.t_control);
 
             % Start insertion
@@ -373,7 +376,7 @@ classdef Robot < handle
                 run_time = toc(sim_time);
 
                 if ~obj.simulation_mode
-                    count_current_insertion = record_home_pos(obj.g);
+                    count_current_insertion = record_home_pos(obj.g)
                 else
                     count_current_insertion = 1000;
                 end
@@ -390,13 +393,35 @@ classdef Robot < handle
 
             disp('Endpoint satisfied')
             stop(obj.t_control);
+            delete(obj.t_control);
+
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+            % Motor control execution
+            omega_rpm = radsec2rpm(0);
+            % omega_rpm = 60;
+            omega_rpm = fix(omega_rpm);
+
+            % disp("Current theta: " + num2str(theta))
+
+            if obj.flag_motor == 1 && ~obj.simulation_mode
+                set_rpm_ino(obj.arduino, omega_rpm);
+            elseif obj.simulation_mode
+                disp(['SIMULATION MODE: Would set motor RPM to ', num2str(omega_rpm), ' [rpm]']);
+            end
+            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
             % Stop motors
             if ~obj.simulation_mode
                 stop_insertion(obj.g, direction);
+                delete(obj.arduino)
+                obj.arduino = arduino_comm_init_motor("COM3");
+                delete(obj.arduino)
             else
                 disp("SIMULATION MODE: Would stop insertion with direction " + num2str(direction));
             end
+
+            % Save important control data to data_all.mat
+            obj.save_experiment_data("data_all.mat");
 
             pause(3);
         end
@@ -489,6 +514,87 @@ classdef Robot < handle
         end
 
         %% ===================================================================
+        %  DATA MANAGEMENT
+        %% ===================================================================
+        function save_experiment_data(obj, filename)
+            %SAVE_EXPERIMENT_DATA Save all recorded experimental data to MAT file
+            %   Saves all control variables recorded during the experiment
+            
+            if nargin < 2
+                filename = "data_all.mat";
+            end
+            
+            % Extract control data from object properties
+            omega_All = obj.omega_All;
+            Needle_pose_act_All = obj.Needle_pose_act_All;
+            Needle_pose_sensor_All = obj.Needle_pose_sensor_All;
+            Needle_pose_sensor_realtime_All = obj.Needle_pose_sensor_realtime_All;
+            Target_Pos_local_All = obj.Target_Pos_local_All;
+            Etc_All = obj.Etc_All;
+            Needle_pose_All = obj.Needle_pose_All;
+            Mom_Vec_All = obj.Mom_Vec_All;
+            theta_encoder_All = obj.theta_encoder_All;
+            
+            % Extract timing data
+            Time_Step = obj.Time_Step;
+            Time_num = obj.Time_num;
+            Ctrl_Time = obj.Ctrl_Time;
+            Sensor_Time = obj.Sensor_Time;
+            Update_Time = obj.Update_Time;
+            Sensor_Diff_Time = obj.Sensor_Diff_Time;
+            
+            % Extract sensor data
+            data_sensor_All = obj.data_sensor_All;
+            data_sensor_ctrl_All = obj.data_sensor_ctrl_All;
+            
+            % Extract control parameters
+            Time_resolution = obj.Time_resolution;
+            Freq_ctrl_sec = obj.Freq_ctrl_sec;
+            Freq_sens_sec = obj.Freq_sens_sec;
+            Stabbing_Vel = obj.Stabbing_Vel;
+            omega_max = obj.omega_max;
+            max_curvature = obj.max_curvature;
+            k_max = obj.k_max;
+            CM = obj.CM;
+            rot_dir = obj.rot_dir;
+            
+            % Extract initial conditions
+            Needle_pose_ini = obj.Needle_pose_ini;
+            Target_Pos_local = obj.Target_Pos_local;
+            theta0 = obj.theta0;
+            
+            % Extract flags and configuration
+            flag_ekf = obj.flag_ekf;
+            flag_exp = obj.flag_exp;
+            flag_motor = obj.flag_motor;
+            flag_terminate_z = obj.flag_terminate_z;
+            flag_terminated = obj.flag_terminated;
+            simulation_mode = obj.simulation_mode;
+            
+            % Save all variables to file
+            save(filename, ...
+                'omega_All', 'Needle_pose_act_All', 'Needle_pose_sensor_All', ...
+                'Needle_pose_sensor_realtime_All', 'Target_Pos_local_All', 'Etc_All', ...
+                'Needle_pose_All', 'Mom_Vec_All', 'theta_encoder_All', ...
+                'Time_Step', 'Time_num', 'Ctrl_Time', 'Sensor_Time', 'Update_Time', 'Sensor_Diff_Time', ...
+                'data_sensor_All', 'data_sensor_ctrl_All', ...
+                'Time_resolution', 'Freq_ctrl_sec', 'Freq_sens_sec', 'Stabbing_Vel', ...
+                'omega_max', 'max_curvature', 'k_max', 'CM', 'rot_dir', ...
+                'Needle_pose_ini', 'Target_Pos_local', 'theta0', ...
+                'flag_ekf', 'flag_exp', 'flag_motor', 'flag_terminate_z', 'flag_terminated', 'simulation_mode');
+            
+            fprintf('Experimental data saved to: %s\n', filename);
+            
+            % Display summary of saved data
+            fprintf('Saved data summary:\n');
+            fprintf('  - Control steps: %d\n', obj.Ctrl_Step_num);
+            fprintf('  - Total time steps: %d\n', obj.Time_num);
+            fprintf('  - Control frequency: %.2f Hz\n', 1/obj.Freq_ctrl_sec);
+            fprintf('  - Simulation mode: %s\n', char(string(obj.simulation_mode)));
+            fprintf('  - EKF enabled: %s\n', char(string(obj.flag_ekf)));
+        end
+
+        %% ===================================================================
         %  SYSTEM CONTROL AND SHUTDOWN
         %% ===================================================================
         function obj = stop(obj)
@@ -565,7 +671,7 @@ classdef Robot < handle
                 [obj.rot_dir, obj.theta0] = Update_rot_dir(theta, obj.theta0, obj.rot_dir);
 
                 % Open-loop B-CURV settings
-                alpha = 1;
+                alpha = 0.5;
                 theta_d = pi;
 
                 % Control output calculation
@@ -580,7 +686,7 @@ classdef Robot < handle
 
             %% Motor control execution
             omega_rpm = radsec2rpm(omega);
-            omega_rpm = 60;
+            % omega_rpm = 60;
             omega_rpm = fix(omega_rpm);
 
             disp("Current theta: " + num2str(theta))
@@ -594,8 +700,15 @@ classdef Robot < handle
             %% Data logging
             obj.omega_All(obj.Ctrl_Step_num) = omega;
             obj.Needle_pose_act_All(obj.Ctrl_Step_num, :) = Needle_pose_act;
+            obj.Needle_pose_sensor_realtime_All(obj.Ctrl_Step_num, :) = obj.Needle_pose_sensor_realtime;
+            obj.Target_Pos_local_All(obj.Ctrl_Step_num, :) = obj.Target_Pos_local;
             obj.Etc_All(obj.Ctrl_Step_num, :) = [theta * 180 / pi, theta_d, omega * 180 / pi, omega_hat_pro * obj.omega_max * 180 / pi, k, alpha];
             obj.theta_encoder_All(obj.Ctrl_Step_num) = theta;
+            if ~isempty(obj.simulation_start_time)
+                obj.Ctrl_Time(obj.Ctrl_Step_num) = toc(obj.simulation_start_time);
+            else
+                obj.Ctrl_Time(obj.Ctrl_Step_num) = obj.Ctrl_Step_num * obj.Freq_ctrl_sec;
+            end
         end
     end
 end
