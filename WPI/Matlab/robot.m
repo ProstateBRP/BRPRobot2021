@@ -1,4 +1,4 @@
-classdef robot < handle
+classdef Robot < handle
     %ROBOT - Advanced needle insertion robot controller
     % 
     % This class provides comprehensive control for needle insertion robots
@@ -32,6 +32,7 @@ classdef robot < handle
         %  BASIC ROBOT STATE PROPERTIES
         %% ===================================================================
         current_mode = 'stop'                          % Current robot operation mode
+        is_start_up = false                            % Current robot started up or not
         starting_position                               % Initial robot position
         target_position_robot                           % Target position in robot frame
         is_target_reached                              % Flag indicating if target is reached
@@ -153,10 +154,10 @@ classdef robot < handle
         %% ===================================================================
         %  CONSTRUCTOR AND INITIALIZATION
         %% ===================================================================
-        function obj = robot(varargin)
+        function obj = Robot(varargin)
             %ROBOT Constructor for robot class
-            %   obj = robot() - creates robot in normal mode
-            %   obj = robot('simulation', true) - creates robot in simulation mode
+            %   obj = Robot() - creates robot in normal mode
+            %   obj = Robot('simulation', true) - creates robot in simulation mode
 
             % Parse input arguments
             p = inputParser;
@@ -245,6 +246,7 @@ classdef robot < handle
                 obj.g = [];
                 disp('SIMULATION MODE: Hardware objects set to dummy values')
             end
+            obj.is_start_up = true;
         end
 
         %% ===================================================================
@@ -252,8 +254,7 @@ classdef robot < handle
         %% ===================================================================
         function robot_not_ready = is_startup(obj)
             %IS_STARTUP Check if the robot has been startup properly
-            robot_not_ready = strcmp(obj.current_mode, 'stop');
-
+            robot_not_ready = ~ obj.is_start_up;
             if robot_not_ready
                 disp('Robot is not ready')
             else
@@ -620,7 +621,6 @@ classdef robot < handle
             % Initialize control variables
             omega_temp = obj.omega;
             omega = omega_temp;
-            
             obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
 
             %% State estimation using Kalman filter
