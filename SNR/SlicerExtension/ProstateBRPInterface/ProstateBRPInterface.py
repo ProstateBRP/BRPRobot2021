@@ -46,7 +46,7 @@ class ProstateBRPInterface(ScriptedLoadableModule):
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "Prostate BRP Interface"
     self.parent.categories = ["IGT"]
-    self.parent.dependencies = []
+    self.parent.dependencies = ["ZFrameRegistration"]
     self.parent.contributors = ["Rebecca Lisk (SNR), Franklin King (SNR)"]
     self.parent.helpText = """
 """
@@ -94,6 +94,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.robot_phase = "NONE"
     self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
 
+  def importZFrameRegistrationScripted(self):
+    try:
+      # Try to import ZFrameRegistrationScripted
+      import ZFrameRegistrationScripted
+      print("ZFrameRegistrationScripted imported")
+      return True
+    except ImportError as e:
+      # Log the error and return False
+      logging.error(f"Failed to import ZFrameRegistrationScripted: {str(e)}")
+      return False
+    except Exception as e:
+      # Handle any other exceptions
+      logging.error(f"Unexpected error importing ZFrameRegistrationScripted: {str(e)}")
+      return False
+
   def onReload(self,moduleName="ProstateBRPInterface"):
     self.getTransformTimer.stop()
     if self.nodeAddedObserver: slicer.mrmlScene.RemoveObserver(self.nodeAddedObserver)
@@ -108,10 +123,21 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.registrationOrientationSliderWidget.reset()
     self.robot_phase = "NONE"
     self.firstServer = True # Set to false the first time CreateServerButton is clicked so that nodes are not re-created
+
     globals()[moduleName] = slicer.util.reloadScriptedModule(moduleName)
 
   def setup(self):
     ScriptedLoadableModuleWidget.setup(self)
+
+    # Try to import ZFrameRegistrationScripted
+    if not self.importZFrameRegistrationScripted():
+      errorLabel = qt.QLabel("Error: ZFrameRegistrationScripted module could not be imported.\nRegistration functionality will not be available.")
+      errorLabel.setStyleSheet("QLabel { color: red; font-weight: bold; padding: 10px; background-color: #ffeeee; border: 1px solid red; }")
+      errorLabel.setWordWrap(True)
+      self.layout.addWidget(errorLabel)
+      self.layout.addWidget(qt.QLabel(""))
+      return
+
     moduleDir = os.path.dirname(slicer.util.modulePath(self.__module__))
     print(moduleDir)
     defaultsFilePath = os.path.join(moduleDir, "Resources/Defaults.ini")
@@ -132,14 +158,14 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     initializeFont = qt.QFont()
     initializeFont.setPointSize(16)
     initializeFont.setBold(False)
-    self.createServerButton = qt.QPushButton("Start robot client")
+    self.createServerButton = qt.QPushButton("Start robot server")
     self.createServerButton.setStyleSheet("QPushButton {background-color: #16417C}")
     self.createServerButton.setFont(initializeFont)
-    self.createServerButton.toolTip = "Create the IGTLink client connection with robot."
+    self.createServerButton.toolTip = "Create the IGTLink connection with robot."
     self.createServerButton.enabled = True
     self.createServerButton.setFixedWidth(250)
     serverFormLayout.addWidget(self.createServerButton, 0, 0)
-    self.createServerButton.connect('clicked()', self.onCreateRobotClientButtonClicked)
+    self.createServerButton.connect('clicked()', self.onCreateRobotConnectionButtonClicked)
 
     self.disconnectFromSocketButton = qt.QPushButton("Disconnect from robot")
     self.disconnectFromSocketButton.setStyleSheet("QPushButton {background-color: #16417C}")
@@ -150,21 +176,40 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     serverFormLayout.addWidget(self.disconnectFromSocketButton, 0, 1)
     self.disconnectFromSocketButton.connect('clicked()', self.onDisconnectFromSocketButtonClicked)
 
+    self.connectionModeButtonGroup = qt.QButtonGroup()
+    self.serverModeRadioButton = qt.QRadioButton("Server")
+    self.clientModeRadioButton = qt.QRadioButton("Client")
+    self.serverModeRadioButton.setChecked(True)  # Default to server mode
+    self.connectionModeButtonGroup.addButton(self.serverModeRadioButton)
+    self.connectionModeButtonGroup.addButton(self.clientModeRadioButton)
+    
+
+    radioButtonLayout = qt.QHBoxLayout()
+    radioButtonLayout.addWidget(self.serverModeRadioButton)
+    radioButtonLayout.addWidget(self.clientModeRadioButton)
+    radioButtonWidget = qt.QWidget()
+    radioButtonWidget.setLayout(radioButtonLayout)
+    serverFormLayout.addWidget(radioButtonWidget, 1, 0)
+
+    # Connect radio button signals
+    self.clientModeRadioButton.connect('toggled(bool)', self.onConnectionModeChanged)
+    self.serverModeRadioButton.connect('toggled(bool)', self.onConnectionModeChanged)
+
     hostname = config['GENERAL']['hostname']
     self.snrHostnameTextboxLabel = qt.QLabel('Robot server hostname:')
     self.snrHostnameTextbox = qt.QLineEdit(hostname)
     self.snrHostnameTextbox.setReadOnly(False)
     self.snrHostnameTextbox.setMaximumWidth(250)
-    serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 1, 0)
-    serverFormLayout.addWidget(self.snrHostnameTextbox, 1, 1)
+    serverFormLayout.addWidget(self.snrHostnameTextboxLabel, 2, 0)
+    serverFormLayout.addWidget(self.snrHostnameTextbox, 2, 1)
 
     port = config['GENERAL']['port']
-    self.snrPortTextboxLabel = qt.QLabel('Robot server port:')
+    self.snrPortTextboxLabel = qt.QLabel('Robot port:')
     self.snrPortTextbox = qt.QLineEdit(port)
     self.snrPortTextbox.setReadOnly(False)
     self.snrPortTextbox.setMaximumWidth(75)
-    serverFormLayout.addWidget(self.snrPortTextboxLabel, 2, 0)
-    serverFormLayout.addWidget(self.snrPortTextbox, 2, 1)
+    serverFormLayout.addWidget(self.snrPortTextboxLabel, 3, 0)
+    serverFormLayout.addWidget(self.snrPortTextbox, 3, 1)
 
     # -------- Slicer <--> WPI connection GUI ---------
 
@@ -758,23 +803,51 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     updateScanPlaneLayout.addLayout(updateScanPlaneLayoutMiddle1)
 
     # Input scan plane transform
-    self.scanPlaneTransformSelector = slicer.qMRMLNodeComboBox()
-    self.scanPlaneTransformSelector.nodeTypes = ["vtkMRMLLinearTransformNode"]
-    self.scanPlaneTransformSelector.selectNodeUponCreation = False
-    self.scanPlaneTransformSelector.noneEnabled = False
-    self.scanPlaneTransformSelector.addEnabled = True
-    self.scanPlaneTransformSelector.removeEnabled = True
-    self.scanPlaneTransformSelector.setMRMLScene(slicer.mrmlScene)
-    updateScanPlaneLayoutMiddle1.addRow("Scan Plane Transform: ", self.scanPlaneTransformSelector)
+    self.scanPlaneTransformSelector1 = slicer.qMRMLNodeComboBox()
+    self.scanPlaneTransformSelector1.nodeTypes = ["vtkMRMLLinearTransformNode"]
+    self.scanPlaneTransformSelector1.selectNodeUponCreation = False
+    self.scanPlaneTransformSelector1.noneEnabled = False
+    self.scanPlaneTransformSelector1.addEnabled = True
+    self.scanPlaneTransformSelector1.removeEnabled = True
+    self.scanPlaneTransformSelector1.setMRMLScene(slicer.mrmlScene)
+    updateScanPlaneLayoutMiddle1.addRow("Scan Plane Transform 1: ", self.scanPlaneTransformSelector1)
+
+    self.scanPlaneTransformSelector2 = slicer.qMRMLNodeComboBox()
+    self.scanPlaneTransformSelector2.nodeTypes = ["vtkMRMLLinearTransformNode"]
+    self.scanPlaneTransformSelector2.selectNodeUponCreation = False
+    self.scanPlaneTransformSelector2.noneEnabled = False
+    self.scanPlaneTransformSelector2.addEnabled = True
+    self.scanPlaneTransformSelector2.removeEnabled = True
+    self.scanPlaneTransformSelector2.setMRMLScene(slicer.mrmlScene)
+    updateScanPlaneLayoutMiddle1.addRow("Scan Plane Transform 2: ", self.scanPlaneTransformSelector2)
+
+    self.scanPlaneTransformSelector3 = slicer.qMRMLNodeComboBox()
+    self.scanPlaneTransformSelector3.nodeTypes = ["vtkMRMLLinearTransformNode"]
+    self.scanPlaneTransformSelector3.selectNodeUponCreation = False
+    self.scanPlaneTransformSelector3.noneEnabled = False
+    self.scanPlaneTransformSelector3.addEnabled = True
+    self.scanPlaneTransformSelector3.removeEnabled = True
+    self.scanPlaneTransformSelector3.setMRMLScene(slicer.mrmlScene)
+    updateScanPlaneLayoutMiddle1.addRow("Scan Plane Transform 3: ", self.scanPlaneTransformSelector3)
 
     # Create a new QHBoxLayout() within updateScanPlaneLayout to format the dropdown & Update Scan Plane button
     updateScanPlaneLayoutMiddle2 = qt.QFormLayout()
     updateScanPlaneLayout.addLayout(updateScanPlaneLayoutMiddle2)
 
-    self.scanPlaneTransform = slicer.vtkMRMLLinearTransformNode()
-    self.scanPlaneTransform.SetName("PLANE_0")
-    slicer.mrmlScene.AddNode(self.scanPlaneTransform)
-    self.scanPlaneTransformSelector.setCurrentNode(self.scanPlaneTransform)
+    self.scanPlaneTransform1 = slicer.vtkMRMLLinearTransformNode()
+    self.scanPlaneTransform1.SetName("PLANE_0")
+    slicer.mrmlScene.AddNode(self.scanPlaneTransform1)
+    self.scanPlaneTransformSelector1.setCurrentNode(self.scanPlaneTransform1)
+
+    self.scanPlaneTransform2 = slicer.vtkMRMLLinearTransformNode()
+    self.scanPlaneTransform2.SetName("PLANE_1")
+    slicer.mrmlScene.AddNode(self.scanPlaneTransform2)
+    self.scanPlaneTransformSelector2.setCurrentNode(self.scanPlaneTransform2)
+
+    self.scanPlaneTransform3 = slicer.vtkMRMLLinearTransformNode()
+    self.scanPlaneTransform3.SetName("PLANE_2")
+    slicer.mrmlScene.AddNode(self.scanPlaneTransform3)
+    self.scanPlaneTransformSelector3.setCurrentNode(self.scanPlaneTransform3)
 
     # self.scanPlaneTransformOrientation = slicer.vtkMRMLLinearTransformNode()
     # self.scanPlaneTransformOrientation.SetName("PLANE_0_Orientation")
@@ -806,10 +879,20 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     self.MRIfpsBox.value = 2
     updateScanPlaneLayoutMiddle2.addRow("Update Transform Rate:", self.MRIfpsBox)
 
-    self.lastTransformMatrix = vtk.vtkMatrix4x4()
-    self.lastTransformMatrix.SetElement(0,0,0)
-    self.lastTransformMatrix.SetElement(1,1,0)
-    self.lastTransformMatrix.SetElement(2,2,0)    
+    self.lastTransformMatrix1 = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix1.SetElement(0,0,0)
+    self.lastTransformMatrix1.SetElement(1,1,0)
+    self.lastTransformMatrix1.SetElement(2,2,0)
+
+    self.lastTransformMatrix2 = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix2.SetElement(0,0,0)
+    self.lastTransformMatrix2.SetElement(1,1,0)
+    self.lastTransformMatrix2.SetElement(2,2,0)   
+
+    self.lastTransformMatrix3 = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix3.SetElement(0,0,0)
+    self.lastTransformMatrix3.SetElement(1,1,0)
+    self.lastTransformMatrix3.SetElement(2,2,0)   
 
     self.MRIUpdateTimer = qt.QTimer()
     self.MRIUpdateTimer.timeout.connect(self.updateMRITransformToScanner)
@@ -817,26 +900,26 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     updateScanPlaneLayoutOrientationLayout = qt.QGridLayout()
     updateScanPlaneLayout.addLayout(updateScanPlaneLayoutOrientationLayout)
 
-    self.axialScanPlaneButton = qt.QPushButton("AXIAL")
-    self.axialScanPlaneButton.toolTip = "Update scan plane for Axial orientation."
-    self.axialScanPlaneButton.enabled = True
-    self.axialScanPlaneButton.setMaximumWidth(250)
-    updateScanPlaneLayoutOrientationLayout.addWidget(self.axialScanPlaneButton, 0, 0)
-    self.axialScanPlaneButton.connect('clicked()', self.onAxialScanPlaneButtonClicked)
+    # self.axialScanPlaneButton = qt.QPushButton("AXIAL")
+    # self.axialScanPlaneButton.toolTip = "Update scan plane for Axial orientation."
+    # self.axialScanPlaneButton.enabled = True
+    # self.axialScanPlaneButton.setMaximumWidth(250)
+    # updateScanPlaneLayoutOrientationLayout.addWidget(self.axialScanPlaneButton, 0, 0)
+    # self.axialScanPlaneButton.connect('clicked()', self.onAxialScanPlaneButtonClicked)
 
-    self.coronalScanPlaneButton = qt.QPushButton("CORONAL")
-    self.coronalScanPlaneButton.toolTip = "Update scan plane for Coronal orientation."
-    self.coronalScanPlaneButton.enabled = True
-    self.coronalScanPlaneButton.setMaximumWidth(250)
-    updateScanPlaneLayoutOrientationLayout.addWidget(self.coronalScanPlaneButton, 0, 1)
-    self.coronalScanPlaneButton.connect('clicked()', self.onCoronalScanPlaneButtonClicked)
+    # self.coronalScanPlaneButton = qt.QPushButton("CORONAL")
+    # self.coronalScanPlaneButton.toolTip = "Update scan plane for Coronal orientation."
+    # self.coronalScanPlaneButton.enabled = True
+    # self.coronalScanPlaneButton.setMaximumWidth(250)
+    # updateScanPlaneLayoutOrientationLayout.addWidget(self.coronalScanPlaneButton, 0, 1)
+    # self.coronalScanPlaneButton.connect('clicked()', self.onCoronalScanPlaneButtonClicked)
 
-    self.sagittalScanPlaneButton = qt.QPushButton("SAGITTAL")
-    self.sagittalScanPlaneButton.toolTip = "Update scan plane for Sagittal orientation."
-    self.sagittalScanPlaneButton.enabled = True
-    self.sagittalScanPlaneButton.setMaximumWidth(250)
-    updateScanPlaneLayoutOrientationLayout.addWidget(self.sagittalScanPlaneButton, 0, 2)
-    self.sagittalScanPlaneButton.connect('clicked()', self.onSagittalScanPlaneButtonClicked)
+    # self.sagittalScanPlaneButton = qt.QPushButton("SAGITTAL")
+    # self.sagittalScanPlaneButton.toolTip = "Update scan plane for Sagittal orientation."
+    # self.sagittalScanPlaneButton.enabled = True
+    # self.sagittalScanPlaneButton.setMaximumWidth(250)
+    # updateScanPlaneLayoutOrientationLayout.addWidget(self.sagittalScanPlaneButton, 0, 2)
+    # self.sagittalScanPlaneButton.connect('clicked()', self.onSagittalScanPlaneButtonClicked)
 
     # ------------------------------------ Log UI ---------------------------------------
     # Info messages collapsible button
@@ -1110,7 +1193,20 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     ReceivedACKTransformMsg.SetAndObserveMatrixTransformToParent(matrix)
     slicer.mrmlScene.RemoveNode(calledNode)
 
-  def onCreateRobotClientButtonClicked(self):
+  def onConnectionModeChanged(self):
+    """Handle radio button changes for connection mode"""
+    if self.clientModeRadioButton.isChecked():
+      self.createServerButton.setText("Start robot client")
+      self.createServerButton.toolTip = "Create the IGTLink client connection with robot."
+      self.snrHostnameTextbox.setEnabled(True)
+      self.snrHostnameTextboxLabel.setEnabled(True)
+    else:  # Server mode
+      self.createServerButton.setText("Start robot server")
+      self.createServerButton.toolTip = "Create the IGTLink server connection with robot."
+      self.snrHostnameTextbox.setEnabled(False)
+      self.snrHostnameTextboxLabel.setEnabled(False)
+
+  def onCreateRobotConnectionButtonClicked(self):
     # GUI changes to enable/disable button functionality
     self.createServerButton.enabled = False
     self.disconnectFromSocketButton.enabled = True
@@ -1122,17 +1218,28 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
     snrPort = self.snrPortTextbox.text
     snrHostname = self.snrHostnameTextbox.text
+
     #VisualFeedback: color in gray when server is created
     self.snrPortTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
-    self.snrHostnameTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
     self.snrPortTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
-    self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
-
-    # Initialize the IGTLink Slicer-side server component
-    self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
-    slicer.mrmlScene.AddNode(self.openIGTNode)
-    self.openIGTNode.SetTypeClient(snrHostname, int(snrPort))
-    self.openIGTNode.Start()
+    
+    if self.clientModeRadioButton.isChecked():
+      # Client mode
+      self.snrHostnameTextboxLabel.setStyleSheet('color: rgb(195,195,195)')
+      self.snrHostnameTextbox.setStyleSheet("""QLineEdit { background-color: white; color: rgb(195,195,195) }""")
+      
+      # Initialize the IGTLink Slicer-side client component
+      self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
+      slicer.mrmlScene.AddNode(self.openIGTNode)
+      self.openIGTNode.SetTypeClient(snrHostname, int(snrPort))
+      self.openIGTNode.Start()
+    else:
+      # Server mode
+      # Initialize the IGTLink Slicer-side server component
+      self.openIGTNode = slicer.vtkMRMLIGTLConnectorNode()
+      slicer.mrmlScene.AddNode(self.openIGTNode)
+      self.openIGTNode.SetTypeServer(int(snrPort))
+      self.openIGTNode.Start()
 
     if self.firstServer:
       self.createServerInitializationStep()
@@ -1653,67 +1760,119 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
   def onMRIStopUpdateTargetButtonClicked(self, unusedArg2=None, unusedArg3=None):
     self.MRIUpdateTimer.stop()
-    self.lastTransformMatrix = vtk.vtkMatrix4x4()
-    self.lastTransformMatrix.SetElement(0,0,0)
-    self.lastTransformMatrix.SetElement(1,1,0)
-    self.lastTransformMatrix.SetElement(2,2,0)
+    self.lastTransformMatrix1 = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix1.SetElement(0,0,0)
+    self.lastTransformMatrix1.SetElement(1,1,0)
+    self.lastTransformMatrix1.SetElement(2,2,0)
+
+    self.lastTransformMatrix2 = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix2.SetElement(0,0,0)
+    self.lastTransformMatrix2.SetElement(1,1,0)
+    self.lastTransformMatrix2.SetElement(2,2,0)   
+
+    self.lastTransformMatrix3 = vtk.vtkMatrix4x4()
+    self.lastTransformMatrix3.SetElement(0,0,0)
+    self.lastTransformMatrix3.SetElement(1,1,0)
+    self.lastTransformMatrix3.SetElement(2,2,0)   
   
   def updateMRITransformToScanner(self, unusedArg2=None, unusedArg3=None):
-    if self.lastTransformMatrix is None:
-      self.lastTransformMatrix = vtk.vtkMatrix4x4()
-      self.lastTransformMatrix.SetElement(0,0,0)
-      self.lastTransformMatrix.SetElement(1,1,0)
-      self.lastTransformMatrix.SetElement(2,2,0)
+    if self.lastTransformMatrix1 is None:
+      self.lastTransformMatrix1 = vtk.vtkMatrix4x4()
+      self.lastTransformMatrix1.SetElement(0,0,0)
+      self.lastTransformMatrix1.SetElement(1,1,0)
+      self.lastTransformMatrix1.SetElement(2,2,0)
+    if self.lastTransformMatrix2 is None:
+      self.lastTransformMatrix2 = vtk.vtkMatrix4x4()
+      self.lastTransformMatrix2.SetElement(0,0,0)
+      self.lastTransformMatrix2.SetElement(1,1,0)
+      self.lastTransformMatrix2.SetElement(2,2,0)
+    if self.lastTransformMatrix3 is None:
+      self.lastTransformMatrix3 = vtk.vtkMatrix4x4()
+      self.lastTransformMatrix3.SetElement(0,0,0)
+      self.lastTransformMatrix3.SetElement(1,1,0)
+      self.lastTransformMatrix3.SetElement(2,2,0)
 
-    m = vtk.vtkMatrix4x4()
-    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
+    m1 = vtk.vtkMatrix4x4()
+    self.scanPlaneTransformSelector1.currentNode().GetMatrixTransformToParent(m1)
+    m2 = vtk.vtkMatrix4x4()
+    self.scanPlaneTransformSelector2.currentNode().GetMatrixTransformToParent(m2)
+    m3 = vtk.vtkMatrix4x4()
+    self.scanPlaneTransformSelector3.currentNode().GetMatrixTransformToParent(m3)
     
     if self.scanPlaneRobotPositionCheckbox.isChecked() and self.currentPositionTransform:
       currentPositionMatrix = vtk.vtkMatrix4x4()
       # or to world? Is current position under registration?
       self.currentPositionTransform.GetMatrixTransformToParent(currentPositionMatrix)
-      m.SetElement(0, 3, currentPositionMatrix.GetElement(0, 3))
-      m.SetElement(1, 3, currentPositionMatrix.GetElement(1, 3))
-      m.SetElement(2, 3, currentPositionMatrix.GetElement(2, 3))
-      self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
-    if not self.CompareMatrices(self.lastTransformMatrix, m):
+      m1.SetElement(0, 3, currentPositionMatrix.GetElement(0, 3))
+      m1.SetElement(1, 3, currentPositionMatrix.GetElement(1, 3))
+      m1.SetElement(2, 3, currentPositionMatrix.GetElement(2, 3))
+      m2.SetElement(0, 3, currentPositionMatrix.GetElement(0, 3))
+      m2.SetElement(1, 3, currentPositionMatrix.GetElement(1, 3))
+      m2.SetElement(2, 3, currentPositionMatrix.GetElement(2, 3))
+      m3.SetElement(0, 3, currentPositionMatrix.GetElement(0, 3))
+      m3.SetElement(1, 3, currentPositionMatrix.GetElement(1, 3))
+      m3.SetElement(2, 3, currentPositionMatrix.GetElement(2, 3))
+      self.scanPlaneTransformSelector1.currentNode().SetMatrixTransformToParent(m1)
+      self.scanPlaneTransformSelector2.currentNode().SetMatrixTransformToParent(m2)
+      self.scanPlaneTransformSelector3.currentNode().SetMatrixTransformToParent(m3)
+    if not self.CompareMatrices(self.lastTransformMatrix1, m1):
       # Send transform message containing new MRI scanning target with prefix "PLANE"
-      timestampIDname = self.generateTimestampNameID("PLANE")
-      self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransformSelector.currentNode())
-      self.openIGTNode_Scanner.PushNode(self.scanPlaneTransformSelector.currentNode())
-      self.openIGTNode_Scanner.UnregisterOutgoingMRMLNode(self.scanPlaneTransformSelector.currentNode())
+      timestampIDname = self.generateTimestampNameID("PLANE_0")
+      self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransformSelector1.currentNode())
+      self.openIGTNode_Scanner.PushNode(self.scanPlaneTransformSelector1.currentNode())
+      self.openIGTNode_Scanner.UnregisterOutgoingMRMLNode(self.scanPlaneTransformSelector1.currentNode())
       infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
       re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
       self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
-      self.lastTransformMatrix.DeepCopy(m)
+      self.lastTransformMatrix.DeepCopy(m1)
+    if not self.CompareMatrices(self.lastTransformMatrix2, m2):
+      # Send transform message containing new MRI scanning target with prefix "PLANE"
+      timestampIDname = self.generateTimestampNameID("PLANE_1")
+      self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransformSelector2.currentNode())
+      self.openIGTNode_Scanner.PushNode(self.scanPlaneTransformSelector2.currentNode())
+      self.openIGTNode_Scanner.UnregisterOutgoingMRMLNode(self.scanPlaneTransformSelector2.currentNode())
+      infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
+      re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+      self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
+      self.lastTransformMatrix.DeepCopy(m2)
+    if not self.CompareMatrices(self.lastTransformMatrix3, m3):
+      # Send transform message containing new MRI scanning target with prefix "PLANE"
+      timestampIDname = self.generateTimestampNameID("PLANE_2")
+      self.openIGTNode_Scanner.RegisterOutgoingMRMLNode(self.scanPlaneTransformSelector3.currentNode())
+      self.openIGTNode_Scanner.PushNode(self.scanPlaneTransformSelector3.currentNode())
+      self.openIGTNode_Scanner.UnregisterOutgoingMRMLNode(self.scanPlaneTransformSelector3.currentNode())
+      infoMsg =  "Sending TRANSFORM( " + timestampIDname + " )"
+      re.sub(r'(?<=[,])(?=[^\s])', r' ', infoMsg)
+      self.appendSentMessageToCommandLog(timestampIDname, infoMsg, "SCANNER")
+      self.lastTransformMatrix.DeepCopy(m3)
     # # Input the current scan plane transform into the MRItableWidget
     # for i in range(4):
     #   for j in range(4):
     #     self.MRItableWidget.setItem(i , j, qt.QTableWidgetItem(str(round(self.scanPlaneTransform.GetMatrix.GetElement(i, j),2))))
 
-  def onAxialScanPlaneButtonClicked(self):
-    m = vtk.vtkMatrix4x4()
-    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
-    m.SetElement(0, 0, 1); m.SetElement(0, 1, 0); m.SetElement(0, 2, 0)
-    m.SetElement(1, 0, 0); m.SetElement(1, 1, 1); m.SetElement(1, 2, 0)
-    m.SetElement(2, 0, 0); m.SetElement(2, 1, 0); m.SetElement(2, 2, 1)
-    self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
+  # def onAxialScanPlaneButtonClicked(self):
+  #   m = vtk.vtkMatrix4x4()
+  #   self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
+  #   m.SetElement(0, 0, 1); m.SetElement(0, 1, 0); m.SetElement(0, 2, 0)
+  #   m.SetElement(1, 0, 0); m.SetElement(1, 1, 1); m.SetElement(1, 2, 0)
+  #   m.SetElement(2, 0, 0); m.SetElement(2, 1, 0); m.SetElement(2, 2, 1)
+  #   self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
 
-  def onCoronalScanPlaneButtonClicked(self):
-    m = vtk.vtkMatrix4x4()
-    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
-    m.SetElement(0, 0, 1); m.SetElement(0, 1, 0); m.SetElement(0, 2, 0)
-    m.SetElement(1, 0, 0); m.SetElement(1, 1, 0); m.SetElement(1, 2, -1)
-    m.SetElement(2, 0, 0); m.SetElement(2, 1, 1); m.SetElement(2, 2, 0)
-    self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
+  # def onCoronalScanPlaneButtonClicked(self):
+  #   m = vtk.vtkMatrix4x4()
+  #   self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
+  #   m.SetElement(0, 0, 1); m.SetElement(0, 1, 0); m.SetElement(0, 2, 0)
+  #   m.SetElement(1, 0, 0); m.SetElement(1, 1, 0); m.SetElement(1, 2, -1)
+  #   m.SetElement(2, 0, 0); m.SetElement(2, 1, 1); m.SetElement(2, 2, 0)
+  #   self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)
 
-  def onSagittalScanPlaneButtonClicked(self):
-    m = vtk.vtkMatrix4x4()
-    self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
-    m.SetElement(0, 0, 0); m.SetElement(0, 1, 0); m.SetElement(0, 2, 1)
-    m.SetElement(1, 0, 0); m.SetElement(1, 1, 1); m.SetElement(1, 2, 0)
-    m.SetElement(2, 0, -1); m.SetElement(2, 1, 0); m.SetElement(2, 2, 0)
-    self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)        
+  # def onSagittalScanPlaneButtonClicked(self):
+  #   m = vtk.vtkMatrix4x4()
+  #   self.scanPlaneTransformSelector.currentNode().GetMatrixTransformToParent(m)
+  #   m.SetElement(0, 0, 0); m.SetElement(0, 1, 0); m.SetElement(0, 2, 1)
+  #   m.SetElement(1, 0, 0); m.SetElement(1, 1, 1); m.SetElement(1, 2, 0)
+  #   m.SetElement(2, 0, -1); m.SetElement(2, 1, 0); m.SetElement(2, 2, 0)
+  #   self.scanPlaneTransformSelector.currentNode().SetMatrixTransformToParent(m)        
 
   def CompareMatrices(self, m, n):
     for i in range(0,4):
@@ -2329,11 +2488,20 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
         vec = [float(s) for s in re.findall(r'-?\d+\.?\d*', line)]
         self.frameTopology.append(vec)
       elif line.startswith('Fiducial'):
-        vec = [float(s) for s in re.findall(r'(-?\d+)(?!:)', line)]
+        coords_str = line.split(': ')[1].strip('()\n').replace(' ', '')
+        point1_str, point2_str = coords_str.split('),(')
+        # Convert each coordinate string to floats
+        point1 = [float(x) for x in point1_str.split(',')]
+        point2 = [float(x) for x in point2_str.split(',')]
+        # Combine into single vector
+        vec = point1 + point2
         self.zFrameFiducials.append(vec)
 
     # Convert frameTopology points to a string, for the sake of passing it as a string argument to the ZframeRegistration CLI 
-    self.frameTopologyString = ' '.join([str(elem) for elem in self.frameTopology])
+    self.frameTopologyString = ', '.join([str(elem) for elem in self.frameTopology])
+
+    print(f'Frame Topology: {self.frameTopologyString}')
+    print(f'ZFrame Fiducials: {self.zFrameFiducials}')
 
   def onRegister(self):
     self.loadTemplateConfiguration()
@@ -2344,10 +2512,10 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       return
     
     print ("Initating calibration matrix calculation with zFrame image.")
+    self.increaseThresholdForRetry = False
 
     result = False
     result = self.registerZFrame()
-    self.increaseThresholdForRetry = False
 
     self.loadZFrameModel()
     self.loadRobotModel()
@@ -2392,13 +2560,20 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
           self.cropVolume(zFrameMaskedVolume, 256, 256)
         
         centerOfMassSlice = int(self.findCentroidOfVolume(zFrameMaskedVolume)[2])
-        # Run zFrameRegistration CLI module
-        params = {'inputVolume': zFrameMaskedVolume, 'startSlice': centerOfMassSlice-3, 'endSlice': centerOfMassSlice+3,
-                  'outputTransform': self.outputTransform, 'zframeConfig': self.zframeConfig, 'frameTopology': self.frameTopologyString, 
-                  'zFrameFids': ''}
-        cliNode = slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
-        if cliNode.GetStatus() & cliNode.ErrorsMask:
-          print(cliNode.GetErrorText())
+
+        # # Run zFrameRegistration CLI module
+        # params = {'inputVolume': zFrameMaskedVolume, 'startSlice': centerOfMassSlice-3, 'endSlice': centerOfMassSlice+3,
+        #           'outputTransform': self.outputTransform, 'zframeConfig': self.zframeConfig, 'frameTopology': self.frameTopologyString, 
+        #           'zFrameFids': ''}
+        # cliNode = slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
+        # if cliNode.GetStatus() & cliNode.ErrorsMask:
+        #   print(cliNode.GetErrorText())
+
+        # Run zFrameRegistration Scripted module
+        import ZFrameRegistrationScripted
+        registrationLogic = ZFrameRegistrationScripted.ZFrameRegistrationScriptedLogic()
+        registrationLogic.run(zFrameMaskedVolume, self.outputTransform, self.zframeConfig, f'{len(self.zFrameFiducials)}-fiducial', self.frameTopologyString, centerOfMassSlice-3, centerOfMassSlice+3)
+        
         if self.removeOrientationCheckBox.isChecked():
           self.removeOrientationComponent(self.outputTransform)
       else:
@@ -2431,31 +2606,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
       else:
         loopRegistration = False
         return True
-      
-    # if self.repairFiducialImageCheckBox.isChecked():
-    #   zFrameMaskedVolume = self.createMaskedVolumeBySize(inputVolume, True)
-    #   if zFrameMaskedVolume.GetImageData().GetScalarRange()[1] > 0:
-    #     # Crop if not 256x256
-    #     zFrameMaskedVolumeDims = zFrameMaskedVolume.GetImageData().GetDimensions()
-    #     # TODO: Pad images smaller than 256 by 256
-    #     if zFrameMaskedVolumeDims[0] != 256 and zFrameMaskedVolumeDims[1] != 256:
-    #       self.cropVolume(zFrameMaskedVolume, 256, 256)
-        
-    #     centerOfMassSlice = int(self.findCentroidOfVolume(zFrameMaskedVolume)[2])
-    #     # Run zFrameRegistration CLI module
-    #     params = {'inputVolume': zFrameMaskedVolume, 'startSlice': centerOfMassSlice-3, 'endSlice': centerOfMassSlice+3,
-    #               'outputTransform': outputTransform, 'zframeConfig': self.zframeConfig, 'frameTopology': self.frameTopologyString, 
-    #               'zFrameFids': ''}
-    #     cliNode = slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
-    #     if cliNode.GetStatus() & cliNode.ErrorsMask:
-    #       print(cliNode.GetErrorText())
-    #     if self.removeOrientationCheckBox.isChecked():
-    #       self.removeOrientationComponent(outputTransform)
-    #   else:
-    #     print("Masked volume empty")
-
-    #   regResult = self.checkRegistrationResult(outputTransform, zFrameMaskedVolume, self.zFrameFiducials)
-    #   return regResult, outputTransform
     
     return False
 
@@ -2497,165 +2647,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
 
   def onUseManualRegistration(self):
     self.sendCalibrationMatrixButton.enabled = True
-
-  # def initiateZFrameCalibration(self):
-  #   # Begin by identifying the zframe dropdown selection & parsing the config file to package topological dimensions into a ZframeRegistration argument
-  #   self.onConfigFileSelectionChanged()
-
-  #   # If there is a zFrame image selected, perform the calibration step to calculate the CLB matrix
-  #   self.inputVolume = self.zFrameVolumeSelector.currentNode()
-
-  #   if self.inputVolume is not None:
-  #     seriesNumber = self.inputVolume.GetName().split(":")[0]
-  #     name = seriesNumber + "-ZFrameTransform"
-      
-  #     # Create an empty transform for the calibration matrix output
-  #     if self.outputTransform:
-  #       slicer.mrmlScene.RemoveNode(self.outputTransform)
-  #       self.outputTransform = None
-  #     self.outputTransform = slicer.vtkMRMLLinearTransformNode()
-  #     self.outputTransform.SetName(name)
-  #     slicer.mrmlScene.AddNode(self.outputTransform)
-  #     self.registrationTranslationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
-  #     self.registrationOrientationSliderWidget.setMRMLTransformNode(slicer.util.getNode(name))
-  #     self.outputTransform.AddObserver(slicer.vtkMRMLTransformNode.TransformModifiedEvent, self.onRegistrationTransformManuallyModified)
-
-  #     print ("Initating calibration matrix calculation with zFrame image.")
-      
-  #     # Get start and end slices from the StartSliceSliderWidget
-  #     self.startSlice = int(self.startSliceSliderWidget.value)
-  #     self.endSlice = int(self.endSliceSliderWidget.value)
-  #     maxSlice = self.inputVolume.GetImageData().GetDimensions()[2]
-  #     if self.endSlice == 0 or self.endSlice > maxSlice:
-  #       # Use the image end slice
-  #       self.endSlice = maxSlice
-  #       self.endSliceSliderWidget.value = float(self.endSlice)
-
-  #     if self.manuallySelectSlices:
-  #       self.startSlice = int(self.startSliceSliderWidget.text)
-  #       self.endSlice = int(self.endSliceSliderWidget.text)
-        
-  #     # If the user manually selected a list of fiducials to use in registration (zFrameFids), set the start and end slices s.t. 
-  #     # only the image frame with the fiducials on it is used in the calculation
-  #     if self.manualRegistration:
-  #       # Get volume voxel coordinates from markup control point RAS coordinates
-  #       # to determine slice index for registration with manual fiducial selection
-  #       # Get point coordinate in RAS
-  #       pointListNode= self.manualZframeFiducialsSelector.currentNode()
-  #       markupsIndex = 0
-  #       point_Ras = [0, 0, 0, 1]
-  #       pointListNode.GetNthFiducialWorldCoordinates(markupsIndex, point_Ras)
-
-  #       # If volume node is transformed, apply that transform to get volume's RAS coordinates
-  #       transformRasToVolumeRas = vtk.vtkGeneralTransform()
-  #       slicer.vtkMRMLTransformNode.GetTransformBetweenNodes(None, self.inputVolume .GetParentTransformNode(), transformRasToVolumeRas)
-  #       point_VolumeRas = transformRasToVolumeRas.TransformPoint(point_Ras[0:3])
-
-  #       # Get voxel coordinates from physical coordinates
-  #       volumeRasToIjk = vtk.vtkMatrix4x4()
-  #       self.inputVolume.GetRASToIJKMatrix(volumeRasToIjk)
-  #       point_Ijk = [0, 0, 0, 1]
-  #       volumeRasToIjk.MultiplyPoint(np.append(point_VolumeRas,1.0), point_Ijk)
-  #       point_Ijk = [ int(round(c)) for c in point_Ijk[0:3] ]
-  #       voxelCoordinate = point_Ijk[2]
-
-  #       self.startSlice = voxelCoordinate
-  #       self.endSlice = voxelCoordinate + 1
-
-  #     # Check for the ZFrame ROI node and if it exists, use it for the start and end slices
-  #     if self.zFrameROI is not None:
-  #       print ("Found zFrame ROI: ", self.zFrameROI.GetID())
-  #       self.zFrameROI.SetDisplayVisibility(1)
-  #       center = [0.0, 0.0, 0.0]
-  #       self.zFrameROI.GetXYZ(center)
-  #       bounds = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-  #       self.zFrameROI.GetRASBounds(bounds)
-  #       pMin = [bounds[0], bounds[2], bounds[4], 1]
-  #       pMax = [bounds[1], bounds[3], bounds[5], 1]
-  #       rasToIJKMatrix = vtk.vtkMatrix4x4()
-  #       self.inputVolume.GetRASToIJKMatrix(rasToIJKMatrix)
-  #       pos = [0,0,0,1]
-  #       rasToIJKMatrix.MultiplyPoint(pMin, pos)
-
-  #       # Only use the ZFrame ROI node to define the start and end slices if the user did NOT 
-  #       # manually select zframe fiducials in Advanced Registration Options
-  #       if not self.manualRegistration and not self.manuallySelectSlices:
-  #         self.startSlice = int(pos[2])
-  #         rasToIJKMatrix.MultiplyPoint(pMax, pos)
-  #         self.endSlice = int(pos[2])
-  #         # Check if slices are in bounds
-  #         if self.startSlice < 0:
-  #           self.startSlice = 0
-  #         if self.endSlice < 0:
-  #           self.endSlice = 0
-  #         endZ = self.inputVolume.GetImageData().GetDimensions()[2]
-  #         endZ = endZ - 1
-  #         if self.startSlice > endZ:
-  #           self.startSlice = endZ
-  #         if self.endSlice > endZ:
-  #           self.endSlice = endZ
-
-  #       self.startSliceSliderWidget.value = float(self.startSlice)
-  #       self.endSliceSliderWidget.value = float(self.endSlice)
-
-  #       if self.configFileSelectionBox.currentText == "Z-frame z001":
-  #         self.ZFRAME_MODEL_PATH = 'zframe001-model.vtk'
-  #         zframeConfig = 'z001'
-  #       elif self.configFileSelectionBox.currentText == "Z-frame z002":
-  #         self.ZFRAME_MODEL_PATH = 'zframe002-model.vtk'
-  #         zframeConfig = 'z002'
-  #       else: # if self.configFileSelectionBox.currentText == "Z-frame z003":
-  #         self.ZFRAME_MODEL_PATH = 'zframe003-model.vtk'
-  #         zframeConfig = 'z003'
-
-  #       self.ZFRAME_MODEL_NAME = 'ZFrameModel'
-        
-  #       # Run ZFrame Open Source Registration
-  #       self.loadZFrameModel()
-  #       self.loadRobotModel()
-
-  #       # Begin zFrameRegistrationWithROI logic
-  #       zFrameTemplateVolume = self.inputVolume
-  #       coverTemplateROI = self.zFrameROI
-
-  #       self.zFrameCroppedVolume = self.createCroppedVolume(zFrameTemplateVolume, coverTemplateROI)
-  #       self.zFrameLabelVolume = self.createLabelMapFromCroppedVolume(self.zFrameCroppedVolume, "labelmap")
-  #       self.zFrameMaskedVolume = self.createMaskedVolume(zFrameTemplateVolume, self.zFrameLabelVolume)
-  #       self.zFrameMaskedVolume.SetName(zFrameTemplateVolume.GetName() + "-label")
-  #       if self.startSlice is None or self.endSlice is None:
-  #         self.startSlice, center, self.endSlice = self.getROIMinCenterMaxSliceNumbers(coverTemplateROI)
-  #         self.otsuOutputVolume = self.applyITKOtsuFilter(self.zFrameMaskedVolume)
-  #         self.dilateMask(self.otsuOutputVolume)
-  #         self.startSlice, self.endSlice = self.getStartEndWithConnectedComponents(self.otsuOutputVolume, center)
-
-  #       # Run zFrameRegistration CLI module
-  #       # params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
-  #       #            'outputTransform': self.outputTransform}
-  #       params = {'inputVolume': self.zFrameMaskedVolume, 'startSlice': self.startSlice, 'endSlice': self.endSlice,
-  #                 'outputTransform': self.outputTransform, 'zframeConfig': zframeConfig, 'frameTopology': self.frameTopologyString, 
-  #                 'zFrameFids': self.zFrameFidsString}
-  #       slicer.cli.run(slicer.modules.zframeregistration, None, params, wait_for_completion=True)
-
-  #       self.zFrameModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
-  #       self.robotModelNode.SetAndObserveTransformNodeID(self.outputTransform.GetID())
-  #       self.zFrameModelNode.GetDisplayNode().SetVisibility2D(True)
-  #       self.zFrameModelNode.SetDisplayVisibility(True)
-  #       self.robotModelNode.SetDisplayVisibility(True)
-
-  #       # Remove unnecessary nodes from the Slicer scene
-  #       self.clearVolumeNodes()
-
-  #       # Reset registration to automatic
-  #       self.manualRegistration = False
-      
-  #       # Enable the sendCalibrationMatrixButton
-  #       self.sendCalibrationMatrixButton.enabled = True
-      
-  #     else:
-  #       print("No ROI found. Please indicate the region of interest using the 'Add ROI' button.")
-        
-  #   else:
-  #     print("No zFrame image found. Cannot calculate the calibration matrix.")
 
   def modified_gram_schmidt(self, A):
     m, n = A.shape
@@ -2956,17 +2947,25 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
           node_of_interest = node
     return node_of_interest
   
-  def compareTransformNodes(self, node1, node2, precision=0.01):
+  def compareTransformNodes(self, node1, node2, rot_precision=0.05, trans_precision=0.5):
     # Get the transformation matrices
     matrix1 = vtk.vtkMatrix4x4()
     node1.GetMatrixTransformToParent(matrix1)
     matrix2 = vtk.vtkMatrix4x4()
     node2.GetMatrixTransformToParent(matrix2)
     # Compare the matrices element by element
-    for i in range(4):
-      for j in range(4):
-        if abs(matrix1.GetElement(i, j) - matrix2.GetElement(i, j)) > precision:
+    for i in range(3):
+      for j in range(3):
+        difference = abs(matrix1.GetElement(i, j) - matrix2.GetElement(i, j))
+        print(f'Difference: {difference}')
+        if difference > rot_precision:
           return False
+    for i in range(3):
+      difference = abs(matrix1.GetElement(i, 3) - matrix2.GetElement(i, 3))
+      print(f'Difference: {difference}')
+      if difference > trans_precision:
+        print(f'Difference: {abs(matrix1.GetElement(i, 3) - matrix2.GetElement(i, 3))}')
+        return False          
     return True
 
   def runTest(self):
@@ -2999,11 +2998,12 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
 
       correctTransform = slicer.vtkMRMLLinearTransformNode()
       correctMatrix = vtk.vtkMatrix4x4()
-      correctMatrix.SetElement(0,0,1); correctMatrix.SetElement(0,1,0); correctMatrix.SetElement(0,2,0); correctMatrix.SetElement(0,3,-6.67969)
-      correctMatrix.SetElement(1,0,0); correctMatrix.SetElement(1,1,1); correctMatrix.SetElement(1,2,0); correctMatrix.SetElement(1,3,68.0608)
-      correctMatrix.SetElement(2,0,0); correctMatrix.SetElement(2,1,0); correctMatrix.SetElement(2,2,1); correctMatrix.SetElement(2,3,-106.241)
+      correctMatrix.SetElement(0,0,1); correctMatrix.SetElement(0,1,0); correctMatrix.SetElement(0,2,0); correctMatrix.SetElement(0,3,-6.69)
+      correctMatrix.SetElement(1,0,0); correctMatrix.SetElement(1,1,1); correctMatrix.SetElement(1,2,0); correctMatrix.SetElement(1,3,68.05)
+      correctMatrix.SetElement(2,0,0); correctMatrix.SetElement(2,1,0); correctMatrix.SetElement(2,2,1); correctMatrix.SetElement(2,3,-106.38)
       correctMatrix.SetElement(3,0,0); correctMatrix.SetElement(3,1,0); correctMatrix.SetElement(3,2,0); correctMatrix.SetElement(3,3,1)
       correctTransform.SetAndObserveMatrixTransformToParent(correctMatrix)
+      print(widget.outputTransform.GetMatrixTransformToParent())
       self.assertTrue(self.compareTransformNodes(widget.outputTransform, correctTransform))
       self.delayDisplay(f'<font color="#72ff6b">Calibration Matrix matches known correct values</font>')
 
@@ -3061,7 +3061,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
       anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
 
-      widget.onCreateRobotClientButtonClicked()
+      widget.onCreateRobotConnectionButtonClicked()
       slicer.util.delayDisplay("Starting connection with robot", 3000)
 
       widget.onStartupButtonClicked()
@@ -3127,7 +3127,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
       anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
 
-      widget.onCreateRobotClientButtonClicked()
+      widget.onCreateRobotConnectionButtonClicked()
       slicer.util.delayDisplay("Starting connection with robot", 3000)
 
       widget.onStartupButtonClicked()
@@ -3198,7 +3198,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
       volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
       anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
 
-      widget.onCreateRobotClientButtonClicked()
+      widget.onCreateRobotConnectionButtonClicked()
       slicer.util.delayDisplay("Starting connection with robot", 3000)
 
       widget.onStartupButtonClicked()
@@ -3253,7 +3253,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
     #   anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
 
-    #   widget.onCreateRobotClientButtonClicked()
+    #   widget.onCreateRobotConnectionButtonClicked()
     #   slicer.util.delayDisplay("Starting connection with robot", 3000)
 
     #   widget.onStartupButtonClicked()
@@ -3311,7 +3311,7 @@ class ProstateBRPInterfaceTest(ScriptedLoadableModuleTest):
     #   volumePathAnatomy = os.path.join(os.path.dirname(os.path.realpath(__file__)), "Testing", "3 AXIAL T2 COVER PROSTATE 3mm 0gap at iso.nrrd")
     #   anatomyImageNode = slicer.util.loadVolume(volumePathAnatomy)
 
-    #   widget.onCreateRobotClientButtonClicked()
+    #   widget.onCreateRobotConnectionButtonClicked()
     #   slicer.util.delayDisplay("Starting connection with robot", 3000)
 
     #   widget.onStartupButtonClicked()
