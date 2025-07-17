@@ -59,13 +59,13 @@ while true
                 end
             end
             if command_recieved
-                disp('Already started up');
-                command_recieved = false;
-            end                           
-                idle_flag = true;
-                state = "IDLE";        
-                server.robot.set_robot_mode('idle');
 
+            end
+                            disp('Already started up');
+                idle_flag = true;
+                state = "IDLE";
+                command_recieved = false;
+                server.robot.set_robot_mode('idle');
         case "CALIBRATION"
             disp('Calibration');
             %First Check if robot has started up
@@ -105,7 +105,6 @@ while true
                     % pose_server = parfeval(backgroundPool, @server.robot_postion_server, 0);
                     while ~calibration_finsh_flag
                         [head, type, data] = server.receiver.readMessage();
-                        id = split(name, '_');
                         if strcmpi(type, 'STRING')
                             if strcmpi(data, 'GET_TRANSFORM')
                                 robot_pose = server.robot.get_robot_current_pose();
@@ -116,8 +115,8 @@ while true
                                 server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
                             end
                         elseif strcmpi(type, 'TRANSFORM')
+                            pause(0.2);
                             server.sender.WriteOpenIGTLinkStringMessage(char("ACK_Transform"), char(type));
-                            % server.sender.WriteOpenIGTLinkTransformMessage(char("ACK_"+id(2)), data);
                             calibration_finsh_flag = server.robot.calibrate(data);
                             if ~calibration_finsh_flag
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
@@ -140,13 +139,15 @@ while true
                 status = struct('code', 13, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_NOT_READY');
                 server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
             end
+            disp('ehhh');
+            %calibration_finsh_flag = false;
             if command_recieved
                 disp('Calibration finished');
-                command_recieved = false;
-            end                           
                 idle_flag = true;
-                state = "IDLE";        
+                state = "IDLE";
+                command_recieved = false;
                 server.robot.set_robot_mode('idle');
+            end
 
         case "PLANNING"
             disp('Planning');
@@ -159,10 +160,11 @@ while true
                 while ~strcmp(robot_mode, 'planning')
                     %try to set the robot mode in planning and check the
                     %mode again
+
                     server.robot.set_robot_mode('planning');
                     set_mode_count = set_mode_count + 1;
                     pause(0.2);
-                    robot_mode = server.robot.check_robot_mode();
+                    robot_mode = server.robot.check_robot_mdoe();
                     
                     if ~strcmp(robot_mode, 'planning')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
@@ -171,12 +173,12 @@ while true
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
-                    server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
+                    server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
                     % should also send after request, need threading.
-                    if set_mode_count >= 10 && ~strcmp(robot_mode, 'planning')
+                    if set_mode_count >= 100 && ~strcmp(robot_mode, 'planning')
                         error_message = "Start planning fail, check robot status";
                         disp(error_message);
-                        % server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
+                        server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
                         fail_flag = true;
                         break;
                     end
@@ -251,7 +253,7 @@ while true
                     server.robot.set_robot_mode('targeting');
                     set_mode_count = set_mode_count + 1;
                     pause(0.2);
-                    robot_mode = server.robot.check_robot_mode();
+                    robot_mode = server.robot.check_robot_mdoe();
                     
                     if ~strcmp(robot_mode, 'targeting')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
@@ -260,7 +262,7 @@ while true
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
-                    server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
+                    server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
                     % should also send after request, need threading.
                     if set_mode_count >= 10 && ~strcmp(robot_mode, 'targeting')
                         error_message = "Start targeting fail, check robot status";
@@ -373,7 +375,7 @@ while true
                     server.robot.set_robot_mode('move_to_goal');
                     set_mode_count = set_mode_count + 1;
                     pause(0.2);
-                    robot_mode = server.robot.check_robot_mode();
+                    robot_mode = server.robot.check_robot_mdoe();
                     
                     if ~strcmp(robot_mode, 'move_to_goal')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');

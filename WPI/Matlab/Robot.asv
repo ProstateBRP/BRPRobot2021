@@ -25,13 +25,12 @@ classdef Robot < handle
     %   - Skips actual motor control
     %   - Allows testing of control algorithms and flow
 
-    
-
     properties (Access = private)
         %% ===================================================================
         %  BASIC ROBOT STATE PROPERTIES
         %% ===================================================================
         current_mode = 'stop'                          % Current robot operation mode
+        is_start_up = false                            % Current robot started up or not
         starting_position                               % Initial robot position
         target_position_robot                           % Target position in robot frame
         is_target_reached                              % Flag indicating if target is reached
@@ -245,6 +244,7 @@ classdef Robot < handle
                 obj.g = [];
                 disp('SIMULATION MODE: Hardware objects set to dummy values')
             end
+            obj.is_start_up = true;
         end
 
         %% ===================================================================
@@ -252,8 +252,7 @@ classdef Robot < handle
         %% ===================================================================
         function robot_not_ready = is_startup(obj)
             %IS_STARTUP Check if the robot has been startup properly
-            robot_not_ready = strcmp(obj.current_mode, 'stop');
-
+            robot_not_ready = ~ obj.is_start_up;
             if robot_not_ready
                 disp('Robot is not ready')
             else
@@ -297,11 +296,11 @@ classdef Robot < handle
         function calibration_finsh_flag = calibrate(obj, recieved_matrix)
             %CALIBRATE Calibrate robot with respect to image frame
             origin = obj.registration_matrix;
-            tol = 1e-6;
-            calibration_finsh_flag = ~all(abs(origin(:) - recieved_matrix(:)) < tol);
-            if calibration_finsh_flag
-                obj.registration_matrix = recieved_matrix;
-            end
+            obj.registration_matrix = recieved_matrix;
+            disp(recieved_matrix);
+            tolerance = 1e-6;
+            calibration_finsh_flag = ~isequal(size(origin), size(obj.registration_matrix)) && ...
+                all(abs(origin - obj.registration_matrix) < tolerance, 'all');
         end
 
         function target_in_robot_frame = target_registration(obj, target)
@@ -621,7 +620,6 @@ classdef Robot < handle
             % Initialize control variables
             omega_temp = obj.omega;
             omega = omega_temp;
-            
             obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
 
             %% State estimation using Kalman filter
