@@ -314,7 +314,87 @@ classdef Robot < handle
         %% ===================================================================
         function is_reachable = reachable(obj, target)
             %REACHABLE Check if target is reachable by furthest insertion
-            is_reachable = true; % No check implemented yet
+            %   Performs geometric calculation to determine if target can be reached
+            %   considering maximum curvature and remaining insertion distance
+            %
+            %   Inputs:
+            %     target - Target position in robot frame [x, y, z] (mm)
+            %
+            %   Outputs:
+            %     is_reachable - Boolean flag indicating reachability
+            
+            % Get current needle pose [x, y, z, gamma, phi, theta]
+            current_pose = obj.Needle_pose;
+            current_pos = current_pose(1:3);  % [x, y, z] position
+            current_theta = current_pose(6);  % Current rotation angle
+            
+            % Calculate needle tip position and transformation matrix
+            [P_tb1, T_tb] = Cal_Ptb1_Ttb(current_pose);
+            needle_tip = P_tb1;  % Current needle tip position
+            
+            % Calculate relative position from needle tip to target
+            target_relative = target - needle_tip;
+            
+            % Calculate remaining insertion distance (z-direction)
+            remaining_z_distance = target_relative(3);
+            
+            % Check if target is behind current position (not reachable)
+            if remaining_z_distance <= 0
+                is_reachable = false;
+                return;
+            end
+            
+            % Calculate lateral distance (x-y plane) to target
+            lateral_distance = sqrt(target_relative(1)^2 + target_relative(2)^2);
+            
+            % Calculate maximum lateral reach with current curvature constraint
+            % Using circular arc approximation: radius = 1/k_max
+            if obj.k_max > 0
+                max_radius = 1 / obj.k_max;  % Maximum curvature radius (mm)
+                
+                % For a circular arc with radius R and arc length s,
+                % the maximum lateral displacement is: R * (1 - cos(s/(2*R)))
+                % where s is the insertion distance
+                
+                % Calculate maximum achievable lateral displacement
+                arc_length = remaining_z_distance;
+                
+                if arc_length <= 2 * max_radius
+                    % For small insertions, use chord approximation
+                    max_lateral_reach = max_radius * sin(arc_length / max_radius);
+                else
+                    % For large insertions, maximum lateral reach approaches 2*R
+                    max_lateral_reach = 2 * max_radius;
+                end
+                
+                % Add safety margin (10% reduction)
+                max_lateral_reach = max_lateral_reach * 0.9;
+                
+                % Check if target is within reachable area
+                is_reachable = lateral_distance <= max_lateral_reach;
+                
+            else
+                % If no curvature constraint (straight needle only)
+                % Target is reachable only if it's directly ahead
+                tolerance = 1.0; % mm tolerance for straight insertion
+                is_reachable = lateral_distance <= tolerance;
+            end
+            
+            % Display reachability analysis for debugging
+            if obj.simulation_mode
+                fprintf('Reachability Analysis:\n');
+                fprintf('  Current needle tip: [%.2f, %.2f, %.2f] mm\n', needle_tip);
+                fprintf('  Target position: [%.2f, %.2f, %.2f] mm\n', target);
+                fprintf('  Remaining Z distance: %.2f mm\n', remaining_z_distance);
+                fprintf('  Lateral distance: %.2f mm\n', lateral_distance);
+                if obj.k_max > 0
+                    fprintf('  Max curvature: %.6f mm^-1\n', obj.k_max);
+                    fprintf('  Max radius: %.2f mm\n', max_radius);
+                    fprintf('  Max lateral reach: %.2f mm\n', max_lateral_reach);
+                end
+                fprintf('  Is reachable: %s\n', char(string(is_reachable)));
+                fprintf('---\n');
+            end
         end
 
         function obj = update_target(obj, target)
@@ -343,7 +423,7 @@ classdef Robot < handle
         %% ===================================================================
         function robot_pose = get_robot_current_pose(obj)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
-            robot_pose = obj.Needle_pose_act;
+            robot_pose = obj.Needle_pose_act; % Some parameters of "Needle_pose_act" are "estimated" needle pose, not "actual" needle pose
         end
 
         function obj = set_entry_point(obj, needle_image)
