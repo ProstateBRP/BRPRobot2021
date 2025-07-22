@@ -397,6 +397,8 @@ classdef Robot < handle
             end
         end
 
+        
+
         function obj = update_target(obj, target)
             %UPDATE_TARGET Update robot target position
             obj.target_position_robot = target;
@@ -410,11 +412,15 @@ classdef Robot < handle
 
         function is_in_workspace = check_target(obj, target)
             %CHECK_TARGET Check if target is in workspace and update if valid
-            target_robot = obj.target_registration(target);
-            is_in_workspace = obj.reachable(target_robot);
-
-            if is_in_workspace
-                obj.update_target(target_robot);
+            if obj.simulation_mode
+                is_in_workspace = true;
+            else
+                target_robot = obj.target_registration(target);
+                is_in_workspace = obj.reachable(target_robot);
+    
+                if is_in_workspace
+                    obj.update_target(target_robot);
+                end
             end
         end
 

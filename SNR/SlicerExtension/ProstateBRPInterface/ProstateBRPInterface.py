@@ -1886,7 +1886,6 @@ class ProstateBRPInterfaceWidget(ScriptedLoadableModuleWidget):
     ReceivedTransformMsg = slicer.mrmlScene.GetFirstNodeByName("ACK_Transform")
     transformMatrix = vtk.vtkMatrix4x4()
     ReceivedTransformMsg.GetMatrixTransformToParent(transformMatrix)
-
     # If the received transform is of type ACK_XXX, check if it matches the original transform sent to WPI
     refMatrix = vtk.vtkMatrix4x4()
     LastTransformNode = slicer.mrmlScene.GetFirstNodeByName(transformNode.last_randomIDname_transform)

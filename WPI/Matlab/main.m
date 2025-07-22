@@ -46,7 +46,9 @@ while true
                     start_up_count = start_up_count + 1;
                 else
                     status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
+                    server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                 end
+                status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
                 server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
                 %should not send any transform, here is the reason, if it's
                 %not start up, it won't answer robot_pose command. If it
@@ -91,7 +93,7 @@ while true
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
-                    server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
+                    server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                     % should also send after request, need threading.
                     if set_mode_count >= 10 && ~strcmp(robot_mode, 'calibration')
                         error_message = "Start Calibration fail, check robot status, back to IDLE.";
@@ -116,14 +118,15 @@ while true
                                 server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
                             end
                         elseif strcmpi(type, 'TRANSFORM')
-                            server.sender.WriteOpenIGTLinkStringMessage(char("ACK_Transform"), char(type));
-                            % server.sender.WriteOpenIGTLinkTransformMessage(char("ACK_"+id(2)), data);
+                            server.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
                             calibration_finsh_flag = server.robot.calibrate(data);
                             if ~calibration_finsh_flag
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
                             else
                                 status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
+                                server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                             end
+                            status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                             server.sender.WriteOpenIGTLinkStatusMessage(char(state), status); 
                         else
                             error_message = "Wrong command at this time.";
@@ -168,10 +171,9 @@ while true
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
                         server.robot.set_robot_mode('planning');
                         set_mode_count = set_mode_count + 1;
-                    else
-                        status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
+                        server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
                     end
-                    server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
+                    
                     % should also send after request, need threading.
                     if set_mode_count >= 10 && ~strcmp(robot_mode, 'planning')
                         error_message = "Start planning fail, check robot status";
@@ -182,35 +184,9 @@ while true
                     end
                 end
                 if ~fail_flag
-                    % pose_server = parfeval(backgroundPool, @server.robot_postion_server, 0);
-                    while ~planning_finsh_flag
-                        [name, type, data] = server.receiver.readMessage();
-                        if strcmpi(type, 'STRING')
-                            if strcmpi(data, 'GET_TRANSFORM')
-                                robot_pose = server.robot.get_robot_current_pose();
-                                server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
-                                pause(0.2);
-                            else
-                                error_message = "Wrong command at this time.";
-                                server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
-                            end
-                        elseif strcmpi(type, 'TRANSFORM')
-                            server.sender.WriteOpenIGTLinkStringMessage(char(name), char("ACK_TRANSFORM"));
-                            planning_finsh_flag = server.robot.planning(data);
-                            pause(0.2);
-                            if ~planning_finsh_flag
-                                status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
-
-                            else
-                                status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
-                            end
-                            server.sender.WriteOpenIGTLinkStatusMessage(char(name), status); 
-                        else
-                            error_message = "Wrong type of message at this time.";
-                            server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
-                        end
-                    end
-                    % cancel(pose_server);
+                    planning_finsh_flag = true;
+                    status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
+                    server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                 end
             %Get into calibration without starting the robot
             elseif robot_not_ready
@@ -241,7 +217,7 @@ while true
             set_mode_count = 0;
             fail_flag = false;
             id = split(name, '_');
-            if ~robot_not_ready && calibration_finsh_flag
+            if ~robot_not_ready && planning_finsh_flag
                 server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
                 % Set the robot into targeting mode
                 while ~strcmp(robot_mode, 'targeting')
@@ -260,8 +236,8 @@ while true
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
+                    server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                     server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
-                    % should also send after request, need threading.
                     if set_mode_count >= 10 && ~strcmp(robot_mode, 'targeting')
                         error_message = "Start targeting fail, check robot status";
                         disp(error_message);
@@ -271,20 +247,20 @@ while true
                     end
                 end
                 if ~fail_flag
-                    % pose_server = parfeval(backgroundPool, @server.robot_postion_server, 0);
                     while ~targeting_finsh_flag
                         [name, type, data] = server.receiver.readMessage();
                         if strcmpi(type, 'STRING')
                             if strcmpi(data, 'GET_TRANSFORM')
                                 robot_pose = server.robot.get_robot_current_pose();
                                 server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
-                                pause(0.2);
+                                %pause(0.2);
                             else
+                                % Need to make sure can return to other states
                                 error_message = "Wrong command at this time.";
                                 server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
                             end
                         elseif strcmpi(type, 'TRANSFORM')
-                            server.sender.WriteOpenIGTLinkStringMessage(char(name), char("ACK_TRANSFORM"));
+                            server.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
                             is_in_workspace = server.robot.check_target(data);
                             pause(0.1);
                             if ~is_in_workspace
@@ -292,7 +268,7 @@ while true
                                 server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
                             else
                                 status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
-                                server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
+                                server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
                                 targeting_finsh_flag = true;
                             end                           
                         else
@@ -309,8 +285,8 @@ while true
                 server.sender.WriteOpenIGTLinkStringMessage(char(name), error_message);
                 status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
                 server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
-            elseif ~calibration_finsh_flag
-                error_message = 'Robot not calibrated, calibrate the robot first!';
+            elseif ~planning_finsh_flag
+                error_message = 'Target not planed, plan the target first!';
                 disp(error_message);
                 server.sender.WriteOpenIGTLinkStringMessage(char(name), error_message);
                 status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
@@ -334,7 +310,7 @@ while true
                         if strcmpi(data, ' CURRENT_POSITION')
                             robot_pose = server.robot.get_robot_current_pose();
                             server.sender.WriteOpenIGTLinkTransformMessage('ACK_Transform', robot_pose);
-                            pause(0.2);
+                            %pause(0.2);
                         elseif ismember(data, server.validCommands)
                             msg = "Exiting idle mode, and getting into " + data + "mode.";
                             idle_flag = false;
@@ -363,8 +339,9 @@ while true
             disp('Scan & Move');
             set_mode_count = 0;
             fail_flag = false;
-            if ~robot_not_ready && calibration_finsh_flag && targeting_finsh_flag
-                server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+string(int64(posixtime(datetime('now'))))), char(state));
+            id = split(name, '_');
+            if ~robot_not_ready && targeting_finsh_flag
+                server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
                 % Set the robot into calibration mode
                 while ~strcmp(robot_mode, 'move_to_goal')
                     %try to set the robot mode in calibration and check the
@@ -382,9 +359,10 @@ while true
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
-                    server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
-                    robot_pose = server.robot.get_robot_current_pose();
-                    server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
+                    server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
+                    server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
+                    % robot_pose = server.robot.get_robot_current_pose();
+                    % server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
                     pause(0.2); 
                     % should also send after request, need threading.
                     if set_mode_count >= 10 && ~strcmp(robot_mode, 'move_to_goal')
