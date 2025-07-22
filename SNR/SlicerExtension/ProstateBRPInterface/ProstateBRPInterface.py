@@ -46,7 +46,7 @@ class ProstateBRPInterface(ScriptedLoadableModule):
     ScriptedLoadableModule.__init__(self, parent)
     self.parent.title = "Prostate BRP Interface"
     self.parent.categories = ["IGT"]
-    self.parent.dependencies = ["ZFrameRegistration"]
+    self.parent.dependencies = ["ZFrameRegistrationScripted"]
     self.parent.contributors = ["Rebecca Lisk (SNR), Franklin King (SNR)"]
     self.parent.helpText = """
 """
