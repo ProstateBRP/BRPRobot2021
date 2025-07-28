@@ -38,7 +38,7 @@ classdef Server < handle
             if p.Results.simulation
                 obj.robot = Robot('simulation', true);
             else
-                obj.robot = robot();
+                obj.robot = Robot();
             end
             obj.host = p.Results.host;
             obj.port = p.Results.port;

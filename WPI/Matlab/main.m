@@ -111,7 +111,7 @@ while true
                         if strcmpi(type, 'STRING')
                             if strcmpi(data, 'GET_TRANSFORM')
                                 robot_pose = server.robot.get_robot_current_pose();
-                                server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
+                                server.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), robot_pose);
                                 pause(0.2);
                             else
                                 error_message = "Wrong command at this time.";
@@ -313,6 +313,7 @@ while true
                             %pause(0.2);
                         elseif ismember(data, server.validCommands)
                             msg = "Exiting idle mode, and getting into " + data + "mode.";
+                            disp(msg);
                             idle_flag = false;
                             command_recieved = true;
                             state = data;
@@ -386,7 +387,6 @@ while true
                                 if strcmpi(data, 'CURRENT_POSITION')
                                     robot_pose = server.robot.get_robot_current_pose();
                                     server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
-                                    pause(0.2);
                                 else
                                     error_message = "Wrong command at this time.";
                                     server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));

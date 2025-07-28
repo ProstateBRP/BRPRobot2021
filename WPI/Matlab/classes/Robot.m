@@ -431,7 +431,11 @@ classdef Robot < handle
         %% ===================================================================
         function robot_pose = get_robot_current_pose(obj)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
-            robot_pose = obj.Needle_pose_act; % Some parameters of "Needle_pose_act" are "estimated" needle pose, not "actual" needle pose
+            if obj.simulation_mode
+                robot_pose = [1,0,0,1;0,1,0,2;0,0,1,3;0,0,0,1];
+            else
+                robot_pose = obj.Needle_pose_act; % Some parameters of "Needle_pose_act" are "estimated" needle pose, not "actual" needle pose
+            end
         end
 
         function obj = set_entry_point(obj, needle_image)
