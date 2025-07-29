@@ -52,6 +52,7 @@ classdef Robot < handle
         Stabbing_Vel = 5                               % Needle insertion speed (mm/sec)
         omega_max = pi                                 % Maximum rotational velocity (rad/sec)
         max_curvature = 0.0026                         % Maximum curvature for needle control
+        max_insertion_distance = 120;                  % Maximum insertion distance (mm) (absolute value)
         k_max                                          % Maximum curvature (computed)
         rot_dir = 1                                    % Rotation direction: CW(1), CCW(-1)
         theta0                                         % Initial theta0 angle
@@ -330,10 +331,10 @@ classdef Robot < handle
             
             % Calculate needle tip position and transformation matrix
             [P_tb1, T_tb] = Cal_Ptb1_Ttb(current_pose);
-            needle_tip = P_tb1;  % Current needle tip position
+            needle_tip = P_tb1(1:3);  % Extract 3D position from homogeneous coordinates
             
             % Calculate relative position from needle tip to target
-            target_relative = target - needle_tip;
+            target_relative = target - needle_tip';
             
             % Calculate remaining insertion distance (z-direction)
             remaining_z_distance = target_relative(3);
@@ -347,50 +348,28 @@ classdef Robot < handle
             % Calculate lateral distance (x-y plane) to target
             lateral_distance = sqrt(target_relative(1)^2 + target_relative(2)^2);
             
-            % Calculate maximum lateral reach with current curvature constraint
-            % Using circular arc approximation: radius = 1/k_max
-            if obj.k_max > 0
-                max_radius = 1 / obj.k_max;  % Maximum curvature radius (mm)
-                
-                % For a circular arc with radius R and arc length s,
-                % the maximum lateral displacement is: R * (1 - cos(s/(2*R)))
-                % where s is the insertion distance
-                
-                % Calculate maximum achievable lateral displacement
-                arc_length = remaining_z_distance;
-                
-                if arc_length <= 2 * max_radius
-                    % For small insertions, use chord approximation
-                    max_lateral_reach = max_radius * sin(arc_length / max_radius);
-                else
-                    % For large insertions, maximum lateral reach approaches 2*R
-                    max_lateral_reach = 2 * max_radius;
-                end
-                
-                % Add safety margin (10% reduction)
-                max_lateral_reach = max_lateral_reach * 0.9;
-                
-                % Check if target is within reachable area
-                is_reachable = lateral_distance <= max_lateral_reach;
-                
-            else
-                % If no curvature constraint (straight needle only)
-                % Target is reachable only if it's directly ahead
-                tolerance = 1.0; % mm tolerance for straight insertion
-                is_reachable = lateral_distance <= tolerance;
+            % Check if the required insertion distance exceeds maximum allowable distance
+            if target(3) > obj.max_insertion_distance
+                is_reachable = false;
+                return;
             end
-            
+
+            lateral_max = 1/obj.k_max * sin(remaining_z_distance*obj.k_max);
+            is_reachable = lateral_distance <= lateral_max;
+
+
             % Display reachability analysis for debugging
-            if obj.simulation_mode
+            if obj.simulation_mode   
                 fprintf('Reachability Analysis:\n');
-                fprintf('  Current needle tip: [%.2f, %.2f, %.2f] mm\n', needle_tip);
-                fprintf('  Target position: [%.2f, %.2f, %.2f] mm\n', target);
+                fprintf('  Current needle tip: [%.2f, %.2f, %.2f] mm\n', needle_tip(1), needle_tip(2), needle_tip(3));
+                fprintf('  Target position: [%.2f, %.2f, %.2f] mm\n', target(1), target(2), target(3));
                 fprintf('  Remaining Z distance: %.2f mm\n', remaining_z_distance);
                 fprintf('  Lateral distance: %.2f mm\n', lateral_distance);
                 if obj.k_max > 0
+                    max_radius = 1 / obj.k_max;
                     fprintf('  Max curvature: %.6f mm^-1\n', obj.k_max);
                     fprintf('  Max radius: %.2f mm\n', max_radius);
-                    fprintf('  Max lateral reach: %.2f mm\n', max_lateral_reach);
+                    fprintf('  Max lateral reach: %.2f mm\n', lateral_max);
                 end
                 fprintf('  Is reachable: %s\n', char(string(is_reachable)));
                 fprintf('---\n');
