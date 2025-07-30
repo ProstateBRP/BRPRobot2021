@@ -11,7 +11,7 @@ target_not_reachable = false;
 idle_flag = false;
 command_recieved = false;
 % Must determine control type!
-open_loop = false;
+open_loop = true;
 %Robot setup and bring up
 robot_not_ready = server.robot.is_startup();
 robot_pose = server.robot.get_robot_current_pose();     
@@ -31,34 +31,21 @@ while true
             start_up_count = 0;
             id = split(name, '_');
             server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
-            while robot_not_ready
+            if robot_not_ready
                 % Start up the robot
                 server.robot.startup();
-                start_up_count = start_up_count + 1;
-                pause(0.2);
                 robot_not_ready = server.robot.is_startup();
-                %robot_pose = get_robot_current_pose();
-
                 %if it's started or not, wait for it to start up
                 if robot_not_ready
                     status = struct('code', 13, 'subCode', 13, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
-                    server.robot.startup();
-                    start_up_count = start_up_count + 1;
+                    error_message = "Start up fail, check robot status";
+                    disp(error_message)
                 else
                     status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
                     server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                 end
                 status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
                 server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
-                %should not send any transform, here is the reason, if it's
-                %not start up, it won't answer robot_pose command. If it
-                %starts up, the loop would exit to idle, which would have
-                %robot_pose server.
-                if start_up_count >= 10 && robot_not_ready
-                    error_message = "Start up fail, check robot status";
-                    disp(error_message);
-                    break;
-                end
             end
             if command_recieved
                 disp('Already started up');
@@ -71,47 +58,35 @@ while true
         case "CALIBRATION"
             disp('Calibration');
             %First Check if robot has started up
-            set_mode_count = 0;
             fail_flag = false;
             id = split(name, '_');
             robot_mode = server.robot.check_robot_mode();
             if ~robot_not_ready 
                 server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
                 % Set the robot into calibration mode
-                while ~strcmp(robot_mode, 'calibration')
-                    %try to set the robot mode in calibration and check the
-                    %mode again
-
+                if ~strcmp(robot_mode, 'calibration')
+                    %try to set the robot mode in calibration
                     server.robot.set_robot_mode('calibration');
-                    set_mode_count = set_mode_count + 1;
-                    pause(0.2);
                     robot_mode = server.robot.check_robot_mode();               
                     if ~strcmp(robot_mode, 'calibration')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
-                        server.robot.set_robot_mode('calibration');
-                        set_mode_count = set_mode_count + 1;
+                        error_message = "Start Calibration fail, check robot status, back to IDLE.";
+                        disp(error_message);
+                        fail_flag = true;
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
                     server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
-                    % should also send after request, need threading.
-                    if set_mode_count >= 10 && ~strcmp(robot_mode, 'calibration')
-                        error_message = "Start Calibration fail, check robot status, back to IDLE.";
-                        disp(error_message);
-                        % server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
-                        fail_flag = true;
-                        break;
-                    end
                 end
+
                 if ~fail_flag
-                    % pose_server = parfeval(backgroundPool, @server.robot_postion_server, 0);
                     while ~calibration_finsh_flag
                         [head, type, data] = server.receiver.readMessage();
                         id = split(name, '_');
                         if strcmpi(type, 'STRING')
-                            if strcmpi(data, 'GET_TRANSFORM')
+                            if strcmpi(data, 'CURRENT_POSITION')
                                 robot_pose = server.robot.get_robot_current_pose();
-                                server.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), robot_pose);
+                                server.sender.WriteOpenIGTLinkTransformMessage(char("CURRENT_POSITION"), robot_pose);
                                 pause(0.2);
                             else
                                 error_message = "Wrong command at this time.";
@@ -132,10 +107,7 @@ while true
                             error_message = "Wrong command at this time.";
                         end
                     end
-                    % cancel(pose_server);
                 end
-            %Get into calibration without starting the robot should not be
-            %accepted?
             else
                 error_message = 'Robot not start up, intialize the robot first!';
                 disp(error_message);
@@ -158,29 +130,17 @@ while true
             id = split(name, '_');
             if ~robot_not_ready && calibration_finsh_flag
                 server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
-                % Set the robot into calibration mode
-                while ~strcmp(robot_mode, 'planning')
-                    %try to set the robot mode in planning and check the
-                    %mode again
+                % Set the robot into planning mode
+                if ~strcmp(robot_mode, 'planning')
                     server.robot.set_robot_mode('planning');
-                    set_mode_count = set_mode_count + 1;
-                    pause(0.2);
                     robot_mode = server.robot.check_robot_mode();
                     
                     if ~strcmp(robot_mode, 'planning')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
-                        server.robot.set_robot_mode('planning');
-                        set_mode_count = set_mode_count + 1;
                         server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
-                    end
-                    
-                    % should also send after request, need threading.
-                    if set_mode_count >= 10 && ~strcmp(robot_mode, 'planning')
                         error_message = "Start planning fail, check robot status";
                         disp(error_message);
-                        % server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
                         fail_flag = true;
-                        break;
                     end
                 end
                 if ~fail_flag
@@ -211,8 +171,6 @@ while true
             end
 
         case "TARGETING"
-            %Should we block targeting if not planned? What's the
-            %difference between planning and targeting?
             disp('Targeting');
             set_mode_count = 0;
             fail_flag = false;
@@ -220,40 +178,31 @@ while true
             if ~robot_not_ready && planning_finsh_flag
                 server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
                 % Set the robot into targeting mode
-                while ~strcmp(robot_mode, 'targeting')
+                if ~strcmp(robot_mode, 'targeting')
                     %try to set the robot mode in calibration and check the
                     %mode again
 
                     server.robot.set_robot_mode('targeting');
-                    set_mode_count = set_mode_count + 1;
-                    pause(0.2);
                     robot_mode = server.robot.check_robot_mode();
                     
                     if ~strcmp(robot_mode, 'targeting')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
-                        server.robot.set_robot_mode('targeting');
-                        set_mode_count = set_mode_count + 1;
+                        error_message = "Start targeting fail, check robot status";
+                        disp(error_message);
+                        fail_flag = true;
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
                     server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                     server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
-                    if set_mode_count >= 10 && ~strcmp(robot_mode, 'targeting')
-                        error_message = "Start targeting fail, check robot status";
-                        disp(error_message);
-                        server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
-                        fail_flag = true;
-                        break;
-                    end
                 end
                 if ~fail_flag
                     while ~targeting_finsh_flag
                         [name, type, data] = server.receiver.readMessage();
                         if strcmpi(type, 'STRING')
-                            if strcmpi(data, 'GET_TRANSFORM')
+                            if strcmpi(data, 'CURRENT_POSITION')
                                 robot_pose = server.robot.get_robot_current_pose();
-                                server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
-                                %pause(0.2);
+                                server.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', robot_pose);
                             else
                                 % Need to make sure can return to other states
                                 error_message = "Wrong command at this time.";
@@ -305,11 +254,11 @@ while true
                 disp('Idle');
                 while idle_flag
                     [name, type, data] = server.receiver.readMessage();
-                    msg = split(name, '=');
                     if strcmpi(type, 'STRING')
-                        if strcmpi(data, ' CURRENT_POSITION')
+                        disp(data);
+                        if strcmpi(data, 'CURRENT_POSITION')
                             robot_pose = server.robot.get_robot_current_pose();
-                            server.sender.WriteOpenIGTLinkTransformMessage('ACK_Transform', robot_pose);
+                            server.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', robot_pose);
                             %pause(0.2);
                         elseif ismember(data, server.validCommands)
                             msg = "Exiting idle mode, and getting into " + data + "mode.";
@@ -338,41 +287,25 @@ while true
 
         case "MOVE_TO_TARGET"
             disp('Scan & Move');
-            set_mode_count = 0;
             fail_flag = false;
             id = split(name, '_');
             if ~robot_not_ready && targeting_finsh_flag
                 server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
                 % Set the robot into calibration mode
-                while ~strcmp(robot_mode, 'move_to_goal')
-                    %try to set the robot mode in calibration and check the
-                    %mode again
-
+                if ~strcmp(robot_mode, 'move_to_goal')
                     server.robot.set_robot_mode('move_to_goal');
-                    set_mode_count = set_mode_count + 1;
-                    pause(0.2);
                     robot_mode = server.robot.check_robot_mode();
                     
                     if ~strcmp(robot_mode, 'move_to_goal')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
-                        server.robot.set_robot_mode('move_to_goal');
-                        set_mode_count = set_mode_count + 1;
+                        error_message = "Start moving fail, check robot status";
+                        disp(error_message);
+                        fail_flag = true;
                     else
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
                     server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                     server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
-                    % robot_pose = server.robot.get_robot_current_pose();
-                    % server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
-                    pause(0.2); 
-                    % should also send after request, need threading.
-                    if set_mode_count >= 10 && ~strcmp(robot_mode, 'move_to_goal')
-                        error_message = "Start moving fail, check robot status";
-                        disp(error_message);
-                        server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
-                        fail_flag = true;
-                        break;
-                    end
                 end
                 if ~fail_flag
                     final_targeting_reached = false;
@@ -386,7 +319,7 @@ while true
                             if strcmpi(type, 'STRING')
                                 if strcmpi(data, 'CURRENT_POSITION')
                                     robot_pose = server.robot.get_robot_current_pose();
-                                    server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
+                                    server.sender.WriteOpenIGTLinkTransformMessage(char("CURRENT_POSITION"), robot_pose);
                                 else
                                     error_message = "Wrong command at this time.";
                                     server.sender.WriteOpenIGTLinkStringMessage(char(name), char(error_message));
@@ -409,7 +342,6 @@ while true
                                     robot_pose = server.robot.get_robot_current_pose();
                                     server.sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
                                     final_targeting_reached = server.robot.is_target_reached;
-                                    pause(0.1);
                                 end                           
                             else
                                 error_message = "Wrong type of message at this time.";
@@ -422,7 +354,7 @@ while true
                     else
                         msg = "Target not reachable anymore.";
                     end
-                    server.sender.WriteOpenIGTLinkStringMessage(char(name), char(msg));
+                    disp(msg)
 
                 end
             %Get into calibration without starting the robot
@@ -446,17 +378,47 @@ while true
                 server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
             end
             if command_recieved
-                disp('Already calibrated');
+                disp('Already moved');
                 idle_flag = true;
                 state = "IDLE";
                 command_recieved = false;
                 server.robot.set_robot_mode('idle');
             end
+
+        case "RETRACT_NEEDLE"
+            disp("Retract needle to home pose")
+            fail_flag = false;
+            id = split(name, '_');
+            if ~robot_not_ready
+                server.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(state));
+                status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
+                server.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
+                server.robot.RetractNeedle();
+                server.sender.WriteOpenIGTLinkStatusMessage(char(state), status);
+            else
+                error_message = 'Robot not start up, intialize the robot first!';
+                disp(error_message);
+                server.sender.WriteOpenIGTLinkStringMessage(char(name), error_message);
+                status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
+                server.sender.WriteOpenIGTLinkStatusMessage(char(name), status);
+            end
+            if command_recieved
+                disp('Already moved');
+                idle_flag = true;
+                state = "IDLE";
+                command_recieved = false;
+                server.robot.set_robot_mode('idle');
+            end
+                       
         case "STOP"
             disp("Stop the robot and communication");
             server.robot.stop();
-            msg = "Robot stopped and disconnected, stopping the communication...";
-            server.sender.WriteOpenIGTLinkStringMessage(char(name), char(msg));
+            msg = "Robot stopped";
+            break
+        case "EMERGENCY"
+            disp("EMERGENCY STOP!");
+            server.robot.stop();
+            msg = "Estop pressed";
             server.disconnect()
             break
     end

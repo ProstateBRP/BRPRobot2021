@@ -4,7 +4,7 @@ function testReceiveMessage()
 
     % Set IP socket and number of messages (N) to receive
     N = 5;
-    sock = igtlConnect('127.0.0.1', 18944);
+    sock = igtlConnect('127.0.0.1', 18936);
     receiver = OpenIGTLinkMessageReceiver(sock, @onRxStatusMessage, @onRxStringMessage, @onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
     % f = parfeval(@backgroundPool, 0);
     % while true
@@ -13,7 +13,7 @@ function testReceiveMessage()
     % end
     for i=1:N+1 % not counting first STATUS message (N+1)
         [a,b,c] = receiver.readMessage();
-        disp(b);
+        disp(c);
     end
     % cancel(f);
     igtlDisconnect(sock);

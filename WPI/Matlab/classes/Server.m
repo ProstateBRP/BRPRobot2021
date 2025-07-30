@@ -7,7 +7,7 @@ classdef Server < handle
     
     properties (Access = private)
         host = '127.0.0.1'
-        port = 18936
+        port = 18931
         socket
         status_buffer
         string_buffer
@@ -15,6 +15,7 @@ classdef Server < handle
         current_robot_position
         current_needle_position_MRI
         desired_target_location
+        ESTOP = true                                   % Software E-stop
     end
 
     properties (Access = public)
@@ -22,7 +23,7 @@ classdef Server < handle
         receiver
         robot
         validCommands = ["START_UP", "CALIBRATION", "PLANNING", "TARGETING",...
-                         "IDLE", "MOVE_TO_TARGET", "STOP"];
+                         "IDLE", "MOVE_TO_TARGET", "STOP", "EMERGENCY", "RETRACT_NEEDLE"];
     end
     
     methods

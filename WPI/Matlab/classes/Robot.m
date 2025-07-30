@@ -37,7 +37,7 @@ classdef Robot < handle
         is_target_reached                              % Flag indicating if target is reached
         previou_needle_pose_MRI                        % Previous needle pose from MRI
         simulation_mode = false                        % Flag to enable simulation mode
-        
+        ESTOP = true                                   % Software E-stop
         %% ===================================================================
         %  REGISTRATION AND COORDINATE TRANSFORMATION
         %% ===================================================================
@@ -412,6 +412,7 @@ classdef Robot < handle
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
             if obj.simulation_mode
                 robot_pose = [1,0,0,1;0,1,0,2;0,0,1,3;0,0,0,1];
+                robot_pose(2,4) = robot_pose(2,4) + 1;
             else
                 robot_pose = obj.Needle_pose_act; % Some parameters of "Needle_pose_act" are "estimated" needle pose, not "actual" needle pose
             end
