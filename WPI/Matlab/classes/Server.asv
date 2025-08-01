@@ -518,20 +518,8 @@ classdef Server < handle
             end
         end
         
-        function obj = onStop(obj)
-            disp("Stop the robot and communication");
-            obj.robot.stop();
-            obj.robot_not_ready = true;
-            obj.idle_flag = false;
-            obj.state = "STOP";
-            obj.command_recieved = false;
-            obj.robot.set_robot_mode('stop');
-            obj.calibration_finsh_flag = false;
-            obj.planning_finsh_flag = false;
-            obj.targeting_finsh_flag = false;
-            obj.target_not_reachable = false;
-        end
 
+        
         function obj = onEmergency(obj)
             disp("EMERGENCY STOP!");
             obj.robot.Emergency();
@@ -547,6 +535,7 @@ classdef Server < handle
             while true
                 if ~obj.idle_flag && ~obj.command_recieved
                     [obj.name, obj.state] = obj.receiver.readCommandMessage();
+            
                 end
                 switch obj.state
                     case "START_UP"
@@ -564,7 +553,17 @@ classdef Server < handle
                     case "RETRACT_NEEDLE"
                         obj.onRetractNeedle();                   
                     case "STOP"
-                        obj.onStop();
+                        disp("Stop the robot and communication");
+                        obj.robot.stop();
+                        obj.robot_not_ready = true;
+                        obj.idle_flag = false;
+                        obj.state = "STOP";
+                        obj.command_recieved = false;
+                        obj.robot.set_robot_mode('stop');
+                        obj.calibration_finsh_flag = false;
+                        obj.planning_finsh_flag = false;
+                        obj.targeting_finsh_flag = false;
+                        obj.target_not_reachable = false;
                         break
                     case "EMERGENCY"
                         obj.onEmergency();

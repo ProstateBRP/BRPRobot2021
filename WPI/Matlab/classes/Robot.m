@@ -174,6 +174,16 @@ classdef Robot < handle
             end
         end
 
+        function obj = Emergency(obj)
+            % Active Estop and get into emergency
+            obj.ESTOP = true;
+        end
+
+        function obj = Release(obj)
+            % Release Estop to continue working
+            obj.ESTOP = false;
+        end
+
         function obj = startup(obj)
             %STARTUP Initialize robot system and prepare for operation
             obj.current_mode = 'startup';
@@ -234,7 +244,7 @@ classdef Robot < handle
                 obj.arduino = arduino_comm_init_motor("COM3");
                 pause(1)
                 obj.g = init_galil();
-                
+                obj.Release();
                 % Access Relay
                 obj.g.command('SB 3');
                 pause(0.1);
@@ -245,6 +255,7 @@ classdef Robot < handle
                 obj.arduino = [];
                 obj.g = [];
                 disp('SIMULATION MODE: Hardware objects set to dummy values')
+                obj.Release();
             end
         end
 
