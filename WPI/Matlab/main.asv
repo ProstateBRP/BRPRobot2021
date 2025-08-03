@@ -1,0 +1,11 @@
+clc;
+clear;
+
+%Initialzation and setup for parameters
+server = Server('simulation', true);
+server.connect();
+
+% Must determine control type!
+open_loop = true;
+%Robot setup and bring up
+server.run();
