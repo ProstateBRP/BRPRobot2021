@@ -7,7 +7,7 @@ classdef Server < handle
     
     properties (Access = private)
         host = '127.0.0.1'
-        port = 18932
+        port = 18936
         socket
         status_buffer
         string_buffer
@@ -319,6 +319,8 @@ classdef Server < handle
                         elseif strcmpi(type, 'TRANSFORM')
                             obj.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
                             is_in_workspace = obj.robot.check_target(data);
+                            disp(is_in_workspace);
+                            
                             if ~is_in_workspace
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
                                 obj.sender.WriteOpenIGTLinkStatusMessage(char(head), status);

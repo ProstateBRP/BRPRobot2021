@@ -49,6 +49,7 @@ classdef Robot < handle
         %  NEEDLE CONTROL PARAMETERS
         %% ===================================================================
         Needle_pose_ini = [0, 0, 0, 0, 0, 0]          % Initial needle pose [x,y,z,gamma,phi,theta] (mm,rad)
+        % Needle_pose_act = Needle_pose_ini;
         Target_Pos_local                               % Target position in needle coordinate (mm)
         Stabbing_Vel = 5                               % Needle insertion speed (mm/sec)
         omega_max = pi                                 % Maximum rotational velocity (rad/sec)
@@ -175,16 +176,6 @@ classdef Robot < handle
             end
         end
 
-        function obj = Emergency(obj)
-            % Active Estop and get into emergency
-            obj.ESTOP = true;
-        end
-
-        function obj = Release(obj)
-            % Release Estop to continue working
-            obj.ESTOP = false;
-        end
-
         function obj = startup(obj)
             %STARTUP Initialize robot system and prepare for operation
             obj.current_mode = 'startup';
@@ -246,7 +237,7 @@ classdef Robot < handle
                 obj.arduino = arduino_comm_init_motor("COM3");
                 pause(1)
                 obj.g = init_galil();
-                obj.Release();
+                
                 % Access Relay
                 obj.g.command('SB 3');
                 pause(0.1);
@@ -257,7 +248,6 @@ classdef Robot < handle
                 obj.arduino = [];
                 obj.g = [];
                 disp('SIMULATION MODE: Hardware objects set to dummy values')
-                obj.Release();
             end
         end
 
@@ -347,7 +337,7 @@ classdef Robot < handle
             needle_tip = P_tb1(1:3);  % Extract 3D position from homogeneous coordinates
             
             % Calculate relative position from needle tip to target
-            target_relative = target(1:3,4) - needle_tip;
+            target_relative = target(4,1:3) - needle_tip;
             
             % Calculate remaining insertion distance (z-direction)
             remaining_z_distance = target_relative(3);
@@ -369,8 +359,9 @@ classdef Robot < handle
 
             lateral_max = 1/obj.k_max * sin(remaining_z_distance*obj.k_max);
             obj.is_reachable = lateral_distance <= lateral_max;
-            % obj.is_reachable = true;
-            
+            % is_reachable = true;
+
+
             % Display reachability analysis for debugging
             if obj.simulation_mode   
                 fprintf('Reachability Analysis:\n');
@@ -387,7 +378,6 @@ classdef Robot < handle
                 fprintf('  Is reachable: %s\n', char(string(obj.is_reachable)));
                 fprintf('---\n');
             end
-            fprintf('  Is reachable: %s\n', char(string(obj.is_reachable)));
         end
 
         
@@ -411,15 +401,9 @@ classdef Robot < handle
                 obj.update_target(target_robot);
             else
                 target_robot = obj.target_registration(target);
-                target_robot(1,4) = target_robot(1,4)-7;
-                target_robot(2,4) = target_robot(2,4)+68;
                 obj.reachable(target_robot);
                 is_in_workspace = obj.is_reachable;
-                disp(obj.is_reachable);
-                disp(is_in_workspace);
-                disp(obj.registration_matrix);
-                disp(target);
-                disp(target_robot);
+    
                 if is_in_workspace
                     obj.update_target(target_robot);
                 end
@@ -436,7 +420,6 @@ classdef Robot < handle
                 robot_pose(2,4) = robot_pose(2,4) + 1;
             else
                 Needle_pose_act_tfrom = Gen_pose2tform(obj.Needle_pose_act);
-                % Needle_pose_act_tfrom(4,3) = Needle_pose_act_tfrom(4,3) - 100; % (test) Offset for 3D slicer
                 robot_pose = Needle_pose_act_tfrom; % Some parameters of "Needle_pose_act" are "estimated" needle pose, not "actual" needle pose
             end
         end
