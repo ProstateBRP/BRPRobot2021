@@ -76,7 +76,7 @@ classdef Robot < handle
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
         stop_count_insertion = -10000%-191841                 % Insertion stop count threshold
-        voltage_insertion = 2.2                       % Insertion voltage
+        voltage_insertion = 2.0                       % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
         max_error_rot = 0.1                           % Motor control error tolerance (rpm)
