@@ -75,7 +75,7 @@ classdef Robot < handle
         %% ===================================================================
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
-        stop_count_insertion = -10000%-191841                 % Insertion stop count threshold
+        stop_count_insertion = -191841  %-191841                 % Insertion stop count threshold
         voltage_insertion = 2.0                       % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
@@ -110,6 +110,7 @@ classdef Robot < handle
         Needle_pose_All                               % Complete needle pose history
         Mom_Vec_All                                   % Moment vector history
         theta_encoder_All                             % Encoder data history
+        tick_insertion_All
         Ctrl_Time                                     % Control timing array
         Sensor_Time                                   % Sensor timing array
         data_sensor_All                               % Sensor data cell array
@@ -191,7 +192,7 @@ classdef Robot < handle
 
             %% Initialize computed properties
             obj.theta0 = obj.Needle_pose_ini(6);
-            obj.Time_SimEnd = 20 / obj.Stabbing_Vel;
+            obj.Time_SimEnd = 100 / obj.Stabbing_Vel;
             obj.Freq_ctrl = round(obj.Freq_ctrl_sec / obj.Time_resolution);
             obj.Freq_sens = round(obj.Freq_sens_sec / obj.Time_resolution);
             obj.delay_step_CtrlFreq = round(obj.delay_step_sec / obj.Freq_ctrl_sec);
@@ -215,6 +216,7 @@ classdef Robot < handle
             obj.Needle_pose_All = zeros(obj.Time_num, 6);
             obj.Mom_Vec_All = zeros(obj.Time_num, 3);
             obj.theta_encoder_All = zeros(round(obj.Time_num / obj.Freq_ctrl), 1);
+            obj.tick_insertion_All = zeros(round(obj.Time_num / obj.Freq_ctrl), 1);
             obj.k_max = obj.max_curvature;
             obj.Ctrl_Time = zeros(round(obj.Time_num / obj.Freq_ctrl), 1) + obj.Time_SimEnd + 1;
             obj.Sensor_Time = zeros(round(obj.Time_num / obj.Freq_sens), 1) + obj.Time_SimEnd + 1;
@@ -368,8 +370,10 @@ classdef Robot < handle
             end
 
             lateral_max = 1/obj.k_max * sin(remaining_z_distance*obj.k_max);
-            obj.is_reachable = lateral_distance <= lateral_max;
-            % obj.is_reachable = true;
+            obj.is_reachable = lateral_distance <= lateral_max; % original
+
+            obj.is_reachable = true; % Only for testing
+            %}
             
             % Display reachability analysis for debugging
             if obj.simulation_mode   
@@ -411,8 +415,8 @@ classdef Robot < handle
                 obj.update_target(target_robot);
             else
                 target_robot = obj.target_registration(target);
-                target_robot(1,4) = target_robot(1,4)-7;
-                target_robot(2,4) = target_robot(2,4)+68;
+                target_robot(1,4) = target_robot(1,4)-7; % offset only for testing (registration matrix needs to be fixed?)
+                target_robot(2,4) = target_robot(2,4)+68; % offset only for testing (registration matrix needs to be fixed?)
                 obj.reachable(target_robot);
                 is_in_workspace = obj.is_reachable;
                 disp(obj.is_reachable);
@@ -422,6 +426,7 @@ classdef Robot < handle
                 disp(target_robot);
                 if is_in_workspace
                     obj.update_target(target_robot);
+                    obj.Target_Pos_local = target_robot(1:3,4); % Ryo: added 20250806 for FF control
                 end
             end
         end
@@ -631,6 +636,7 @@ classdef Robot < handle
             Needle_pose_All = obj.Needle_pose_All;
             Mom_Vec_All = obj.Mom_Vec_All;
             theta_encoder_All = obj.theta_encoder_All;
+            tick_insertion_All = obj.tick_insertion_All;
             
             % Extract timing data
             Time_Step = obj.Time_Step;
@@ -672,7 +678,7 @@ classdef Robot < handle
             save(filename, ...
                 'omega_All', 'Needle_pose_act_All', 'Needle_pose_sensor_All', ...
                 'Needle_pose_sensor_realtime_All', 'Target_Pos_local_All', 'Etc_All', ...
-                'Needle_pose_All', 'Mom_Vec_All', 'theta_encoder_All', ...
+                'Needle_pose_All', 'Mom_Vec_All', 'theta_encoder_All',"tick_insertion_All", ...
                 'Time_Step', 'Time_num', 'Ctrl_Time', 'Sensor_Time', 'Update_Time', 'Sensor_Diff_Time', ...
                 'data_sensor_All', 'data_sensor_ctrl_All', ...
                 'Time_resolution', 'Freq_ctrl_sec', 'Freq_sens_sec', 'Stabbing_Vel', ...
@@ -719,6 +725,9 @@ classdef Robot < handle
             
             obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
 
+            % Obtain target position in robot frame
+            target_position_robot_temp = obj.target_position_robot(1:3,4);
+
             %% State estimation using Kalman filter
             if obj.flag_ekf == 1 && obj.Ctrl_Step_num > 1
                 [obj.ekf, Needle_pose_ekf] = Update_EKF(obj.ekf, obj.Needle_pose_sensor, obj.sensor_flag, obj.omega_All, obj.Stabbing_Vel, obj.Freq_ctrl_sec, obj.Ctrl_Step_num, obj.delay_step_CtrlFreq);
@@ -735,6 +744,8 @@ classdef Robot < handle
                 initialPulse = 0;
                 theta_encoder = encoder2theta(encoder_read, obj.PPR, initialPulse);
                 theta = theta_encoder;
+                tick_insertion = get_encoder_insertion(obj.g);
+                mm_insertion_encoder = abs(tick_insertion)*5000*3;
             else
                 theta = 0;
                 disp(['SIMULATION MODE: Using simulated theta = ', num2str(theta)]);
@@ -765,19 +776,23 @@ classdef Robot < handle
                 % Profile imitation
                 [alpha, omega_hat_pro] = Imitation_Profile(k, obj.k_max, theta_d);
 
-                % Update rotation direction
-                [obj.rot_dir, obj.theta0] = Update_rot_dir(theta, obj.theta0, obj.rot_dir);
+                
 
                 % Open-loop B-CURV settings
-                alpha = 0.5;
-                theta_d = pi;
+                % alpha = 0.5;
+                % theta_d = pi;
 
-                % Control output calculation
-                omega = Cal_Omega(alpha, theta, theta_d, obj.omega_max, obj.rot_dir);
+                
 
             elseif obj.CM == 2
                 % New feedback control implementation area
             end
+
+            % Update rotation direction
+            [obj.rot_dir, obj.theta0] = Update_rot_dir(theta, obj.theta0, obj.rot_dir);
+
+            % Control output calculation
+            omega = Cal_Omega(alpha, theta, theta_d, obj.omega_max, obj.rot_dir);
 
             % Store omega value
             obj.omega = omega;
@@ -795,6 +810,14 @@ classdef Robot < handle
                 disp(['SIMULATION MODE: Would set motor RPM to ', num2str(omega_rpm), ' [rpm]']);
             end
 
+            % Terminate move if reach target along z-axis
+            if mm_insertion_encoder > target_position_robot_temp(3)
+                obj.flag_terminate_z = 1;
+                disp("--------------------------------")
+                disp("Reached target along z-axis")
+                disp("--------------------------------")
+            end
+
             %% Data logging
             obj.omega_All(obj.Ctrl_Step_num) = omega;
             obj.Needle_pose_act_All(obj.Ctrl_Step_num, :) = Needle_pose_act;
@@ -802,6 +825,7 @@ classdef Robot < handle
             obj.Target_Pos_local_All(obj.Ctrl_Step_num, :) = obj.Target_Pos_local;
             obj.Etc_All(obj.Ctrl_Step_num, :) = [theta * 180 / pi, theta_d, omega * 180 / pi, omega_hat_pro * obj.omega_max * 180 / pi, k, alpha];
             obj.theta_encoder_All(obj.Ctrl_Step_num) = theta;
+            obj.tick_insertion_All(obj.Ctrl_Step_num) = tick_insertion;
             if ~isempty(obj.simulation_start_time)
                 obj.Ctrl_Time(obj.Ctrl_Step_num) = toc(obj.simulation_start_time);
             else
