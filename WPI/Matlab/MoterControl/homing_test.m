@@ -2,7 +2,7 @@ clear;
 close all;
 
 
-
+flag_only_homing = true;
 %% Create GalilTools COM server object
 g = init_galil();
 
@@ -39,22 +39,27 @@ disp('Relay for drivers should be turned on');
 home_pos = 0;
 
 %% Insert2;
-direction = 1;
-voltage = 2;
-pause
-disp("Insertion ongoing")
-move_insertion(g, direction, voltage);
 
-pause
-stop_pos = record_home_pos(g)
-disp("Stopped")
-stop_insertion(g, direction);
+if flag_only_homing
+    disp("Only Homing Mode")
+else
+    direction = 1;
+    voltage = 2;
+    pause
+    disp("Insertion ongoing")
+    move_insertion(g, direction, voltage);
 
+    pause
+    stop_pos = record_home_pos(g)
+    disp("Stopped")
+    stop_insertion(g, direction);
+end
 
 
 %% Homing
+pause
 threshold = 1000;
 home_insertion(g, home_pos, threshold);
-% % % record_home_pos(g)% 
+% % % record_home_pos(g)%
 disable_galil(g);
 
