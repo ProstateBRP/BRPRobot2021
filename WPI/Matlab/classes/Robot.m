@@ -762,6 +762,8 @@ classdef Robot < handle
                 mm_insertion_encoder = abs(tick_insertion)/5000*3;
             else
                 theta = 0;
+                mm_insertion_encoder = 5*obj.Ctrl_Step_num;
+                tick_insertion = -1; % define for simulation to avoid undefined usage in logging
                 disp(['SIMULATION MODE: Using simulated theta = ', num2str(theta)]);
             end
 
@@ -772,6 +774,10 @@ classdef Robot < handle
 
             obj.Needle_pose_sensor_realtime(6) = theta;
             Needle_pose_act(6) = theta;
+            obj.Needle_pose_sensor_realtime(3) = mm_insertion_encoder;
+            Needle_pose_act(3) = mm_insertion_encoder;
+
+            obj.Needle_pose_act = Needle_pose_act; 
 
             %% Control algorithm execution
             % Generate needle tip position and transformation matrix
