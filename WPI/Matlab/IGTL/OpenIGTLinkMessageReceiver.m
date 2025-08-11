@@ -38,12 +38,14 @@ end
 
 % Process message content. Handle message content according with their types
 function [name, data] = readCommandMessage()
-    global onRxStringMessage;
+    global onRxStringMessage onRxStatusMessage;
     msg = ReadOpenIGTLinkMessage();
     messageType = char(msg.dataTypeName);
     messageType = deblank(messageType);
     if strcmpi(messageType, 'STRING')
         [name, data] = handleStringMessage(msg, onRxStringMessage);
+    elseif strcmpi(messageType, 'STATUS')
+        [name, data] = handleStatusMessage(msg, onRxStatusMessage);
     else
         disp(['Unexpected message type:', messageType])
     end

@@ -38,7 +38,8 @@ classdef Robot < handle
         previou_needle_pose_MRI                        % Previous needle pose from MRI
         simulation_mode = false                        % Flag to enable simulation mode
         ESTOP = true                                   % Software E-stop
-        is_reachable
+        is_reachable                                   % Reachability Checking result
+        counter = 0                                    % Counter timer
         %% ===================================================================
         %  REGISTRATION AND COORDINATE TRANSFORMATION
         %% ===================================================================
@@ -178,6 +179,8 @@ classdef Robot < handle
             else
                 disp('Robot initialized in NORMAL MODE - hardware dependencies required');
             end
+            robot_pose = obj.Needle_pose;
+            save('shared_data.mat', 'robot_pose');
         end
 
         function obj = Emergency(obj)
@@ -441,8 +444,11 @@ classdef Robot < handle
         function robot_pose = get_robot_current_pose(obj)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
             if obj.simulation_mode
-                robot_pose = [1,0,0,1;0,1,0,2;0,0,1,3;0,0,0,1];
-                robot_pose(2,4) = robot_pose(2,4) + 1;
+                robot_pose = [1,0,0,1;0,1,0,2;0,0,1,obj.counter;0,0,0,1];
+                obj.counter = obj.counter + 1;
+                if obj.counter == 100
+                    obj.counter = 0;
+                end
             else
                 Needle_pose_act_tfrom = Gen_pose2tform(obj.Needle_pose_act);
                 % Needle_pose_act_tfrom(4,3) = Needle_pose_act_tfrom(4,3) - 100; % (test) Offset for 3D slicer
@@ -477,7 +483,8 @@ classdef Robot < handle
             end
 
             % Main control loop
-            while true
+            while ~obj.ESTOP
+                % obj.update_shared_file();
                 pause(obj.Time_resolution / 100);
                 run_time = toc(sim_time);
 
@@ -839,5 +846,34 @@ classdef Robot < handle
                 obj.Ctrl_Time(obj.Ctrl_Step_num) = obj.Ctrl_Step_num * obj.Freq_ctrl_sec;
             end
         end
+
+        function update_shared_file(obj)
+            file = 'shared_data.mat';          % Shared data file path
+            lockfile = 'shared_data.lock';     % Lock file path
+            acquireLock(lockfile);    % lock file
+            robot_pose = obj.Needle_pose;
+            save(file, 'robot_pose'); % overwrite file with only robot_pose
+            releaseLock(lockfile);    % release lock
+        end
+    end
+end
+
+function acquireLock(lockfile)
+    while true
+        if ~isfile(lockfile)
+            fid = fopen(lockfile, 'w');
+            if fid ~= -1
+                fprintf(fid, 'lock');
+                fclose(fid);
+                return
+            end
+        end
+        pause(0.01);
+    end
+end
+
+function releaseLock(lockfile)
+    if isfile(lockfile)
+        delete(lockfile);
     end
 end

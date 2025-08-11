@@ -27,7 +27,8 @@ classdef Server < handle
         target_not_reachable = false
         idle_flag = false
         command_recieved = false
-        ESTOP = true                                   % Software E-stop
+        pool
+        Queue
     end
 
     properties (Access = public)
@@ -58,19 +59,22 @@ classdef Server < handle
             obj.port = p.Results.port;
             obj.open_loop = p.Results.open_loop;
             obj.robot_not_ready = obj.robot.is_startup();
-            obj.robot_pose = obj.robot.get_robot_current_pose(); 
+            obj.robot_pose = obj.robot.get_robot_current_pose();
+            obj.pool = gcp('nocreate'); % get existing pool if any
+            if isempty(obj.pool)
+                obj.pool = parpool('threads'); % create thread pool if none
+            end
+            obj.Queue = parallel.pool.DataQueue;
+            afterEach(obj.Queue, @(~) obj.onEmergency());
         end
 
         function obj = connect(obj)
         %connect to igtl server and construct data sender and reciever
         disp("Connecting to IGTL server");
         obj.socket = igtlConnect(obj.host, obj.port);
-        obj.receiver = OpenIGTLinkMessageReceiver(obj.socket, @onRxStatusMessage, @obj.onRxStringMessage, @obj.onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
+        obj.receiver = OpenIGTLinkMessageReceiver(obj.socket, @obj.onRxStatusMessage, @obj.onRxStringMessage, @obj.onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
         obj.sender = OpenIGTLinkMessageSender(obj.socket);
         disp("connect finish");
-        obj.sender.WriteOpenIGTLinkStringMessage('Connection Notice', 'IGTL connected');
-        msg = 'Ready to take commands, please start the robot first.';
-        obj.sender.WriteOpenIGTLinkStringMessage('Connection Notice', msg);
         end
 
         function disconnect(obj)
@@ -80,26 +84,6 @@ classdef Server < handle
             pause(2);
             igtlDisconnect(obj.socket);
             disp("disconnect finish");
-        end
-        
-        function robot_postion_server(obj)
-            %if having any socket function issue, define a new socket here
-            while true
-                [obj.name, type, data] = obj.receiver.readMessage();
-                if strcmpi(type, 'STRING')
-                    if strcmpi(data, 'CURRENT_POSITION')
-                        robot_pose_local = obj.robot.get_robot_current_pose();
-                        obj.sender.WriteOpenIGTLinkTransformMessage(char(obj.name), robot_pose_local);
-                        pause(0.2);
-                    else
-                        error_message = "Wrong command at this time.";
-                        obj.sender.WriteOpenIGTLinkStringMessage(char(obj.name), char(error_message));
-                    end
-                else
-                    error_message = "Wrong type of message at this time.";
-                    obj.sender.WriteOpenIGTLinkStringMessage(char(obj.name), char(error_message));
-                end
-            end
         end
 
         function obj = onRxStatusMessage(obj, deviceName, text)
@@ -141,17 +125,17 @@ classdef Server < handle
                 else
                     status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
                     obj.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
+                    status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
+                    obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
                 end
-                status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
-                obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
             end
             if obj.command_recieved
                 disp('Already started up');
                 obj.command_recieved = false;
             end                           
-                obj.idle_flag = true;
-                obj.state = "IDLE";        
-                obj.robot.set_robot_mode('idle');
+            obj.idle_flag = true;
+            obj.state = "IDLE";        
+            obj.robot.set_robot_mode('idle');
         end
         
         function obj = onCalibration(obj)
@@ -421,7 +405,9 @@ classdef Server < handle
                     first_step_flag = true;
                     while ~final_targeting_reached
                         if obj.open_loop
+                            % F = parfeval(obj.pool, @robot_postion_server, 0, obj.host, obj.port, obj.Queue);
                             obj.robot.move_to_end();
+                            % cancel(F);
                             break
                         else
                             [head, type, data] = obj.receiver.readMessage();
@@ -532,6 +518,7 @@ classdef Server < handle
             obj.planning_finsh_flag = false;
             obj.targeting_finsh_flag = false;
             obj.target_not_reachable = false;
+            delete(obj.pool);
         end
 
         function obj = onEmergency(obj)
@@ -579,3 +566,52 @@ classdef Server < handle
 
 end
 
+function robot_postion_server(host, port, Queue)
+    file = 'shared_data.mat';          % Shared data file path
+    lockfile = 'shared_data.lock';     % Lock file path
+    socket = igtlConnect(host, port);
+    receiver = OpenIGTLinkMessageReceiver(socket, @onRxStatusMessage, @onRxStringMessage, @onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
+    sender = OpenIGTLinkMessageSender(socket);
+    while true
+        [name, type, data] = receiver.readCommandMessage();
+        if strcmpi(type, 'STRING')
+            if strcmpi(data, 'CURRENT_POSITION')
+                acquireLock(lockfile);             % Acquire lock (wait if busy)
+                S = load(file);                    % Load data from file
+                robot_pose = S.robot_pose;
+                releaseLock(lockfile); 
+                sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
+            elseif strcmpi(data, 'EMERGENCY')
+                Estop = true;
+                send(Queue, Estop);
+            end
+        end
+    end
+    igtlDisconnect(socket);
+end
+
+function obj = onRxStringMessage(deviceName, text)
+    % Callback when STRING message is received and processed
+    % Currently, only prints received value
+    obj.string_buffer = text;
+    disp(['Received STRING message: ', deblank(deviceName), ' = ', text]);
+end
+function acquireLock(lockfile)
+    while true
+        if ~isfile(lockfile)
+            fid = fopen(lockfile, 'w');
+            if fid ~= -1
+                fprintf(fid, 'lock');
+                fclose(fid);
+                return
+            end
+        end
+        pause(0.01);
+    end
+end
+
+function releaseLock(lockfile)
+    if isfile(lockfile)
+        delete(lockfile);
+    end
+end
