@@ -398,7 +398,7 @@ classdef Server < handle
                         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                     end
                     obj.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
-                    obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
+                    
                 end
                 if ~fail_flag
                     final_targeting_reached = false;
@@ -444,6 +444,7 @@ classdef Server < handle
                             end
                         end
                     end
+                    obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
                     if final_targeting_reached
                         msg = "Reached Final target.";
                     else
