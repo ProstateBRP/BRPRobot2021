@@ -153,8 +153,9 @@ classdef Robot < handle
         Needle_pose_delay                            % Delayed needle position
         Needle_pose_sensor                           % Sensor-based needle position
         Needle_pose_sensor_realtime                  % Real-time needle pose
-        Needle_pose_act = [0 0 0 0 0 0];                              % Actual needle pose for control
+        Needle_pose_act = [0 0 0 0 0 0];             % Actual needle pose for control
         simulation_start_time                        % Simulation start time for timing calculations
+        ki = Kinematics();                           % Kinematics construct 
     end
 
     methods
@@ -451,8 +452,8 @@ classdef Robot < handle
                 end
             else
                 Needle_pose_act_tfrom = Gen_pose2tform(obj.Needle_pose_act);
+                robot_pose = obj.ki.ForwardKinematics(xFrontSlider1, xFrontSlider2, xRearSlider1, xRearSlider2, zInsertion, Needle_pose_act_tfrom);
                 % Needle_pose_act_tfrom(4,3) = Needle_pose_act_tfrom(4,3) - 100; % (test) Offset for 3D slicer
-                robot_pose = Needle_pose_act_tfrom; % Some parameters of "Needle_pose_act" are "estimated" needle pose, not "actual" needle pose
             end
         end
 
