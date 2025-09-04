@@ -532,7 +532,6 @@ classdef Server < handle
             obj.state = "STOP";
             obj.command_recieved = false;
             obj.robot.set_robot_mode('stop');
-            delete all
         end
 
         function obj = Run(obj)

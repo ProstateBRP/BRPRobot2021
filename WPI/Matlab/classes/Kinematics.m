@@ -82,9 +82,9 @@ classdef Kinematics < handle
             
             obj.yRearPointOfRotation = yR_1 + sqrt(yR_2 - yR_3);
             obj.zRearPointOfRotation = 0;
-            
             % Alpha is the yaw angle of the needle tip relative to an imaginary straight insertion line
             alpha = atan2(obj.xFrontPointOfRotation - obj.xRearPointOfRotation, obj.distanceBetweenTraps);
+
             % Beta is the pitch angle of the needle tip relative to an imaginary straight insertion line
             beta = atan2(obj.yRearPointOfRotation - obj.yFrontPointOfRotation, obj.distanceBetweenTraps);
             
