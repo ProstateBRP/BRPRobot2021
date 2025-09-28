@@ -3,38 +3,39 @@ function testReceiveMessage()
     clc; close all;
 
     % Set IP socket and number of messages (N) to receive
-    N = 5;
+    N = 7;
     sock = igtlConnect('127.0.0.1', 18936);
     receiver = OpenIGTLinkMessageReceiver(sock, @onRxStatusMessage, @onRxStringMessage, @onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
     % f = parfeval(@backgroundPool, 0);
-    % while true
-    %     [a,b,c] = receiver.readMessage();
-    %     pause(0.1);
-    % end
-    for i=1:N+1 % not counting first STATUS message (N+1)
+    while true
         [a,b,c] = receiver.readMessage();
-        disp(c);
+        disp(c)
+        pause(0.1);
     end
+    % for i=1:N+1 % not counting first STATUS message (N+1)
+    %     [a,b,c] = receiver.readMessage();
+    %     disp(c);
+    % end
     % cancel(f);
     igtlDisconnect(sock);
 end
 
-function backgroundPool()
-    fid = fopen('backgroundLog.txt', 'a');
-    sock = igtlConnect('127.0.0.1', 18944);
-    receiver = OpenIGTLinkMessageReceiver(sock, @onRxStatusMessage, @onRxStringMessage, @onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
-    try
-        fprintf(fid, 'Background thread started...\n');
-        while true
-            fprintf(fid, 'Waiting for message...\n');
-            [x,y,z] = receiver.readMessage();
-            fprintf(fid, 'Message received:\n%s\n', z);
-        end
-    catch ME
-        fprintf(fid, 'Background function crashed:\n%s\n', getReport(ME));
-    end
-    fclose(fid);
-end
+% function backgroundPool()
+%     fid = fopen('backgroundLog.txt', 'a');
+%     sock = igtlConnect('127.0.0.1', 18944);
+%     receiver = OpenIGTLinkMessageReceiver(sock, @onRxStatusMessage, @onRxStringMessage, @onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
+%     try
+%         fprintf(fid, 'Background thread started...\n');
+%         while true
+%             fprintf(fid, 'Waiting for message...\n');
+%             [x,y,z] = receiver.readMessage();
+%             fprintf(fid, 'Message received:\n%s\n', z);
+%         end
+%     catch ME
+%         fprintf(fid, 'Background function crashed:\n%s\n', getReport(ME));
+%     end
+%     fclose(fid);
+% end
 %% Callback when STATUS message is received and processed
 % Currently, only prints received value
 function onRxStatusMessage(deviceName, text)
