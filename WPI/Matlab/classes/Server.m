@@ -182,6 +182,7 @@ classdef Server < Robot
                             disp(obj.calibration_finsh_flag)
                             if ~obj.calibration_finsh_flag
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
+                                break
                             else
                                 status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                                 obj.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
