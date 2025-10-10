@@ -1,4 +1,4 @@
-classdef Robot < handle
+classdef Robot < Kinematics
     %ROBOT - Advanced needle insertion robot controller
     % 
     % This class provides comprehensive control for needle insertion robots
@@ -27,7 +27,7 @@ classdef Robot < handle
 
     
 
-    properties (Access = private)
+    properties (Access = public)
         %% ===================================================================
         %  BASIC ROBOT STATE PROPERTIES
         %% ===================================================================
@@ -45,6 +45,9 @@ classdef Robot < handle
         %% ===================================================================
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
+        baseToZframe = [1., 0., 0., 0.; 0., 1., 0., 167.4; 0., 0., 1., 239.71; 0., 0., 0., 1];
+        baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
+        zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
 
         %% ===================================================================
         %  NEEDLE CONTROL PARAMETERS
@@ -164,7 +167,6 @@ classdef Robot < handle
         Needle_pose_sensor_realtime                  % Real-time needle pose
         Needle_pose_act = [0 0 0 0 0 0];             % Actual needle pose for control
         simulation_start_time                        % Simulation start time for timing calculations
-        ki = Kinematics();                           % Kinematics construct 
     end
 
     methods
@@ -222,10 +224,10 @@ classdef Robot < handle
             obj.Target_Pos_local = Target_Start;
 
             % Initialize Robot Joint Positions
-            obj.xFrontSlider1 = 16; % mm
-            obj.xFrontSlider2 = 16; % mm
-            obj.xRearSlider1 = 16; % mm
-            obj.xRearSlider2 = 16; % mm
+            obj.xFrontSlider1 = 150; % mm
+            obj.xFrontSlider2 = -150; % mm
+            obj.xRearSlider1 = 150; % mm
+            obj.xRearSlider2 = -150; % mm
             obj.zInsertion = 3; % mm
 
             %% Initialize time and data arrays
@@ -467,13 +469,10 @@ classdef Robot < handle
                     obj.counter = 0;
                 end
             else
-                Needle_pose_act_tfrom = Gen_pose2tform(obj.Needle_pose_act);
-                % zInsertion = obj.Needle_pose_act(3)
-                robot_kinematics = obj.ki.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion, Needle_pose_act_tfrom);
-                robot_pose = robot_kinematics.NeedleTip;
-                robot_pose(1:3,4) = robot_kinematics.NeedleTip(1:3,4) - obj.registration_matrix(1:3,4);
-                disp(robot_pose)
-                % Needle_pose_act_tfrom(4,3) = Needle_pose_act_tfrom(4,3) - 100; % (test) Offset for 3D slicer
+                % Needle_pose_act_tfrom = Gen_pose2tform(obj.Needle_pose_act);
+                robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion);
+                obj.zFrameToKinematicTip = obj.baseToZframe\robot_kinematics.BaseToTreatment;
+                robot_pose = obj.registration_matrix *  obj.zFrameToKinematicTip;
             end
         end
 

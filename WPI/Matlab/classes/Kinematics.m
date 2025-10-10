@@ -43,7 +43,7 @@ classdef Kinematics < handle
             obj.h = 0.0;
         end
         
-        function FK = ForwardKinematics(obj, xFrontSlider1, xFrontSlider2, xRearSlider1, xRearSlider2, zInsertion, NeedleT)
+        function FK = ForwardKinematics(obj, xFrontSlider1, xFrontSlider2, xRearSlider1, xRearSlider2, zInsertion)
             %FORWARDKINEMATICS Calculate forward kinematics
             %   Inputs:
             %       xFrontSlider1, xFrontSlider2 - Front left and right slider positions
@@ -126,7 +126,6 @@ classdef Kinematics < handle
             FK.frontSliders = [xFrontSlider1; xFrontSlider2];
             FK.rearSliders = [xRearSlider1; xRearSlider2];
             FK.insertion = zInsertion;
-            FK.NeedleTip = FK.BaseToTreatment * NeedleT;
         end
         
         function IK = InverseKinematics(obj, TargetPose)
