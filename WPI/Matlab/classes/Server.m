@@ -164,7 +164,6 @@ classdef Server < Robot
                     end
                     obj.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                 end
-    
                 if ~fail_flag
                     while ~obj.calibration_finsh_flag
                         [~, type, data] = obj.receiver.readMessage();
@@ -180,6 +179,7 @@ classdef Server < Robot
                         elseif strcmpi(type, 'TRANSFORM')
                             obj.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
                             obj.calibration_finsh_flag = obj.calibrate(data);
+                            disp(obj.calibration_finsh_flag)
                             if ~obj.calibration_finsh_flag
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
                             else
@@ -203,10 +203,10 @@ classdef Server < Robot
             if obj.command_recieved
                 disp('Calibration finished');
                 obj.command_recieved = false;
+                obj.idle_flag = true;
+                obj.state = "IDLE";        
+                obj.set_robot_mode('idle');
             end                           
-            obj.idle_flag = true;
-            obj.state = "IDLE";        
-            obj.set_robot_mode('idle');
         end
         
         function obj = onPlanning(obj)
@@ -350,7 +350,7 @@ classdef Server < Robot
                             obj.robot_pose = obj.get_robot_current_pose();
                             obj.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', obj.robot_pose);
                         elseif ismember(data, obj.validCommands)
-                            msg = "Exiting idle mode, and getting into " + data + "mode.";
+                            msg = "Exiting idle mode, and getting into " + data + " mode.";
                             disp(msg);
                             obj.idle_flag = false;
                             obj.command_recieved = true;

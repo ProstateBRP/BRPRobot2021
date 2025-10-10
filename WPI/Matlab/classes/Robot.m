@@ -338,12 +338,10 @@ classdef Robot < Kinematics
         %% ===================================================================
         function calibration_finsh_flag = calibrate(obj, recieved_matrix)
             %CALIBRATE Calibrate robot with respect to image frame
-            origin = obj.registration_matrix;
+            % origin = obj.registration_matrix;
+            obj.registration_matrix = recieved_matrix;
             tol = 1e-6;
-            calibration_finsh_flag = ~all(abs(origin(:) - recieved_matrix(:)) < tol);
-            if calibration_finsh_flag
-                obj.registration_matrix = recieved_matrix;
-            end
+            calibration_finsh_flag = all(abs(obj.registration_matrix(:) - recieved_matrix(:)) < tol);
         end
 
         function target_in_robot_frame = target_registration(obj, target)
