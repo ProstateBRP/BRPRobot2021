@@ -1,2 +1,2 @@
-% 並列プールの削除
+% Delete paralell pool
 delete(gcp('nocreate'))
