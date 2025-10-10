@@ -1,4 +1,4 @@
-classdef Server < handle
+classdef Server < Robot
     %SERVER Summary of this class goes here
     % This class is for communication with upper level control from 3D
     % slicer amd lower level robot hardware. The robot hardware interface
@@ -28,7 +28,8 @@ classdef Server < handle
         idle_flag = false
         command_recieved = false
         pool
-        Queue
+        sideFuture   % parallel.FevalFuture
+        stopSide = true
     end
 
     properties (Access = public)
@@ -51,22 +52,15 @@ classdef Server < handle
             parse(p, varargin{:});
             % Connect to robot control part
             if p.Results.simulation
-                obj.robot = Robot('simulation', true);
-            else
-                obj.robot = Robot();
+                obj.simulation_mode = true;
             end
             obj.host = p.Results.host;
             obj.port = p.Results.port;
             obj.open_loop = p.Results.open_loop;
-            obj.robot_not_ready = obj.robot.is_startup();
+            obj.robot_not_ready = obj.is_startup();
 
             %obj.robot_pose = obj.robot.get_robot_current_pose();
             % obj.pool = gcp('nocreate'); % get existing pool if any
-            % if isempty(obj.pool)
-            %     obj.pool = parpool('threads'); % create thread pool if none
-            % end
-            % obj.Queue = parallel.pool.DataQueue;
-            % afterEach(obj.Queue, @(~) obj.onEmergency());
         end
 
         function obj = connect(obj)
@@ -116,8 +110,8 @@ classdef Server < handle
             obj.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(obj.state));
             if obj.robot_not_ready
                 % Start up the robot
-                obj.robot.startup();
-                obj.robot_not_ready = obj.robot.is_startup();
+                obj.startup();
+                obj.robot_not_ready = obj.is_startup();
                 %if it's started or not, wait for it to start up
                 if obj.robot_not_ready
                     status = struct('code', 13, 'subCode', 13, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
@@ -128,15 +122,17 @@ classdef Server < handle
                     obj.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                     status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
                     obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
+                    obj.stopSide = false;
+                    % obj.sideFuture = parfeval(backgroundPool, @Server.robot_position_server, 0, obj);
+                    obj.idle_flag = true;
+                    obj.state = "IDLE";        
+                    obj.set_robot_mode('idle');
                 end
             end
             if obj.command_recieved
                 disp('Already started up');
                 obj.command_recieved = false;
             end                           
-            obj.idle_flag = true;
-            obj.state = "IDLE";        
-            obj.robot.set_robot_mode('idle');
         end
         
         function obj = onCalibration(obj)
@@ -150,14 +146,14 @@ classdef Server < handle
             %First Check if robot has started up
             fail_flag = false;
             id = split(obj.name, '_');
-            obj.robot_mode = obj.robot.check_robot_mode();
+            obj.robot_mode = obj.check_robot_mode();
             if ~obj.robot_not_ready 
                 obj.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(obj.state));
                 % Set the robot into calibration mode
                 if ~strcmp(obj.robot_mode, 'calibration')
                     %try to set the robot mode in calibration
-                    obj.robot.set_robot_mode('calibration');
-                    obj.robot_mode = obj.robot.check_robot_mode();               
+                    obj.set_robot_mode('calibration');
+                    obj.robot_mode = obj.check_robot_mode();               
                     if ~strcmp(obj.robot_mode, 'calibration')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
                         error_message = "Start Calibration fail, check robot status, back to IDLE.";
@@ -174,7 +170,7 @@ classdef Server < handle
                         [~, type, data] = obj.receiver.readMessage();
                         if strcmpi(type, 'STRING')
                             if strcmpi(data, 'CURRENT_POSITION')
-                                obj.robot_pose = obj.robot.get_robot_current_pose();
+                                obj.robot_pose = obj.get_robot_current_pose();
                                 obj.sender.WriteOpenIGTLinkTransformMessage(char("CURRENT_POSITION"), obj.robot_pose);
                                 pause(0.2);
                             else
@@ -183,7 +179,7 @@ classdef Server < handle
                             end
                         elseif strcmpi(type, 'TRANSFORM')
                             obj.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
-                            obj.calibration_finsh_flag = obj.robot.calibrate(data);
+                            obj.calibration_finsh_flag = obj.calibrate(data);
                             if ~obj.calibration_finsh_flag
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
                             else
@@ -208,9 +204,9 @@ classdef Server < handle
                 disp('Calibration finished');
                 obj.command_recieved = false;
             end                           
-                obj.idle_flag = true;
-                obj.state = "IDLE";        
-                obj.robot.set_robot_mode('idle');
+            obj.idle_flag = true;
+            obj.state = "IDLE";        
+            obj.set_robot_mode('idle');
         end
         
         function obj = onPlanning(obj)
@@ -226,8 +222,8 @@ classdef Server < handle
                 obj.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(obj.state));
                 % Set the robot into planning mode
                 if ~strcmp(obj.robot_mode, 'planning')
-                    obj.robot.set_robot_mode('planning');
-                    obj.robot_mode = obj.robot.check_robot_mode();
+                    obj.set_robot_mode('planning');
+                    obj.robot_mode = obj.check_robot_mode();
                     
                     if ~strcmp(obj.robot_mode, 'planning')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
@@ -261,7 +257,7 @@ classdef Server < handle
                 obj.idle_flag = true;
                 obj.state = "IDLE";
                 obj.command_recieved = false;
-                obj.robot.set_robot_mode('idle');
+                obj.set_robot_mode('idle');
             end
         end    
         
@@ -278,8 +274,8 @@ classdef Server < handle
                 obj.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(obj.state));
                 % Set the robot into targeting mode
                 if ~strcmp(obj.robot_mode, 'targeting')
-                    obj.robot.set_robot_mode('targeting');
-                    obj.robot_mode = obj.robot.check_robot_mode();
+                    obj.set_robot_mode('targeting');
+                    obj.robot_mode = obj.check_robot_mode();
                     
                     if ~strcmp(obj.robot_mode, 'targeting')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
@@ -298,12 +294,12 @@ classdef Server < handle
                         [head, type, data] = obj.receiver.readMessage();
                         if strcmpi(type, 'STRING')
                             if strcmpi(data, 'CURRENT_POSITION')
-                                obj.robot_pose = obj.robot.get_robot_current_pose();
+                                obj.robot_pose = obj.get_robot_current_pose();
                                 obj.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', obj.robot_pose);
                             end
                         elseif strcmpi(type, 'TRANSFORM')
                             obj.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
-                            is_in_workspace = obj.robot.check_target(data);
+                            is_in_workspace = obj.check_target(data);
                             disp(is_in_workspace);
                             
                             if ~is_in_workspace
@@ -339,7 +335,7 @@ classdef Server < handle
                 obj.idle_flag = true;
                 obj.state = "IDLE";
                 obj.command_recieved = false;
-                obj.robot.set_robot_mode('idle');
+                obj.set_robot_mode('idle');
             end
         end
 
@@ -351,7 +347,7 @@ classdef Server < handle
                     if strcmpi(type, 'STRING')
                         disp(data);
                         if strcmpi(data, 'CURRENT_POSITION')
-                            obj.robot_pose = obj.robot.get_robot_current_pose();
+                            obj.robot_pose = obj.get_robot_current_pose();
                             obj.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', obj.robot_pose);
                         elseif ismember(data, obj.validCommands)
                             msg = "Exiting idle mode, and getting into " + data + "mode.";
@@ -387,8 +383,8 @@ classdef Server < handle
                 obj.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(obj.state));
                 % Set the robot into calibration mode
                 if ~strcmp(obj.robot_mode, 'move_to_goal')
-                    obj.robot.set_robot_mode('move_to_goal');
-                    obj.robot_mode = obj.robot.check_robot_mode();
+                    obj.set_robot_mode('move_to_goal');
+                    obj.robot_mode = obj.check_robot_mode();
                     
                     if ~strcmp(obj.robot_mode, 'move_to_goal')
                         status = struct('code', 13, 'subCode', 0, 'errorName', 'Device not ready', 'message', 'STATUS_NOT_READY');
@@ -407,14 +403,14 @@ classdef Server < handle
                     while ~final_targeting_reached
                         if obj.open_loop
                             % F = parfeval(obj.pool, @robot_postion_server, 0, obj.host, obj.port, obj.Queue);
-                            obj.robot.move_to_end();
+                            obj.move_to_end();
                             % cancel(F);
                             break
                         else
                             [head, type, data] = obj.receiver.readMessage();
                             if strcmpi(type, 'STRING')
                                 if strcmpi(data, 'CURRENT_POSITION')
-                                    obj.robot_pose = obj.robot.get_robot_current_pose();
+                                    obj.robot_pose = obj.get_robot_current_pose();
                                     obj.sender.WriteOpenIGTLinkTransformMessage(char("CURRENT_POSITION"), obj.robot_pose);
                                 else
                                     error_message = "Wrong command at this time.";
@@ -429,15 +425,15 @@ classdef Server < handle
                                     break
                                 else
                                     if first_step_flag
-                                        obj.robot.set_entry_point(data);
+                                        obj.set_entry_point(data);
                                         first_step_flag = false;
                                     end
                                     status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                                     obj.sender.WriteOpenIGTLinkStatusMessage(char(head), status);
-                                    obj.robot.move_A_step(data);
-                                    obj.robot_pose = obj.robot.get_robot_current_pose();
+                                    obj.move_A_step(data);
+                                    obj.robot_pose = obj.get_robot_current_pose();
                                     obj.sender.WriteOpenIGTLinkTransformMessage(char(head), obj.robot_pose);
-                                    final_targeting_reached = obj.robot.is_target_reached;
+                                    final_targeting_reached = obj.is_target_reached;
                                 end                           
                             else
                                 error_message = "Wrong type of message at this time.";
@@ -477,7 +473,7 @@ classdef Server < handle
                     obj.idle_flag = true;
                     obj.state = "IDLE";
                     obj.command_recieved = false;
-                    obj.robot.set_robot_mode('idle');
+                    obj.set_robot_mode('idle');
                 end
             end
         end
@@ -490,7 +486,7 @@ classdef Server < handle
                 obj.sender.WriteOpenIGTLinkStringMessage(char("ACK_"+id(2)), char(obj.state));
                 status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                 obj.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
-                obj.robot.RetractNeedle();
+                obj.RetractNeedle();
                 obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
             else
                 error_message = 'Robot not start up, intialize the robot first!';
@@ -504,35 +500,63 @@ classdef Server < handle
                 obj.idle_flag = true;
                 obj.state = "IDLE";
                 obj.command_recieved = false;
-                obj.robot.set_robot_mode('idle');
+                obj.set_robot_mode('idle');
             end
         end
         
         function obj = onStop(obj)
             disp("Stop the robot and communication");
-            obj.robot.stop();
+            obj.stop();
             obj.robot_not_ready = true;
             obj.idle_flag = false;
             obj.state = "STOP";
             obj.command_recieved = false;
-            obj.robot.set_robot_mode('stop');
+            obj.set_robot_mode('stop');
+            obj.stopSide = true;     % cooperative stop
+            if ~isempty(obj.sideFuture) && ~strcmp(obj.sideFuture.State, 'finished')
+                cancel(obj.sideFuture);   % hard stop if needed
+            end
             obj.calibration_finsh_flag = false;
             obj.planning_finsh_flag = false;
             obj.targeting_finsh_flag = false;
             obj.target_not_reachable = false;
-            delete(obj.pool);
+            delete(gcp('nocreate'));
             delete all
         end
 
         function obj = onEmergency(obj)
             disp("EMERGENCY STOP!");
-            obj.robot.Emergency();
+            obj.Emergency();
             obj.robot_not_ready = true;
             obj.idle_flag = false;
             obj.state = "STOP";
             obj.command_recieved = false;
-            obj.robot.set_robot_mode('stop');
-            delete all
+            obj.set_robot_mode('stop');
+            delete(obj.pool);
+        end
+
+        function robot_position_server(obj)
+            send(q, "side client started");
+            sidesocket = igtlConnect(obj.host, obj.port);
+            sidereceiver =OpenIGTLinkMessageReceiver(sidesocket, @obj.onRxStatusMessage, @obj.onRxStringMessage, @obj.onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
+            sidesender = OpenIGTLinkMessageSender(obj.socket);
+            while ~obj.stopSide
+                [name_local, type, data] = sidereceiver.readCommandMessage();
+                if strcmpi(type, 'STRING')
+                    if strcmpi(data, 'CURRENT_POSITION')
+                        robot_pose_local = obj.get_robot_current_pose();
+                        sidesender.WriteOpenIGTLinkTransformMessage(char(name_local), robot_pose_local);
+                    elseif strcmpi(data, 'EMERGENCY')
+                        obj.onEmergency();
+                        obj.stopSide = true;
+                        if ~isempty(obj.sideFuture) && ~strcmp(obj.sideFuture.State, 'finished')
+                            cancel(obj.sideFuture);   % hard stop if needed
+                        end
+                    end
+                end
+            end
+            send(q, "side client stopped");
+            igtlDisconnect(sidesocket);
         end
 
         function obj = Run(obj)
@@ -570,52 +594,5 @@ classdef Server < handle
 
 end
 
-function robot_postion_server(host, port, Queue)
-    file = 'shared_data.mat';          % Shared data file path
-    lockfile = 'shared_data.lock';     % Lock file path
-    socket = igtlConnect(host, port);
-    receiver = OpenIGTLinkMessageReceiver(socket, @onRxStatusMessage, @onRxStringMessage, @onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
-    sender = OpenIGTLinkMessageSender(socket);
-    while true
-        [name, type, data] = receiver.readCommandMessage();
-        if strcmpi(type, 'STRING')
-            if strcmpi(data, 'CURRENT_POSITION')
-                acquireLock(lockfile);             % Acquire lock (wait if busy)
-                S = load(file);                    % Load data from file
-                robot_pose = S.robot_pose;
-                releaseLock(lockfile); 
-                sender.WriteOpenIGTLinkTransformMessage(char(name), robot_pose);
-            elseif strcmpi(data, 'EMERGENCY')
-                Estop = true;
-                send(Queue, Estop);
-            end
-        end
-    end
-    igtlDisconnect(socket);
-end
 
-function obj = onRxStringMessage(deviceName, text)
-    % Callback when STRING message is received and processed
-    % Currently, only prints received value
-    obj.string_buffer = text;
-    disp(['Received STRING message: ', deblank(deviceName), ' = ', text]);
-end
-function acquireLock(lockfile)
-    while true
-        if ~isfile(lockfile)
-            fid = fopen(lockfile, 'w');
-            if fid ~= -1
-                fprintf(fid, 'lock');
-                fclose(fid);
-                return
-            end
-        end
-        pause(0.01);
-    end
-end
 
-function releaseLock(lockfile)
-    if isfile(lockfile)
-        delete(lockfile);
-    end
-end
