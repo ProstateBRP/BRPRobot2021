@@ -5,7 +5,7 @@ timers = timerfind;
 if ~isempty(timers)
     stop(timers);  % タイマーを停止
     delete(timers);  % タイマーを削除
-    disp('全てのタイマーが停止され、削除されました。');
+    disp('All timers have been stopped and deleted');
 else
-    disp('実行中のタイマーはありません。');
+    disp('No timers running');
 end
