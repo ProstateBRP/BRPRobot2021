@@ -32,8 +32,8 @@ classdef Robot < Kinematics
         %  BASIC ROBOT STATE PROPERTIES
         %% ===================================================================
         current_mode = 'stop'                          % Current robot operation mode
-        starting_position                               % Initial robot position
-        target_position_robot                           % Target position in robot frame
+        starting_position                              % Initial robot position
+        target_position_robot                          % Target position in robot frame
         is_target_reached                              % Flag indicating if target is reached
         previou_needle_pose_MRI                        % Previous needle pose from MRI
         simulation_mode = false                        % Flag to enable simulation mode
@@ -45,9 +45,14 @@ classdef Robot < Kinematics
         %% ===================================================================
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
-        baseToZframe = [1., 0., 0., 0.; 0., 1., 0., 167.4; 0., 0., 1., 239.71; 0., 0., 0., 1];
+        robot_base_to_zframe = [1., 0., 0., 0.; 0., 1., 0., 167.4; 0., 0., 1., 239.71; 0., 0., 0., 1];
         baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
         zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
+        reachable_target_pose_imager_coord = eye(4);
+        current_pose_image_coord = eye(4);
+        base_to_desired_target_robot_coord = eye(4);
+        base_to_treatment_robot_coord = eye(4);
+        target_full_pose_image_coord = eye(4);
 
         %% ===================================================================
         %  NEEDLE CONTROL PARAMETERS
@@ -146,6 +151,7 @@ classdef Robot < Kinematics
         xRearSlider1
         xRearSlider2
         zInsertion
+        zRotation
 
         %% ===================================================================
         %  KALMAN FILTER AND STATE ESTIMATION
@@ -229,6 +235,7 @@ classdef Robot < Kinematics
             obj.xRearSlider1 = 150; % mm
             obj.xRearSlider2 = -150; % mm
             obj.zInsertion = 3; % mm
+            obj.zRotation = 0;
 
             %% Initialize time and data arrays
             obj.Time_Step = 0:obj.Time_resolution:obj.Time_SimEnd;
@@ -288,6 +295,24 @@ classdef Robot < Kinematics
                 obj.Release();
             end
         end
+        %% ==================================================================
+        % Basic robot setup and update functions
+        %% ==================================================================
+        function obj = SetNeedleLength(obj, needle_length)
+        % Update the needle information
+            obj.BiopsyNeedle.needleLength = needle_length;
+            obj.UpdateNeedleLength();
+            %obj.RunInverseKinematics();
+        end
+
+        function T = ConvertFromImagerToRobotBase(obj, matrix_img_coord)
+            T = obj.robot_base_to_zframe * (obj.registration_matrix \ matrix_img_coord);
+        end
+        
+        function T = ConvertFromRobotBaseToImager(obj, matrix_rbt_coord)
+            T =  obj.registration_matrix * (obj.robot_base_to_zframe \ matrix_rbt_coord);
+        end
+
 
         %% ===================================================================
         %  ROBOT STATUS AND MODE MANAGEMENT
@@ -461,15 +486,21 @@ classdef Robot < Kinematics
         function robot_pose = get_robot_current_pose(obj)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
             if obj.simulation_mode
-                robot_pose = [1,0,0,1;0,1,0,2;0,0,1,obj.counter;0,0,0,1];
-                obj.counter = obj.counter + 1;
-                if obj.counter == 100
-                    obj.counter = 0;
-                end
+                robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
+                disp(robot_kinematics.BaseToTreatment);
+                robot_pose = obj.ConvertFromRobotBaseToImager(robot_kinematics.BaseToTreatment);
+                disp(obj.zFrameToKinematicTip)
+                % robot_pose = [1,0,0,0;0,1,0,-26.9738;0,0,1,-34.7100;0,0,0,1];
+                % robot_pose = obj.registration_matrix * robot_pose;
+                % disp(robot_pose)
+                % obj.counter = obj.counter + 1;
+                % if obj.counter == 100
+                %     obj.counter = 0;
+                % end
             else
-                % Needle_pose_act_tfrom = Gen_pose2tform(obj.Needle_pose_act);
-                robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion);
+                robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
                 obj.zFrameToKinematicTip = obj.baseToZframe\robot_kinematics.BaseToTreatment;
+                disp(obj.zFrameToKinematicTip)
                 robot_pose = obj.registration_matrix *  obj.zFrameToKinematicTip;
             end
         end

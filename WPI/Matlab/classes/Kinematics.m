@@ -4,28 +4,34 @@ classdef Kinematics < handle
     %   surgery robot based on the C++ implementation
     
     properties (Constant)
+	    % Robot Specific Parameters
+	    baseToNeedleGuideZ = 223.4;   % Distance from base to needle guide tip at home
         RADIAN_TO_DEGREE = 57.29578;
         % Robot Specific Parameters (from C++ implementation)
         lengthTrapSideLink = 124.0;        % L
         widthTrapTop = 84.0;               % B
         heightLowerTrapOffset = 12.0;      % H1
-        heightUpperTrapOffset = 67.5;      % H2
-        lengthNeedleTipOffset = 205.0;     % Zoffset
+        heightUpperTrapOffset = 25     %67.5;      % H2
         distanceBetweenTraps = 181.5;      % D
+        % Angulation Variables
+        C = 18.2;   % Distance between point of rotation and center of front trapezoid stage in Z-direction
+        h = 92.5;   % Distance between needle's direction and center of front trapezoid stage in vertical direction
+        NeedleHolder = struct('holderLength', 90., 'needleBaseToHolderTip', 0. ,'holderBaseToRobotBaseZ',90.);
+        % {_holderLength, _needleBaseToHolderTip, _holderBaseToRobotBaseZ}
+        
     end
     
     properties
         % Values that update with motion
+        lengthNeedleTipOffset = 223.4;     % Zoffset
         xFrontPointOfRotation
         yFrontPointOfRotation
         zFrontPointOfRotation
         xRearPointOfRotation
         yRearPointOfRotation
         zRearPointOfRotation
+        BiopsyNeedle = struct('needleGauge',18,'needleLength',224.0,'bevelAngle',22.5);
         
-        % Angulation Variables
-        C   % Distance between point of rotation and center of front trapezoid stage in Z-direction
-        h   % Distance between needle's direction and center of front trapezoid stage in vertical direction
     end
     
     methods
@@ -37,13 +43,17 @@ classdef Kinematics < handle
             obj.xRearPointOfRotation = 0.0;
             obj.yRearPointOfRotation = 0.0;
             obj.zRearPointOfRotation = 0.0;
-            
-            % Angulation Variables
-            obj.C = 0.0;
-            obj.h = 0.0;
+            obj.UpdateNeedleLength();
+
+
         end
-        
-        function FK = ForwardKinematics(obj, xFrontSlider1, xFrontSlider2, xRearSlider1, xRearSlider2, zInsertion)
+        function obj = UpdateNeedleLength(obj)
+            obj.lengthNeedleTipOffset = obj.BiopsyNeedle.needleLength + ...
+								   obj.NeedleHolder.holderLength - obj.NeedleHolder.needleBaseToHolderTip - ...
+								   obj.NeedleHolder.holderBaseToRobotBaseZ;
+        end
+        function FK = ForwardKinematics(obj, xFrontSlider1, xFrontSlider2, xRearSlider1, xRearSlider2, zInsertion, zrotation)
+
             %FORWARDKINEMATICS Calculate forward kinematics
             %   Inputs:
             %       xFrontSlider1, xFrontSlider2 - Front left and right slider positions
@@ -54,11 +64,11 @@ classdef Kinematics < handle
             
             % Initialize output structure
             FK = struct();
-            
+            theta = zrotation;
             %*** BASE FORWARD KINEMATICS ***%
             obj.xFrontPointOfRotation = (xFrontSlider1 + xFrontSlider2) / 2;
             
-            yF_1 = obj.heightLowerTrapOffset + obj.heightUpperTrapOffset;
+            yF_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;
             yF_2 = obj.lengthTrapSideLink^2;
             yF_3 = ((xFrontSlider1 - xFrontSlider2 - obj.widthTrapTop) / 2)^2;
             
@@ -68,10 +78,10 @@ classdef Kinematics < handle
             end
             
             obj.yFrontPointOfRotation = yF_1 + sqrt(yF_2 - yF_3);
-            obj.zFrontPointOfRotation = -obj.C;
+            obj.zFrontPointOfRotation = 0;
             
             obj.xRearPointOfRotation = (xRearSlider1 + xRearSlider2) / 2;
-            yR_1 = obj.heightLowerTrapOffset + obj.heightUpperTrapOffset;
+            yR_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;
             yR_2 = obj.lengthTrapSideLink^2;
             yR_3 = ((xRearSlider1 - xRearSlider2 - obj.widthTrapTop) / 2)^2;
             
@@ -96,26 +106,29 @@ classdef Kinematics < handle
             rotationBaseToTipPitch = [1, 0, 0;
                                      0, cos(beta), -sin(beta);
                                      0, sin(beta), cos(beta)];
+
+            rotationBaseToTipRoll = [cos(theta), -sin(theta), 0;
+		                              sin(theta), cos(theta), 0.;
+		                                0, 0, 1;];
             
-            rotationBaseToTip = rotationBaseToTipYaw * rotationBaseToTipPitch;
+            rotationBaseToTip = rotationBaseToTipYaw * rotationBaseToTipPitch * rotationBaseToTipRoll;
             
             % Calculate needle tip position
-            FK.xNeedleBase = ((obj.lengthNeedleTipOffset + zInsertion) * cos(beta) * sin(alpha)) + ...
-                           (obj.h * sin(beta) * sin(alpha)) + obj.xFrontPointOfRotation;
+            FK.xNeedleTip = ((obj.lengthNeedleTipOffset + zInsertion) * cos(-beta) + (obj.h * sin(-beta))) * sin(alpha) + obj.xFrontPointOfRotation;
             
             FK.yNeedleTip = (obj.h * cos(beta)) - ...
                            ((obj.lengthNeedleTipOffset + zInsertion) * sin(beta)) + obj.yFrontPointOfRotation;
             
-            FK.zNeedleTip = ((obj.lengthNeedleTipOffset + zInsertion) * cos(beta) * cos(alpha)) + ...
-                           (obj.h * sin(beta) * cos(alpha)) + obj.zFrontPointOfRotation;
+            FK.zNeedleTip = ((obj.lengthNeedleTipOffset + zInsertion) * cos(-beta) * cos(alpha)) + ...
+                           (obj.h * sin(-beta) * cos(alpha)) + obj.zFrontPointOfRotation;
             
             % Base to treatment transformation matrix
             FK.BaseToTreatment = eye(4);
             FK.BaseToTreatment(1:3, 1:3) = rotationBaseToTip;
-            FK.BaseToTreatment(1:3, 4) = [FK.xNeedleBase; FK.yNeedleTip; FK.zNeedleTip];
+            FK.BaseToTreatment(1:3, 4) = [FK.xNeedleTip; FK.yNeedleTip; FK.zNeedleTip];
             
             % Additional outputs for convenience
-            FK.needleBase = [FK.xNeedleBase; FK.yNeedleTip; FK.zNeedleTip];
+            FK.needleBase = [FK.xNeedleTip; FK.yNeedleTip; FK.zNeedleTip];
             FK.frontRotationCenter = [obj.xFrontPointOfRotation; obj.yFrontPointOfRotation; obj.zFrontPointOfRotation];
             FK.rearRotationCenter = [obj.xRearPointOfRotation; obj.yRearPointOfRotation; obj.zRearPointOfRotation];
             FK.alphaDeg = alpha * obj.RADIAN_TO_DEGREE;
@@ -148,15 +161,14 @@ classdef Kinematics < handle
             
             % Calculate the coordinate of the front point of rotation
             xFrontPointOfRotationDesired = TargetPose(1, 4) - ...
-                                          (((obj.lengthNeedleTipOffset + IK.zInsertion) * cos(beta) * sin(alpha)) + ...
-                                           (obj.h * sin(beta) * sin(alpha)));
+                                          ((obj.lengthNeedleTipOffset + IK.zInsertion) * cos(beta) + (obj.h * sin(beta))) * sin(alpha);
             
             yFrontPointOfRotationDesired = TargetPose(2, 4) - ...
                                           ((obj.h * cos(beta)) - ...
                                            ((obj.lengthNeedleTipOffset + IK.zInsertion) * sin(beta)));
             
             % Calculating front right and left slider amounts
-            frontHeight = yFrontPointOfRotationDesired - (obj.heightLowerTrapOffset + obj.heightUpperTrapOffset);
+            frontHeight = yFrontPointOfRotationDesired - (obj.heightLowerTrapOffset - obj.heightUpperTrapOffset);
             
             % Check if calculation is valid
             if obj.lengthTrapSideLink^2 - frontHeight^2 < 0
@@ -175,15 +187,14 @@ classdef Kinematics < handle
             
             % Calculate the coordinate of the rear point of rotation
             xRearPointOfRotationDesired = TargetPose(1, 4) - ...
-                                         (((obj.lengthNeedleTipOffset + IK.zInsertion + obj.distanceBetweenTraps) * cos(beta) * sin(alpha)) + ...
-                                          (obj.h * sin(beta) * sin(alpha)));
+                                         (((obj.lengthNeedleTipOffset + IK.zInsertion + obj.distanceBetweenTraps) * cos(beta)) + (obj.h * sin(beta))) * sin(alpha);
             
             yRearPointOfRotationDesired = TargetPose(2, 4) - ...
                                          ((obj.h * cos(beta)) - ...
                                           ((obj.lengthNeedleTipOffset + IK.zInsertion + obj.distanceBetweenTraps) * sin(beta)));
             
             % Calculating rear right and left slider amounts
-            rearHeight = yRearPointOfRotationDesired - (obj.heightLowerTrapOffset + obj.heightUpperTrapOffset);
+            rearHeight = yRearPointOfRotationDesired - (obj.heightLowerTrapOffset - obj.heightUpperTrapOffset);
             
             % Check if calculation is valid
             if obj.lengthTrapSideLink^2 - rearHeight^2 < 0
@@ -214,7 +225,7 @@ classdef Kinematics < handle
             
             obj.xFrontPointOfRotation = (xFrontSlider1 + xFrontSlider2) / 2;
             
-            yF_1 = obj.heightLowerTrapOffset + obj.heightUpperTrapOffset;
+            yF_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;
             yF_2 = obj.lengthTrapSideLink^2;
             yF_3 = ((xFrontSlider1 - xFrontSlider2 - obj.widthTrapTop) / 2)^2;
             
@@ -223,10 +234,10 @@ classdef Kinematics < handle
             end
             
             obj.yFrontPointOfRotation = yF_1 + sqrt(yF_2 - yF_3);
-            obj.zFrontPointOfRotation = -obj.C;
+            % obj.zFrontPointOfRotation = -obj.C;
             
             obj.xRearPointOfRotation = (xRearSlider1 + xRearSlider2) / 2;
-            yR_1 = obj.heightLowerTrapOffset + obj.heightUpperTrapOffset;
+            yR_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;
             yR_2 = obj.lengthTrapSideLink^2;
             yR_3 = ((xRearSlider1 - xRearSlider2 - obj.widthTrapTop) / 2)^2;
             
@@ -246,7 +257,47 @@ classdef Kinematics < handle
             
             angulation = [alpha_deg, beta_deg];
         end
-        
+
+        function FK = GetNeedleGuidePoseRobotCoord(obj, xFrontSlider1, xFrontSlider2, xRearSlider1, xRearSlider2)
+            obj.xFrontPointOfRotation = (xFrontSlider1 + xFrontSlider2) / 2;
+            yF_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;
+            yF_2 = obj.lengthTrapSideLink^2;
+            yF_3 = ((xFrontSlider1 - xFrontSlider2 - obj.widthTrapTop) / 2) ^ 2;
+            if yF_2 - yF_3 < 0
+                error('Invalid slider positions: outside workspace limits');
+            end
+            
+            obj.yFrontPointOfRotation = yF_1 + sqrt(yF_2 - yF_3);
+            obj.zFrontPointOfRotation = 0;
+
+            alpha = atan2(obj.xFrontPointOfRotation - obj.xRearPointOfRotation, obj.distanceBetweenTraps);
+            obj.xRearPointOfRotation = (xRearSlider1 + xRearSlider2) / 2;
+            yR_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;
+            yR_2 = obj.lengthTrapSideLink^2;
+            yR_3 = ((xRearSlider1 - xRearSlider2 - obj.widthTrapTop) / 2)^2;
+            if yR_2 - yR_3 < 0
+                error('Invalid slider positions: outside workspace limits');
+            end
+            
+            obj.yRearPointOfRotation = yR_1 + sqrt(yR_2 - yR_3);
+            obj.zRearPointOfRotation = 0;
+            beta = atan2(obj.yRearPointOfRotation - obj.yFrontPointOfRotation, obj.distanceBetweenTraps);
+            rotationBaseToTipYaw = [cos(alpha), 0, sin(alpha);
+                                   0, 1, 0;
+                                   -sin(alpha), 0, cos(alpha)];
+            
+            rotationBaseToTipPitch = [1, 0, 0;
+                                     0, cos(beta), -sin(beta);
+                                     0, sin(beta), cos(beta)];
+            rotationBaseToTip = rotationBaseToTipYaw * rotationBaseToTipPitch;
+            FK.xNeedleTip = (obj.baseToNeedleGuideZ * cos(beta) * sin(alpha)) + (obj.h * sin(beta) * sin(alpha)) + obj.xFrontPointOfRotation;
+            FK.yNeedleTip = (obj.h * cos(beta)) - (obj.baseToNeedleGuideZ * sin(beta)) + obj.yFrontPointOfRotation;
+            FK.zNeedleTip = (obj.baseToNeedleGuideZ * cos(beta) * cos(alpha)) + (obj.h * sin(beta) * cos(alpha)) + obj.zFrontPointOfRotation;
+            FK.BaseToTreatment = eye(4);
+            FK.BaseToTreatment(1:3, 1:3) = rotationBaseToTip;
+            FK.BaseToTreatment(1:3, 4) = [FK.xNeedleBase; FK.yNeedleTip; FK.zNeedleTip];
+        end
+
         function isValid = CheckWorkspaceLimits(obj, xFrontSlider1, xFrontSlider2, xRearSlider1, xRearSlider2)
             %CHECKWORKSPACELIMITS Check if slider positions are within workspace limits
             
