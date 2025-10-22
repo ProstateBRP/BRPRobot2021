@@ -234,7 +234,7 @@ classdef Robot < Kinematics
             obj.xFrontSlider2 = -150; % mm
             obj.xRearSlider1 = 150; % mm
             obj.xRearSlider2 = -150; % mm
-            obj.zInsertion = 3; % mm
+            obj.zInsertion = 0; % mm
             obj.zRotation = 0;
 
             %% Initialize time and data arrays
@@ -485,11 +485,13 @@ classdef Robot < Kinematics
         %% ===================================================================
         function robot_pose = get_robot_current_pose(obj)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
-            if obj.simulation_mode
+            % if obj.simulation_mode
                 robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
+                disp("======")
                 disp(robot_kinematics.BaseToTreatment);
+                disp("======");
                 robot_pose = obj.ConvertFromRobotBaseToImager(robot_kinematics.BaseToTreatment);
-                disp(obj.zFrameToKinematicTip)
+                % disp(obj.zFrameToKinematicTip)
                 % robot_pose = [1,0,0,0;0,1,0,-26.9738;0,0,1,-34.7100;0,0,0,1];
                 % robot_pose = obj.registration_matrix * robot_pose;
                 % disp(robot_pose)
@@ -497,12 +499,12 @@ classdef Robot < Kinematics
                 % if obj.counter == 100
                 %     obj.counter = 0;
                 % end
-            else
-                robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
-                obj.zFrameToKinematicTip = obj.baseToZframe\robot_kinematics.BaseToTreatment;
-                disp(obj.zFrameToKinematicTip)
-                robot_pose = obj.registration_matrix *  obj.zFrameToKinematicTip;
-            end
+            % else
+                % robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
+                % obj.zFrameToKinematicTip = obj.baseToZframe\robot_kinematics.BaseToTreatment;
+                % disp(obj.zFrameToKinematicTip)
+                % robot_pose = obj.registration_matrix *  obj.zFrameToKinematicTip;
+            % end
         end
 
         function obj = set_entry_point(obj, needle_image)

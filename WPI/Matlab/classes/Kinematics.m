@@ -23,14 +23,14 @@ classdef Kinematics < handle
     
     properties
         % Values that update with motion
-        lengthNeedleTipOffset = 223.4;     % Zoffset
+        lengthNeedleTipOffset = 224.0;     % Zoffset
         xFrontPointOfRotation
         yFrontPointOfRotation
         zFrontPointOfRotation
         xRearPointOfRotation
         yRearPointOfRotation
         zRearPointOfRotation
-        BiopsyNeedle = struct('needleGauge',18,'needleLength',224.0,'bevelAngle',22.5);
+        BiopsyNeedle = struct('needleGauge',18,'needleLength',24.0,'bevelAngle',22.5);
         
     end
     
@@ -64,7 +64,7 @@ classdef Kinematics < handle
             
             % Initialize output structure
             FK = struct();
-            theta = zrotation;
+            theta = 0; %zrotation;
             %*** BASE FORWARD KINEMATICS ***%
             obj.xFrontPointOfRotation = (xFrontSlider1 + xFrontSlider2) / 2;
             
@@ -114,14 +114,14 @@ classdef Kinematics < handle
             rotationBaseToTip = rotationBaseToTipYaw * rotationBaseToTipPitch * rotationBaseToTipRoll;
             
             % Calculate needle tip position
-            FK.xNeedleTip = ((obj.lengthNeedleTipOffset + zInsertion) * cos(-beta) + (obj.h * sin(-beta))) * sin(alpha) + obj.xFrontPointOfRotation;
+            FK.xNeedleTip = ((obj.lengthNeedleTipOffset + zInsertion) * cos(-beta) * sin(alpha) + (obj.h * sin(-beta))) * sin(alpha) + obj.xFrontPointOfRotation;
             
             FK.yNeedleTip = (obj.h * cos(beta)) - ...
                            ((obj.lengthNeedleTipOffset + zInsertion) * sin(beta)) + obj.yFrontPointOfRotation;
             
             FK.zNeedleTip = ((obj.lengthNeedleTipOffset + zInsertion) * cos(-beta) * cos(alpha)) + ...
                            (obj.h * sin(-beta) * cos(alpha)) + obj.zFrontPointOfRotation;
-            
+            % disp(obj.h * cos(beta))
             % Base to treatment transformation matrix
             FK.BaseToTreatment = eye(4);
             FK.BaseToTreatment(1:3, 1:3) = rotationBaseToTip;
