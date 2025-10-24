@@ -16,7 +16,7 @@ classdef Kinematics < handle
         % Angulation Variables
         C = 18.2;   % Distance between point of rotation and center of front trapezoid stage in Z-direction
         h = 92.5;   % Distance between needle's direction and center of front trapezoid stage in vertical direction
-        NeedleHolder = struct('holderLength', 90., 'needleBaseToHolderTip', 0. ,'holderBaseToRobotBaseZ',90.);
+        NeedleHolder = struct('holderLength', 40., 'needleBaseToHolderTip', 30. ,'holderBaseToRobotBaseZ',5.);
         % {_holderLength, _needleBaseToHolderTip, _holderBaseToRobotBaseZ}
         
     end
@@ -30,7 +30,7 @@ classdef Kinematics < handle
         xRearPointOfRotation
         yRearPointOfRotation
         zRearPointOfRotation
-        BiopsyNeedle = struct('needleGauge',18,'needleLength',24.0,'bevelAngle',22.5);
+        BiopsyNeedle = struct('needleGauge',18,'needleLength',235.0,'bevelAngle',22.5);
         
     end
     
@@ -78,7 +78,7 @@ classdef Kinematics < handle
             end
             
             obj.yFrontPointOfRotation = yF_1 + sqrt(yF_2 - yF_3);
-            obj.zFrontPointOfRotation = 0;
+            obj.zFrontPointOfRotation = -57.0; %0;
             
             obj.xRearPointOfRotation = (xRearSlider1 + xRearSlider2) / 2;
             yR_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;

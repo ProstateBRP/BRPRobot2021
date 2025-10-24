@@ -33,7 +33,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         current_mode = 'stop'                          % Current robot operation mode
         starting_position                              % Initial robot position
-        target_position_robot                          % Target position in robot frame
+        target_position_image                          % Target position in robot frame
         is_target_reached                              % Flag indicating if target is reached
         previou_needle_pose_MRI                        % Previous needle pose from MRI
         simulation_mode = false                        % Flag to enable simulation mode
@@ -61,12 +61,15 @@ classdef Robot < Kinematics
         Target_Pos_local                               % Target position in needle coordinate (mm)
         Stabbing_Vel = 5                               % Needle insertion speed (mm/sec)
         omega_max = pi                                 % Maximum rotational velocity (rad/sec)
-        max_curvature = 0.0026                         % Maximum curvature for needle control
-        max_insertion_distance = 120;                  % Maximum insertion distance (mm) (absolute value)
+        % max_curvature = 0.0026                         % Maximum curvature for needle control
+        max_curvature = 0.001054;                      % In-bore B-CURV with gelatine
+        % max_curvature = 0.000545;                      % In-bore B-CURV with gelwax
+        max_insertion_distance = 100;                  % Maximum insertion distance (mm) (absolute value)
         k_max                                          % Maximum curvature (computed)
         rot_dir = 1                                    % Rotation direction: CW(1), CCW(-1)
         theta0                                         % Initial theta0 angle
         CM = 0                                         % Control method (0=FF, 1=FB_old, 2=FB_new)
+        target_relative_global                               % Target position relative to needle tip
         
         %% ===================================================================
         %  TIMING AND CONTROL PARAMETERS
@@ -97,7 +100,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         %  SYSTEM FLAGS
         %% ===================================================================
-        flag_ekf = 1                                  % Extended Kalman Filter flag
+        flag_ekf = 0                                  % Extended Kalman Filter flag
         flag_exp = 1                                  % Experiment flag (1=Experiment, 0=Simulation)
         flag_motor = 1                                % Motor control flag (1=Enable, 0=Disable)
         flag_terminate_z = 0                          % Z-direction termination flag
@@ -196,6 +199,10 @@ classdef Robot < Kinematics
                 disp('Robot initialized in SIMULATION MODE - hardware dependencies will be bypassed');
             else
                 disp('Robot initialized in NORMAL MODE - hardware dependencies required');
+                % robot_init = obj.get_robot_current_pose();
+                % obj.Needle_pose_ini(0:3) = robot_init(1:3,4);
+                % obj.Needle_pose_ini(3) = obj.Needle_pose_ini(3) + 200;
+                % disp(obj.Needle_pose_ini)
             end
             robot_pose = obj.Needle_pose;
             save('shared_data.mat', 'robot_pose');
@@ -388,6 +395,7 @@ classdef Robot < Kinematics
             %   Outputs:
             %     is_reachable - Boolean flag indicating reachability
             
+            %{
             % Get current needle pose [x, y, z, gamma, phi, theta]
             current_pose = obj.Needle_pose;
             current_pos = current_pose(1:3);  % [x, y, z] position
@@ -399,6 +407,14 @@ classdef Robot < Kinematics
             
             % Calculate relative position from needle tip to target
             target_relative = target(1:3,4) - needle_tip;
+            %}
+
+            % A = obj.get_robot_current_pose();
+            % target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
+            % obj.target_relative_global = target_relative;
+
+            A = obj.get_robot_current_pose();
+            target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
             
             % Calculate remaining insertion distance (z-direction)
             remaining_z_distance = target_relative(3);
@@ -418,10 +434,12 @@ classdef Robot < Kinematics
                 return;
             end
 
-            lateral_max = 1/obj.k_max * sin(remaining_z_distance*obj.k_max);
-            obj.is_reachable = lateral_distance <= lateral_max; % original
+            if true % True if lateral check disabled
+                lateral_max = 1/obj.k_max * (1 - cos(remaining_z_distance*obj.k_max));
+                obj.is_reachable = lateral_distance <= lateral_max; % original
+            end
 
-            obj.is_reachable = true; % Only for testing
+            % obj.is_reachable = true; % Only for testing
             %}
             
             % Display reachability analysis for debugging
@@ -447,7 +465,7 @@ classdef Robot < Kinematics
 
         function obj = update_target(obj, target)
             %UPDATE_TARGET Update robot target position
-            obj.target_position_robot = target;
+            obj.target_position_image = target;
         end
 
         function planning_finsh_flag = planning(obj, target)
@@ -463,21 +481,45 @@ classdef Robot < Kinematics
                 target_robot = obj.target_registration(target);
                 obj.update_target(target_robot);
             else
-                target_robot = obj.target_registration(target);
-                target_robot(1,4) = target_robot(1,4)-7; % offset only for testing (registration matrix needs to be fixed?)
-                target_robot(2,4) = target_robot(2,4)+68; % offset only for testing (registration matrix needs to be fixed?)
-                obj.reachable(target_robot);
-                is_in_workspace = obj.is_reachable;
-                disp(obj.is_reachable);
-                disp(is_in_workspace);
-                disp(obj.registration_matrix);
-                disp(target);
-                disp(target_robot);
-                if is_in_workspace
-                    obj.update_target(target_robot);
-                    obj.Target_Pos_local = transpose(target_robot(1:3,4)); % Ryo: added 20250806 for FF control
+                % target_robot = obj.target_registration(target);
+                % target_robot(1,4) = target_robot(1,4)-7; % offset only for testing (registration matrix needs to be fixed?)
+                % target_robot(2,4) = target_robot(2,4)+68; % offset only for testing (registration matrix needs to be fixed?)
+
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % Ryo Moved to below
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % obj.reachable(target);
+                % is_in_workspace = obj.is_reachable;
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+                % disp(obj.is_reachable);
+                % disp(is_in_workspace);
+                % disp(obj.registration_matrix);
+                % disp(target);
+                % disp(target_robot);
+                
+                % if is_in_workspace % Ryo commented out this line and
+                % added the following line
+                if true % Ryo added this line to move reachable to after this
+                    obj.update_target(target);
+                    obj.Target_Pos_local = transpose(target(1:3,4)); % Ryo: added 20250806 for FF control
+                    % obj.Target_Pos_local
+                    % obj.target_position_image
                 end
+
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                % Ryo Moved from above
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                obj.reachable(target);
+                is_in_workspace = obj.is_reachable;
+                %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             end
+
+            A = obj.get_robot_current_pose();
+            target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
+            obj.target_relative_global = target_relative;
+            fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
+            
         end
 
         %% ===================================================================
@@ -628,9 +670,9 @@ classdef Robot < Kinematics
         function next_step = calculate_next_step(obj, needle_pos, slow_flag)
             %CALCULATE_NEXT_STEP Calculate next movement step
             if slow_flag
-                next_step = xxxx(needle_pos, obj.target_position_robot, small_step_value);
+                next_step = xxxx(needle_pos, obj.target_position_image, small_step_value);
             else
-                next_step = xxxx(needle_pos, obj.target_position_robot, large_step_value);
+                next_step = xxxx(needle_pos, obj.target_position_image, large_step_value);
             end
         end
 
@@ -643,7 +685,7 @@ classdef Robot < Kinematics
         function hit_flag = isInTargetingPos(obj, needle_pos)
             %ISINTARGETINGPOS Check if robot has reached target position
             current_pos = current_robot_position();
-            if obj.target_position_robot - mean(current_pos, needle_pos) < max_error_allowed
+            if obj.target_position_image - mean(current_pos, needle_pos) < max_error_allowed
                 hit_flag = true;
             else
                 hit_flag = false;
@@ -790,8 +832,28 @@ classdef Robot < Kinematics
             
             obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
 
+            % if obj.Ctrl_Step_num == 1
+            %     A = obj.get_robot_current_pose();
+            %     target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
+            %     obj.target_relative_global = target_relative;
+            % 
+            % end
+
             % Obtain target position in robot frame
-            target_position_robot_temp = obj.target_position_robot(1:3,4);
+            % target_position_image_temp = obj.target_position_image(1:3,4);
+            target_position_image_temp = obj.target_relative_global;
+            if isempty(target_position_image_temp)
+                disp('target_position_image_temp is empty');
+            else
+                try
+                    fprintf('target_position_image_temp: [%.3f, %.3f, %.3f]\n', ...
+                        target_position_image_temp(1), target_position_image_temp(2), target_position_image_temp(3));
+                catch
+                    disp('target_position_image_temp:');
+                    disp(target_position_image_temp);
+                end
+            end
+            
 
             %% State estimation using Kalman filter
             if obj.flag_ekf == 1 && obj.Ctrl_Step_num > 1
@@ -828,7 +890,17 @@ classdef Robot < Kinematics
             obj.Needle_pose_sensor_realtime(3) = mm_insertion_encoder;
             Needle_pose_act(3) = mm_insertion_encoder;
 
+            % Only for open-loop
+            if obj.CM ==0
+                Needle_pose_act(1) = 0;
+                Needle_pose_act(2) = 0;
+                Needle_pose_act(3) = 0;
+                obj.Target_Pos_local = transpose(target_position_image_temp); % Ryo: added 20250806 for FF control
+            end
+
             obj.Needle_pose_act = Needle_pose_act; 
+            
+            
 
             %% Control algorithm execution
             % Generate needle tip position and transformation matrix
@@ -848,13 +920,22 @@ classdef Robot < Kinematics
                 [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
 
                 % Open-loop B-CURV settings
-                obj.alpha = 0.5;
-                obj.theta_d = pi;
+                % obj.alpha = 0.5;
+                % obj.theta_d = pi;
+                
 
                 
 
             elseif obj.CM == 2
                 % New feedback control implementation area
+            end
+
+            % Display current alpha and desired theta (in degrees)
+            try
+                fprintf('alpha: %.6f, theta_d: %.6f deg\n', obj.alpha, obj.theta_d * 180 / pi);
+            catch
+                disp('alpha:'); disp(obj.alpha);
+                disp('theta_d (deg):'); disp(obj.theta_d * 180 / pi);
             end
 
             % Update rotation direction
@@ -880,9 +961,10 @@ classdef Robot < Kinematics
             end
 
             % Terminate move if reach target along z-axis
-            target_position_robot_temp(3)
+            % target_position_image_temp(3)
+            disp("Target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
             mm_insertion_encoder
-            if mm_insertion_encoder > target_position_robot_temp(3)
+            if mm_insertion_encoder > target_position_image_temp(3)
                 obj.flag_terminate_z = 1;
                 disp("--------------------------------")
                 disp("Reached target along z-axis")

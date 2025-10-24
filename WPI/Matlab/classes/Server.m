@@ -306,6 +306,7 @@ classdef Server < Robot
                             if ~is_in_workspace
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
                                 obj.sender.WriteOpenIGTLinkStatusMessage(char(head), status);
+                                break
                             else
                                 status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                                 obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
@@ -314,6 +315,7 @@ classdef Server < Robot
                         else
                             error_message = "Wrong type of message at this time.";
                             obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
+                            break
                         end
                     end
                 end
