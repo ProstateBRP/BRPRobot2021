@@ -1,4 +1,4 @@
-classdef Kinematics < handle
+classdef Kinematics < igtl_utils
     %PROSTATEKINEMATICS_MATLAB Prostate surgery robot kinematics calculation class
     %   This class implements forward and inverse kinematics for the prostate
     %   surgery robot based on the C++ implementation

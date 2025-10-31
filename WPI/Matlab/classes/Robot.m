@@ -217,6 +217,12 @@ classdef Robot < Kinematics
             % Release Estop to continue working
             obj.ESTOP = false;
         end
+        
+        function obj = Send_Current_Position(obj)
+            % Update current position to 3D Slicer server
+            obj.robot_pose = obj.get_robot_current_pose();
+            obj.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', obj.robot_pose);
+        end
 
         function obj = startup(obj)
             %STARTUP Initialize robot system and prepare for operation

@@ -6,12 +6,6 @@ classdef Server < Robot
 
     
     properties (Access = private)
-        host = '127.0.0.1'
-        port = 18936
-        socket
-        status_buffer
-        string_buffer
-        transformation_buffer
         current_robot_position
         current_needle_position_MRI
         desired_target_location
@@ -19,23 +13,15 @@ classdef Server < Robot
         robot_not_ready
         robot_pose
         robot_mode
-        name
-        state
         calibration_finsh_flag = false
         planning_finsh_flag = false
         targeting_finsh_flag = false
         target_not_reachable = false
         idle_flag = false
         command_recieved = false
-        pool
-        sideFuture   % parallel.FevalFuture
-        stopSide = true
     end
 
     properties (Access = public)
-        sender
-        receiver
-        robot
         validCommands = ["START_UP", "CALIBRATION", "PLANNING", "TARGETING",...
                          "IDLE", "MOVE_TO_TARGET", "STOP", "EMERGENCY", "RETRACT_NEEDLE"];
     end
@@ -56,52 +42,9 @@ classdef Server < Robot
             end
             obj.host = p.Results.host;
             obj.port = p.Results.port;
+            obj.socket = obj.connect(obj.host,obj.port);
             obj.open_loop = p.Results.open_loop;
             obj.robot_not_ready = obj.is_startup();
-
-            %obj.robot_pose = obj.robot.get_robot_current_pose();
-            % obj.pool = gcp('nocreate'); % get existing pool if any
-        end
-
-        function obj = connect(obj)
-        %connect to igtl server and construct data sender and reciever
-        disp("Connecting to IGTL server");
-        obj.socket = igtlConnect(obj.host, obj.port);
-        obj.receiver = OpenIGTLinkMessageReceiver(obj.socket, @obj.onRxStatusMessage, @obj.onRxStringMessage, @obj.onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
-        obj.sender = OpenIGTLinkMessageSender(obj.socket);
-        disp("connect finish");
-        end
-
-        function disconnect(obj)
-            msg = "Disconnecting with igtl in 2s";
-            obj.sender.WriteOpenIGTLinkStringMessage('DisconnectNotice', msg);
-            disp(msg)
-            pause(2);
-            igtlDisconnect(obj.socket);
-            disp("disconnect finish");
-        end
-
-        function obj = onRxStatusMessage(obj, deviceName, text)
-            % Callback when STATUS message is received and processed
-            % Currently, only prints received value
-            obj.status_buffer = text;
-            disp(['Received STATUS message ', deblank(deviceName),  text]);
-        end
-        
-        function obj = onRxStringMessage(obj, deviceName, text)
-            % Callback when STRING message is received and processed
-            % Currently, only prints received value
-            obj.string_buffer = text;
-            disp(['Received STRING message: ', deblank(deviceName), ' = ', text]);
-        end
-
-        function obj = onRxTransformMessage(obj, deviceName, transform)
-            % Callback when TRANSFORM message is received and processed
-            % Currently, only prints received value
-            disp('Received TRANSFORM message: ');
-            disp([deblank(deviceName),  ' = ']);
-            obj.transformation_buffer = transform;
-            disp(transform);
         end
 
         function obj = onStartUp(obj)
@@ -122,7 +65,6 @@ classdef Server < Robot
                     obj.sender.WriteOpenIGTLinkStatusMessage(char("CURRENT_STATUS"), status);
                     status = struct('code', 1, 'subCode', 1, 'errorName', 'none', 'message', 'STATUS_OK');
                     obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
-                    obj.stopSide = false;
                     % obj.sideFuture = parfeval(backgroundPool, @Server.robot_position_server, 0, obj);
                     obj.idle_flag = true;
                     obj.state = "IDLE";        
@@ -171,7 +113,7 @@ classdef Server < Robot
                             if strcmpi(data, 'CURRENT_POSITION')
                                 obj.robot_pose = obj.get_robot_current_pose();
                                 obj.sender.WriteOpenIGTLinkTransformMessage(char("CURRENT_POSITION"), obj.robot_pose);
-                                pause(0.2);
+                                pause(0.01);
                             else
                                 error_message = "Wrong command at this time.";
                                 obj.sender.WriteOpenIGTLinkStringMessage(char(obj.state), char(error_message));
@@ -405,9 +347,7 @@ classdef Server < Robot
                     first_step_flag = true;
                     while ~final_targeting_reached
                         if obj.open_loop
-                            % F = parfeval(obj.pool, @robot_postion_server, 0, obj.host, obj.port, obj.Queue);
                             obj.move_to_end();
-                            % cancel(F);
                             break
                         else
                             [head, type, data] = obj.receiver.readMessage();
@@ -421,7 +361,7 @@ classdef Server < Robot
                                 end
                             elseif strcmpi(type, 'TRANSFORM')
                                 obj.sender.WriteOpenIGTLinkStringMessage(char(head), char("ACK_NPSOE"));
-                                pause(0.1);
+                                pause(0.01);
                                 if ~is_in_workspace
                                     status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
                                     obj.sender.WriteOpenIGTLinkStatusMessage(char(head), status);
@@ -515,15 +455,10 @@ classdef Server < Robot
             obj.state = "STOP";
             obj.command_recieved = false;
             obj.set_robot_mode('stop');
-            obj.stopSide = true;     % cooperative stop
-            if ~isempty(obj.sideFuture) && ~strcmp(obj.sideFuture.State, 'finished')
-                cancel(obj.sideFuture);   % hard stop if needed
-            end
             obj.calibration_finsh_flag = false;
             obj.planning_finsh_flag = false;
             obj.targeting_finsh_flag = false;
             obj.target_not_reachable = false;
-            delete(gcp('nocreate'));
             delete all
         end
 
@@ -535,31 +470,6 @@ classdef Server < Robot
             obj.state = "STOP";
             obj.command_recieved = false;
             obj.set_robot_mode('stop');
-            delete(obj.pool);
-        end
-
-        function robot_position_server(obj)
-            send(q, "side client started");
-            sidesocket = igtlConnect(obj.host, obj.port);
-            sidereceiver =OpenIGTLinkMessageReceiver(sidesocket, @obj.onRxStatusMessage, @obj.onRxStringMessage, @obj.onRxTransformMessage, @onRxPointMessage, @onRxImageMessage);
-            sidesender = OpenIGTLinkMessageSender(obj.socket);
-            while ~obj.stopSide
-                [name_local, type, data] = sidereceiver.readCommandMessage();
-                if strcmpi(type, 'STRING')
-                    if strcmpi(data, 'CURRENT_POSITION')
-                        robot_pose_local = obj.get_robot_current_pose();
-                        sidesender.WriteOpenIGTLinkTransformMessage(char(name_local), robot_pose_local);
-                    elseif strcmpi(data, 'EMERGENCY')
-                        obj.onEmergency();
-                        obj.stopSide = true;
-                        if ~isempty(obj.sideFuture) && ~strcmp(obj.sideFuture.State, 'finished')
-                            cancel(obj.sideFuture);   % hard stop if needed
-                        end
-                    end
-                end
-            end
-            send(q, "side client stopped");
-            igtlDisconnect(sidesocket);
         end
 
         function obj = Run(obj)
