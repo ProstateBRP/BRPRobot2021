@@ -11,7 +11,6 @@ classdef Server < Robot
         desired_target_location
         open_loop = false
         robot_not_ready
-        robot_pose
         robot_mode
         calibration_finsh_flag = false
         planning_finsh_flag = false
@@ -111,9 +110,7 @@ classdef Server < Robot
                         [~, type, data] = obj.receiver.readMessage();
                         if strcmpi(type, 'STRING')
                             if strcmpi(data, 'CURRENT_POSITION')
-                                obj.robot_pose = obj.get_robot_current_pose();
-                                obj.sender.WriteOpenIGTLinkTransformMessage(char("CURRENT_POSITION"), obj.robot_pose);
-                                pause(0.01);
+                                obj.Send_Current_Position();
                             else
                                 error_message = "Wrong command at this time.";
                                 obj.sender.WriteOpenIGTLinkStringMessage(char(obj.state), char(error_message));
@@ -237,8 +234,7 @@ classdef Server < Robot
                         [head, type, data] = obj.receiver.readMessage();
                         if strcmpi(type, 'STRING')
                             if strcmpi(data, 'CURRENT_POSITION')
-                                obj.robot_pose = obj.get_robot_current_pose();
-                                obj.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', obj.robot_pose);
+                                obj.Send_Current_Position();
                             end
                         elseif strcmpi(type, 'TRANSFORM')
                             obj.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
@@ -292,8 +288,7 @@ classdef Server < Robot
                     if strcmpi(type, 'STRING')
                         disp(data);
                         if strcmpi(data, 'CURRENT_POSITION')
-                            obj.robot_pose = obj.get_robot_current_pose();
-                            obj.sender.WriteOpenIGTLinkTransformMessage('CURRENT_POSITION', obj.robot_pose);
+                            obj.Send_Current_Position();
                         elseif ismember(data, obj.validCommands)
                             msg = "Exiting idle mode, and getting into " + data + " mode.";
                             disp(msg);
@@ -353,8 +348,7 @@ classdef Server < Robot
                             [head, type, data] = obj.receiver.readMessage();
                             if strcmpi(type, 'STRING')
                                 if strcmpi(data, 'CURRENT_POSITION')
-                                    obj.robot_pose = obj.get_robot_current_pose();
-                                    obj.sender.WriteOpenIGTLinkTransformMessage(char("CURRENT_POSITION"), obj.robot_pose);
+                                    obj.Send_Current_Position();
                                 else
                                     error_message = "Wrong command at this time.";
                                     obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
