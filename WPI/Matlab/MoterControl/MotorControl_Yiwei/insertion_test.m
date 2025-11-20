@@ -1,6 +1,28 @@
 %% Create GalilTools COM server object
 g = init_galil();
 
+%% Set A, B Port as Servo
+response = g.command('MT 1,1');
+response = g.command('KP 0,0');
+response = g.command('KI 0,0');
+response = g.command('KD 0,0');
+response = g.command('SH A');
+
+% response = g.command('MT 1');
+% response = g.command('KP 0');
+% response = g.command('KI 0');
+% response = g.command('KD 0');
+response = g.command('SH B');
+
+% response = g.command('OFB=3');
+
+% Turn off DO1 and DO2 (Safety feature)
+response = g.command('CB 1');
+response = g.command('CB 2');
+response = g.command('CB 3');
+response = g.command('CB 4');
+response = g.command('CB 5');
+
 %% Control Module Initialization
 % Access Relay
 g.command('SB 3');
@@ -30,7 +52,7 @@ disp('Relay for drivers should be turned on');
 %% Insertion Speed Calibration
 PPR = 5000;
 
-voltage_st = 2.28;
+voltage_st = 1.19;
 voltage_res = 0.01;
 voltage_step_num = 3;
 voltage_ed = voltage_st + voltage_res*(voltage_step_num-1);

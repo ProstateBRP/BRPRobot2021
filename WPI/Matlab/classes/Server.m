@@ -118,7 +118,7 @@ classdef Server < Robot
                         elseif strcmpi(type, 'TRANSFORM')
                             obj.sender.WriteOpenIGTLinkTransformMessage(char("ACK_Transform"), data);
                             obj.calibration_finsh_flag = obj.calibrate(data);
-                            disp(obj.calibration_finsh_flag)
+                            % disp(obj.calibration_finsh_flag)
                             if ~obj.calibration_finsh_flag
                                 status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
                                 break

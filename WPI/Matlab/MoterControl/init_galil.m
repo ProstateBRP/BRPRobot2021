@@ -16,7 +16,7 @@ function g = init_galil()
     % --- MODIFICATION START ---
     % Specify the IP address directly to bypass the connection popup.
     % !!! REPLACE '192.168.1.100' with your controller's actual IP address !!!
-    ip_address = '192.168.88.254'; % <-- ★Set your Galil's IP here
+    ip_address = '192.168.88.252'; % <-- ★Set your Galil's IP here
 
     % Use the standard Galil connection string.
     % '-T 1000' sets a 1000ms timeout, which is recommended.

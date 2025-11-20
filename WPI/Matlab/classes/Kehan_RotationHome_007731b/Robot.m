@@ -46,7 +46,6 @@ classdef Robot < Kinematics
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
         robot_base_to_zframe = [1., 0., 0., 0.; 0., 1., 0., 167.4; 0., 0., 1., 239.71; 0., 0., 0., 1];
-        robot_base_to_zframe = [1., 0., 0., 0.; 0., 1., 0., 172.4; 0., 0., 1., 239.71; 0., 0., 0., 1]; %y = 167.4
         baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
         zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
         reachable_target_pose_imager_coord = eye(4);
@@ -90,7 +89,6 @@ classdef Robot < Kinematics
         %% ===================================================================
         stop_count_insertion = -391841  %-191841                 % Insertion stop count threshold
         voltage_insertion = 2.0                       % Insertion voltage
-        voltage_insertion = 1.19                     % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
         max_error_rot = 0.1                           % Motor control error tolerance (rpm)
@@ -646,18 +644,34 @@ classdef Robot < Kinematics
             pause(3);
         end
 
-        function obj = home_insertion(obj, home_pos, threshold)
+        function obj = home_insertion_rotaion(obj, home_pos, threshold)
+            
+            start_rot = obj.zRotation;
+            encoder_read = get_encoder_tick(obj.arduino);
+            initialPulse = encoder_read;
             current_pos = get_encoder_insertion(obj.g);
             obj.zInsertion = abs(current_pos)/5000*3;
-            while abs(current_pos - home_pos) > threshold
-                voltage = 2.0;
-                direction = 0; % Pull-out
+            f_pos = true;
+            f_rot = true;
+            voltage = 2;
+            direction = 0; % Pull-out
+            while  f_pos && f_rot
                 move_insertion(obj.g, direction, voltage);
-                pause(0.1);
+                set_rpm_ino(obj.arduino, 9.55);
+                pause(0.05);
                 stop_insertion(obj.g, direction);
+                set_rpm_ino(obj.arduino, 0);
+                current_rot = start_rot + encoder2theta(encoder_read, obj.PPR, initialPulse);
                 current_pos = get_encoder_insertion(obj.g);
                 obj.zInsertion = abs(current_pos)/5000*3;
+                obj.zRotation = current_rot;
                 obj.Send_Current_Position();
+                if abs(current_pos - home_pos) <= threshold
+                    f_pos = false;
+                end
+                if abs(2*pi - current_rot) <= 0.04
+                    f_rot = false;
+                end
             end
         end
 
@@ -666,9 +680,8 @@ classdef Robot < Kinematics
             disp('homing start')
             threshold = 1000;
             home_pos = 0;
-
             if ~obj.simulation_mode
-                obj.home_insertion(home_pos, threshold);
+                obj.home_insertion_rotation(home_pos, threshold);
             else
                 disp("SIMULATION MODE: Would home insertion with home_pos " + num2str(home_pos) + " and threshold " + num2str(threshold));
             end
@@ -946,8 +959,8 @@ classdef Robot < Kinematics
                 [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
 
                 % Open-loop B-CURV settings
-                % obj.alpha = 1.0;
-                % obj.theta_d = 0;
+                % obj.alpha = 0.5;
+                % obj.theta_d = pi;
                 
 
                 
