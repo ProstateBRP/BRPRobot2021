@@ -631,9 +631,9 @@ classdef Robot < Kinematics
             % Stop motors
             if ~obj.simulation_mode
                 stop_insertion(obj.g, direction);
-                delete(obj.arduino)
-                obj.arduino = arduino_comm_init_motor("COM4");
-                delete(obj.arduino)
+                % delete(obj.arduino)
+                % obj.arduino = arduino_comm_init_motor("COM4");
+                % delete(obj.arduino)
             else
                 disp("SIMULATION MODE: Would stop insertion with direction " + num2str(direction));
             end
@@ -644,18 +644,42 @@ classdef Robot < Kinematics
             pause(3);
         end
 
-        function obj = home_insertion(obj, home_pos, threshold)
+        function obj = home_insertion_rotaion(obj, home_pos, threshold)
+            
+            current_rot = obj.zRotation;
+            initialPulse = 0;
             current_pos = get_encoder_insertion(obj.g);
             obj.zInsertion = abs(current_pos)/5000*3;
-            while abs(current_pos - home_pos) > threshold
-                voltage = 2.0;
-                direction = 0; % Pull-out
-                move_insertion(obj.g, direction, voltage);
+            f_pos = true;
+            f_rot = true;
+            voltage = 2;
+            direction = 0; % Pull-out
+            while  f_pos || f_rot
+                if f_pos
+                    move_insertion(obj.g, direction, voltage);
+                end
+                if f_rot
+                    set_rpm_ino(obj.arduino, 2);
+                end
                 pause(0.1);
                 stop_insertion(obj.g, direction);
+                set_rpm_ino(obj.arduino, 0);
+                encoder_read = get_encoder_tick(obj.arduino);
+                current_rot = encoder2theta(encoder_read, obj.PPR, initialPulse);
+                disp("current");
+                disp(current_rot);
                 current_pos = get_encoder_insertion(obj.g);
                 obj.zInsertion = abs(current_pos)/5000*3;
+                obj.zRotation = current_rot;
                 obj.Send_Current_Position();
+                disp("relative")
+                disp(abs(2*pi - current_rot))
+                if abs(current_pos - home_pos) <= threshold
+                    f_pos = false;
+                end
+                if abs(current_rot - (2*pi)) <= deg2rad(1)
+                    f_rot = false;
+                end
             end
         end
 
@@ -664,9 +688,8 @@ classdef Robot < Kinematics
             disp('homing start')
             threshold = 1000;
             home_pos = 0;
-
             if ~obj.simulation_mode
-                obj.home_insertion(home_pos, threshold);
+                obj.home_insertion_rotaion(home_pos, threshold);
             else
                 disp("SIMULATION MODE: Would home insertion with home_pos " + num2str(home_pos) + " and threshold " + num2str(threshold));
             end
