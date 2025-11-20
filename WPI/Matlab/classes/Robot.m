@@ -45,7 +45,6 @@ classdef Robot < Kinematics
         %% ===================================================================
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
-        robot_base_to_zframe = [1., 0., 0., 0.; 0., 1., 0., 167.4; 0., 0., 1., 239.71; 0., 0., 0., 1];
         robot_base_to_zframe = [1., 0., 0., 0.; 0., 1., 0., 172.4; 0., 0., 1., 239.71; 0., 0., 0., 1]; %y = 167.4
         baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
         zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
@@ -65,7 +64,7 @@ classdef Robot < Kinematics
         % max_curvature = 0.0026                         % Maximum curvature for needle control
         max_curvature = 0.001054;                      % In-bore B-CURV with gelatine
         % max_curvature = 0.000545;                      % In-bore B-CURV with gelwax
-        max_insertion_distance = 100;                  % Maximum insertion distance (mm) (absolute value)
+        max_insertion_distance = 120;                  % Maximum insertion distance (mm) (absolute value)
         k_max                                          % Maximum curvature (computed)
         rot_dir = 1                                    % Rotation direction: CW(1), CCW(-1)
         theta0                                         % Initial theta0 angle
@@ -89,7 +88,6 @@ classdef Robot < Kinematics
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
         stop_count_insertion = -391841  %-191841                 % Insertion stop count threshold
-        voltage_insertion = 2.0                       % Insertion voltage
         voltage_insertion = 1.19                     % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
@@ -293,7 +291,7 @@ classdef Robot < Kinematics
             %% Hardware initialization
             if ~obj.simulation_mode
                 disp('Setup Start: Motor Control')
-                obj.arduino = arduino_comm_init_motor("COM3");
+                obj.arduino = arduino_comm_init_motor("COM4");
                 pause(1)
                 obj.g = init_galil();
                 obj.Release();
@@ -537,9 +535,9 @@ classdef Robot < Kinematics
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
             % if obj.simulation_mode
                 robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
-                disp("======")
-                disp(robot_kinematics.BaseToTreatment);
-                disp("======");
+                % disp("======")
+                % disp(robot_kinematics.BaseToTreatment);
+                % disp("======");
                 robot_pose = obj.ConvertFromRobotBaseToImager(robot_kinematics.BaseToTreatment);
                 disp("======")
                 disp(robot_pose);
@@ -634,7 +632,7 @@ classdef Robot < Kinematics
             if ~obj.simulation_mode
                 stop_insertion(obj.g, direction);
                 delete(obj.arduino)
-                obj.arduino = arduino_comm_init_motor("COM3");
+                obj.arduino = arduino_comm_init_motor("COM4");
                 delete(obj.arduino)
             else
                 disp("SIMULATION MODE: Would stop insertion with direction " + num2str(direction));
