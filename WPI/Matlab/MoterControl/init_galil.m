@@ -44,4 +44,5 @@ function g = init_galil()
     % Initialize motor speeds to 0V for safety
     g.command('OFA=0'); 
     g.command('OFB=0'); 
+    g.command('OFC=0')
 end

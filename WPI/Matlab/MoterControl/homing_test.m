@@ -1,16 +1,16 @@
+
 clear;
 close all;
-
 
 flag_only_homing = true;
 %% Create GalilTools COM server object
 g = init_galil();
 
 %% Set A, B Port as Servo
-response = g.command('MT 1,1');
-response = g.command('KP 0,0');
-response = g.command('KI 0,0');
-response = g.command('KD 0,0');
+response = g.command('MT 1,1,1');
+response = g.command('KP 0,0,0');
+response = g.command('KI 0,0,0');
+response = g.command('KD 0,0,0');
 response = g.command('SH A');
 
 % response = g.command('MT 1');
@@ -19,6 +19,7 @@ response = g.command('SH A');
 % response = g.command('KD 0');
 
 response = g.command('SH B');
+response = g.command('SH C');
 
 % response = g.command('OFB=3');
 
@@ -44,7 +45,7 @@ home_pos = 0;
 if flag_only_homing
     disp("Only Homing Mode")
 else
-    direction = 1;
+    direction = 0;
     voltage = 2;
     pause
     disp("Insertion ongoing")

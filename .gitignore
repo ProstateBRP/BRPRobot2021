@@ -1043,3 +1043,4 @@ Module.symvers
 Mkfile.old
 dkms.conf
 WPI/Matlab/shared_data.mat
+*.mat

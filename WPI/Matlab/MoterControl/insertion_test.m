@@ -30,10 +30,12 @@ disp('Relay for drivers should be turned on');
 %% Insertion Speed Calibration
 PPR = 5000;
 
-voltage_st = 2.28;
+voltage_st = 0.01;
 voltage_res = 0.01;
 voltage_step_num = 3;
 voltage_ed = voltage_st + voltage_res*(voltage_step_num-1);
+
+pause();
 
 disp("Calibrating Insert Direction");
 direction = 1;

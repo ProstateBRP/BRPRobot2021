@@ -45,7 +45,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
-        robot_base_to_zframe = [1., 0., 0., 0.; 0., 1., 0., 172.4; 0., 0., 1., 239.71; 0., 0., 0., 1]; %y = 167.4
+        robot_base_to_zframe = [1., 0., 0., 0.8; 0., 1., 0., 166.4; 0., 0., 1., 252.71; 0., 0., 0., 1]; %x = 0, y = 167.4, z=239.71
         baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
         zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
         reachable_target_pose_imager_coord = eye(4);
@@ -88,7 +88,7 @@ classdef Robot < Kinematics
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
         stop_count_insertion = -391841  %-191841                 % Insertion stop count threshold
-        voltage_insertion = 1.19                     % Insertion voltage
+        voltage_insertion = 2.14                     % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
         max_error_rot = 0.1                           % Motor control error tolerance (rpm)
@@ -295,9 +295,34 @@ classdef Robot < Kinematics
                 pause(1)
                 obj.g = init_galil();
                 obj.Release();
+
+                %% Set A, B Port as Servo
+                response = obj.g.command('MT 1,1,1');
+                response = obj.g.command('KP 0,0,0');
+                response = obj.g.command('KI 0,0,0');
+                response = obj.g.command('KD 0,0,0');
+                response = obj.g.command('SH A');
+
+                % response = g.command('MT 1');
+                % response = g.command('KP 0');
+                % response = g.command('KI 0');
+                % response = g.command('KD 0');
+
+                response = obj.g.command('SH B');
+                response = obj.g.command('SH C');
+
+                % response = g.command('OFB=3');
+
+                % Turn off DO1 and DO2 (Safety feature)
+                response = obj.g.command('CB 1');
+                response = obj.g.command('CB 2');
+                response = obj.g.command('CB 3');
+                response = obj.g.command('CB 4');
+                response = obj.g.command('CB 5');
+
                 % Access Relay
-                obj.g.command('SB 3');
-                pause(0.1);
+                % obj.g.command('SB 3');
+                % pause(0.1);
                 disp('Relay for drivers should be turned on');
                 disp('Setup Terminated: Motor Control')
             else
@@ -967,9 +992,9 @@ classdef Robot < Kinematics
                 [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
 
                 % Open-loop B-CURV settings
-                % obj.alpha = 1.0;
+                obj.alpha = 1.0;
                 % obj.theta_d = 0;
-                
+                % 
 
                 
 

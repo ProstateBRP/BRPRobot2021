@@ -6,6 +6,7 @@ function disable_galil(g)
 
     g.command('OFA=0'); 
     g.command('OFB=0'); 
+    g.command('OFC=0'); 
 
     delete(g);
     

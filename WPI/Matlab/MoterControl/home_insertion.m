@@ -6,6 +6,6 @@ function home_insertion(g, home_pos, threshold)
         move_insertion(g, direction, voltage);
         pause(0.1);
         stop_insertion(g, direction);
-        current_pos = get_encoder_insertion(g);
+        current_pos = get_encoder_insertion(g)
     end
 end
