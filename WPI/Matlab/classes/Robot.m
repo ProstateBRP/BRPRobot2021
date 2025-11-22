@@ -686,10 +686,12 @@ classdef Robot < Kinematics
 
                 stop_insertion(obj.g, direction);
 
-                current_pos = get_encoder_insertion(obj.g);
+                current_pos = get_encoder_insertion(obj.g)
                 obj.zInsertion = abs(current_pos)/5000*3;   
 
             end
+
+            obj.Send_Current_Position();
 
 
 %{
@@ -1038,15 +1040,29 @@ classdef Robot < Kinematics
             %% Motor control execution
             omega_rpm = radsec2rpm(omega);
             % omega_rpm = 60;
-            omega_rpm = fix(omega_rpm);
+            if abs(omega_rpm) < 0.01
+                omega_rpm = 0;
+            elseif abs(omega_rpm) < 1
+                omega_rpm = sign(omega_rpm) * 1;
+            else
+                omega_rpm = fix(omega_rpm);
+            end
+            % omega_rpm = fix(omega_rpm);
 
-            disp("Current theta: " + num2str(obj.zRotation))
+            disp("Current theta: " + num2str(rad2deg(obj.zRotation)))
 
             if obj.flag_motor == 1 && ~obj.simulation_mode
                 set_rpm_ino(obj.arduino, omega_rpm);
             elseif obj.simulation_mode
                 disp(['SIMULATION MODE: Would set motor RPM to ', num2str(omega_rpm), ' [rpm]']);
             end
+
+            % Control_CB 内の表示部分に追加
+            fprintf('Goal: %.2f, Curr: %.2f, Diff: %.2f, CmdRPM: %.5f\n', ...
+                rad2deg(obj.theta_d), ...
+                rad2deg(obj.zRotation), ...
+                rad2deg(angdiff(obj.zRotation, obj.theta_d)), ... % 角度差（要Mapping Toolbox、なければ自作）
+                radsec2rpm(omega));
 
             % Terminate move if reach target along z-axis
             % target_position_image_temp(3)

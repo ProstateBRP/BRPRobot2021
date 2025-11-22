@@ -1044,3 +1044,5 @@ Mkfile.old
 dkms.conf
 WPI/Matlab/shared_data.mat
 *.mat
+*.mat
+WPI/Matlab/shared_data.mat
