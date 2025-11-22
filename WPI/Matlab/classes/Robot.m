@@ -666,20 +666,34 @@ classdef Robot < Kinematics
             % Save important control data to data_all.mat
             obj.save_experiment_data("data_all.mat");
 
-            pause(3);
+            pause(0.5);
         end
 
-        function obj = home_insertion_rotaion(obj, home_pos, threshold)
+        function obj = home_insertion(obj, home_pos, threshold)
             
             current_rot = obj.zRotation;
             initialPulse = 0;
             current_pos = get_encoder_insertion(obj.g);
             obj.zInsertion = abs(current_pos)/5000*3;
-            f_pos = true;
-            f_rot = true;
             voltage = 2;
             direction = 0; % Pull-out
-            while  f_pos || f_rot
+
+            while abs(current_pos - home_pos) > threshold
+                
+                move_insertion(obj.g, direction, voltage);
+                
+                pause(0.1);
+
+                stop_insertion(obj.g, direction);
+
+                current_pos = get_encoder_insertion(obj.g);
+                obj.zInsertion = abs(current_pos)/5000*3;   
+
+            end
+
+
+%{
+             while  f_pos || f_rot
                 if f_pos
                     move_insertion(obj.g, direction, voltage);
                 end
@@ -705,7 +719,9 @@ classdef Robot < Kinematics
                 if abs(current_rot - (2*pi)) <= deg2rad(1)
                     f_rot = false;
                 end
-            end
+            end 
+%}
+
         end
 
         function RetractNeedle(obj)
@@ -714,7 +730,7 @@ classdef Robot < Kinematics
             threshold = 1000;
             home_pos = 0;
             if ~obj.simulation_mode
-                obj.home_insertion_rotaion(home_pos, threshold);
+                obj.home_insertion(home_pos, threshold);
             else
                 disp("SIMULATION MODE: Would home insertion with home_pos " + num2str(home_pos) + " and threshold " + num2str(threshold));
             end
