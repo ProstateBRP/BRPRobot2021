@@ -1010,9 +1010,18 @@ classdef Robot < Kinematics
                 [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
 
                 % Open-loop B-CURV settings
-                obj.alpha = 1.0;
-                % obj.theta_d = 0;
-                % 
+                flag_noRotation = false;
+                flag_random = false;
+
+                if flag_noRotation
+                    obj.alpha = 1.0;
+                    if flag_random
+
+                        obj.theta_d = 2 * pi * rand();
+                    else
+                        % obj.theta_d = 0; % use if fixed value
+                    end
+                end
 
                 
 
