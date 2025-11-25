@@ -32,8 +32,8 @@ response = g.command('CB 5');
 
 %% Control Module Initialization
 % Access Relay
-g.command('SB 3');
-pause(0.1);
+% g.command('SB 3');
+% pause(0.1);
 disp('Relay for drivers should be turned on');
 
 %% Record encoder tick at home
@@ -45,7 +45,7 @@ home_pos = 0;
 if flag_only_homing
     disp("Only Homing Mode")
 else
-    direction = 0;
+    direction = 1;
     voltage = 2;
     pause
     disp("Insertion ongoing")

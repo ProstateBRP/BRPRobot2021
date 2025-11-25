@@ -78,7 +78,7 @@ classdef Kinematics < igtl_utils
             end
             
             obj.yFrontPointOfRotation = yF_1 + sqrt(yF_2 - yF_3);
-            obj.zFrontPointOfRotation = -63; %0;
+            obj.zFrontPointOfRotation = -68.4; %0;
             
             obj.xRearPointOfRotation = (xRearSlider1 + xRearSlider2) / 2;
             yR_1 = obj.heightLowerTrapOffset - obj.heightUpperTrapOffset;

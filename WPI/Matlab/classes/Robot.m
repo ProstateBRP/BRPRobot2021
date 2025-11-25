@@ -45,7 +45,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
-        robot_base_to_zframe = [1., 0., 0., 0.8; 0., 1., 0., 166.4; 0., 0., 1., 252.71; 0., 0., 0., 1]; %x = 0, y = 167.4, z=239.71
+        robot_base_to_zframe = [1., 0., 0., 0.3; 0., 1., 0., 166.4; 0., 0., 1., 239.71; 0., 0., 0., 1]; %x = 0, y = 167.4, z=239.71
         baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
         zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
         reachable_target_pose_imager_coord = eye(4);
@@ -64,7 +64,7 @@ classdef Robot < Kinematics
         % max_curvature = 0.0026                         % Maximum curvature for needle control
         max_curvature = 0.001054;                      % In-bore B-CURV with gelatine
         % max_curvature = 0.000545;                      % In-bore B-CURV with gelwax
-        max_insertion_distance = 120;                  % Maximum insertion distance (mm) (absolute value)
+        max_insertion_distance = 127;                  % Maximum insertion distance (mm) (absolute value)
         k_max                                          % Maximum curvature (computed)
         rot_dir = 1                                    % Rotation direction: CW(1), CCW(-1)
         theta0                                         % Initial theta0 angle
@@ -88,7 +88,7 @@ classdef Robot < Kinematics
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
         stop_count_insertion = -391841  %-191841                 % Insertion stop count threshold
-        voltage_insertion = 2.14                     % Insertion voltage
+        voltage_insertion = 2.2                     % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
         max_error_rot = 0.1                           % Motor control error tolerance (rpm)
@@ -1010,8 +1010,15 @@ classdef Robot < Kinematics
                 [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
 
                 % Open-loop B-CURV settings
-                flag_noRotation = false;
-                flag_random = false;
+                flag_test_group = true;
+                
+                if flag_test_group
+                    flag_noRotation = false;
+                    flag_random = false;
+                else
+                    flag_noRotation = true;
+                    flag_random = true;
+                end
 
                 if flag_noRotation
                     obj.alpha = 1.0;
