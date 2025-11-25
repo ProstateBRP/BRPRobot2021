@@ -30,7 +30,7 @@ g = init_galil();
 %% Insertion Speed Calibration
 PPR = 5000;
 
-voltage_st = 2.18;
+voltage_st = 2.15;
 voltage_res = 0.01;
 voltage_step_num = 3;
 voltage_ed = voltage_st + voltage_res*(voltage_step_num-1);

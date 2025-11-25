@@ -45,7 +45,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
-        robot_base_to_zframe = [1., 0., 0., 0.3; 0., 1., 0., 166.4; 0., 0., 1., 239.71; 0., 0., 0., 1]; %x = 0, y = 167.4, z=239.71
+        robot_base_to_zframe = [1., 0., 0., -0.5; 0., 1., 0., 166.4; 0., 0., 1., 239.71; 0., 0., 0., 1]; %x = 0, y = 167.4, z=239.71
         baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
         zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
         reachable_target_pose_imager_coord = eye(4);
@@ -88,7 +88,7 @@ classdef Robot < Kinematics
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
         stop_count_insertion = -391841  %-191841                 % Insertion stop count threshold
-        voltage_insertion = 2.2                     % Insertion voltage
+        voltage_insertion = 2.16                     % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
         max_error_rot = 0.1                           % Motor control error tolerance (rpm)
@@ -1010,7 +1010,7 @@ classdef Robot < Kinematics
                 [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
 
                 % Open-loop B-CURV settings
-                flag_test_group = true;
+                flag_test_group = false;
                 
                 if flag_test_group
                     flag_noRotation = false;
