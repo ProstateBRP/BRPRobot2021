@@ -26,28 +26,69 @@
 
 ## Executive Summary
 
-This proposal outlines a **step-and-scan MRI feedback control system** for needle insertion. The workflow involves:
-1. **Robot inserts needle** a specified distance
-2. **Robot stops and signals MRI** for imaging
-3. **MRI acquires image** at specified location
-4. **MRI sends needle position** to MATLAB via OpenIGTLink
-5. **MATLAB adjusts trajectory** and repeats
+This proposal outlines a **step-and-scan MRI feedback control system with B-CURV needle steering** for needle insertion. The workflow involves:
+1. **Compute control parameters** (Alpha and Theta_d) from current needle tip position
+2. **Robot executes insertion + rotation simultaneously** (B-CURV control, 10mm step)
+3. **Robot stops and signals MRI** for imaging
+4. **MRI acquires image** and segments needle tip
+5. **MRI sends needle tip position** (x, y, z only) to MATLAB via OpenIGTLink
+6. **MATLAB stores position** for next step's control computation
+7. **Check termination** based on insertion encoder reading
+8. **Repeat** until termination condition met
+
+### Key Control Characteristics:
+- **B-CURV Steering**: Each step computes Alpha and Theta_d based on MRI-measured needle position
+- **Reuses Open-Loop Logic**: Control parameter calculation mirrors open-loop approach
+- **Position-Only Feedback**: MRI provides 3D tip position (x,y,z); orientation not used
+- **Fixed Step Distance**: 10mm insertion per step
+- **Encoder-Based Termination**: Uses insertion encoder (same as open-loop), not 3D distance to target
+- **Initial Position**: Home position used as initial needle tip for first step
+- **Theta Continuity**: Each step's initial Theta inherits from previous step's final Theta
 
 The system is designed with **phased implementation**:
-- **Phase 1 (Minimum)**: Timing signals only (MATLAB → MRI)
-- **Phase 2 (Enhanced)**: Imaging location specification (MATLAB → MRI)
-- **Phase 3 (Advanced)**: Bidirectional real-time coordination
+- **Phase 1 (Minimum)**: Timing signals and position feedback (MATLAB ↔ Slicer ↔ MRI)
+- **Phase 2 (Enhanced)**: Imaging location specification (MATLAB → Slicer → MRI)
+- **Phase 3 (Advanced)**: Bidirectional real-time coordination and Kalman filtering
 
 ### Key Design Principles:
-1. **Stepwise Implementation**: Start with timing, add location control incrementally
+1. **Stepwise Implementation**: Start with basic step-and-scan, add features incrementally
 2. **Flexibility**: Support multiple message types and communication patterns
-3. **Clear Team Separation**: Well-defined interface between MATLAB and MRI teams
-4. **Robustness**: Graceful degradation and timeout handling
-5. **Testability**: Simulation mode for development without hardware
+3. **Clear Team Separation**: Well-defined interface between MATLAB and Slicer/MRI teams
+4. **Slicer as Communication Hub**: All MATLAB ↔ MRI communication flows through 3D Slicer
+5. **Robustness**: Retry mechanism and fallback to previous control parameters on MRI failure
+6. **Testability**: Simulation mode for development without hardware
+7. **Consistency with Open-Loop**: Reuses existing control calculation methods
 
 ---
 
 ## Workflow Overview: Step-and-Scan Approach
+
+### System Architecture
+
+```
+┌─────────────────┐                    ┌──────────────────┐                   ┌─────────────────┐
+│  MATLAB Control │ ←─ OpenIGTLink ──→ │   3D Slicer      │ ←─ DICOM/etc. ──→ │  MRI Scanner    │
+│                 │                    │ (Communication    │                   │                 │
+│  - Robot Ctrl   │                    │      Hub)         │                   │  - Image Acq.   │
+│  - Trajectory   │                    │                   │                   │  - Scanning     │
+│  - Control Calc │                    │  - Segmentation   │                   │                 │
+│  - OpenIGTLink  │                    │  - Visualization  │                   │                 │
+└────────┬────────┘                    │  - OpenIGTLink    │                   └─────────────────┘
+         │                             │  - Coordination   │
+         │                             └──────────────────┘
+         ↓
+┌─────────────────┐
+│ Robot Hardware  │
+│  - Insertion    │
+│  - Rotation     │
+│  - Encoders     │
+└─────────────────┘
+```
+
+**Key Points**:
+- **Slicer as Hub**: All MATLAB ↔ MRI communication flows through 3D Slicer
+- **OpenIGTLink**: Standard protocol for medical device communication
+- **Clear Separation**: MATLAB handles robot control, Slicer handles imaging coordination
 
 ### Clinical Workflow
 
@@ -55,38 +96,45 @@ The system is designed with **phased implementation**:
 sequenceDiagram
     participant MATLAB as MATLAB Control
     participant Robot as Robot Hardware
-    participant MRI as MRI System
-    participant Slicer as 3D Slicer
+    participant Slicer as 3D Slicer (Communication Hub)
+    participant MRI as MRI Scanner
 
-    Note over MATLAB,Slicer: Initialization Phase
+    Note over MATLAB,MRI: Initialization Phase
     MATLAB->>Slicer: Ready for targeting
     Slicer->>MATLAB: Target position
-    MATLAB->>MATLAB: Compute trajectory
+    MATLAB->>MATLAB: Initialize (home position as initial needle tip)
     
-    Note over MATLAB,Slicer: Insertion Phase (Loop)
+    Note over MATLAB,MRI: Insertion Phase (Loop)
     loop Step-and-Scan Cycle
-        MATLAB->>Robot: Move forward (step distance)
-        Robot->>MATLAB: Movement complete
+        MATLAB->>MATLAB: Compute Alpha & Theta_d from current position
         
-        Note over MATLAB,MRI: Phase 1: Timing Signal
-        MATLAB->>MRI: TRIGGER_SCAN (STRING)
+        Note over MATLAB,Robot: Insertion + Rotation (Simultaneous)
+        MATLAB->>Robot: Execute insertion + rotation (B-CURV)
+        Robot->>Robot: Insert 10mm + Rotate to Theta_d
+        Robot->>MATLAB: Movement complete (encoder feedback)
         
-        Note over MATLAB,MRI: Phase 2: Location Specification (Future)
-        MATLAB->>MRI: SCAN_LOCATION (TRANSFORM)
+        Note over MATLAB,Slicer: Phase 1: Timing Signal via Slicer
+        MATLAB->>Slicer: TRIGGER_SCAN (STRING via OpenIGTLink)
+        Slicer->>MRI: Initiate scan acquisition
+        
+        Note over MATLAB,Slicer: Phase 2: Location Specification (Future)
+        MATLAB->>Slicer: SCAN_LOCATION (TRANSFORM via OpenIGTLink)
+        Slicer->>MRI: Set imaging parameters
         
         MRI->>MRI: Acquire image at specified location
         MRI->>Slicer: Image data
         Slicer->>Slicer: Segment needle tip
-        Slicer->>MATLAB: NEEDLE_POSITION (TRANSFORM/POINT)
+        Slicer->>MATLAB: NEEDLE_TIP_POSITION (TRANSFORM via OpenIGTLink)
         
-        MATLAB->>MATLAB: Update trajectory based on position
-        MATLAB->>MATLAB: Check if target reached
+        MATLAB->>MATLAB: Store position for next cycle
+        MATLAB->>MATLAB: Check termination (insertion encoder)
         
-        alt Target Reached
+        alt Termination Condition Met
             MATLAB->>Robot: Stop insertion
-            MATLAB->>MRI: SCAN_COMPLETE (STRING)
+            MATLAB->>Slicer: SCAN_COMPLETE (STRING)
+            Slicer->>MRI: End imaging session
         else Continue
-            Note over MATLAB,MRI: Next iteration
+            Note over MATLAB,Slicer: Next iteration with new position
         end
     end
 ```
@@ -95,40 +143,58 @@ sequenceDiagram
 
 **Timing Parameters**:
 ```matlab
-step_distance = 5-10 mm        % Distance to move per step
+step_distance = 10 mm          % Fixed insertion distance per step
 scan_wait_time = 2-5 sec       % Wait time before triggering scan
 mri_timeout = 30 sec           % Maximum wait for MRI response
 position_timeout = 60 sec      % Maximum wait for position data
 ```
 
 **Key Characteristics**:
+- **Fixed Step Distance**: Robot inserts exactly 10mm per step with simultaneous B-CURV rotation
 - **Discrete Motion**: Robot moves, stops completely, then MRI scans
 - **No Motion Artifacts**: MRI imaging occurs during complete stillness
-- **Coordinated**: Explicit handshaking between MATLAB and MRI systems
-- **Robust**: Timeout protection at each step
+- **Coordinated**: Explicit handshaking between MATLAB and Slicer/MRI systems
+- **Robust**: Timeout protection and retry mechanism at each step
+- **B-CURV Control**: Alpha and Theta_d computed at each step based on MRI feedback
+- **Termination**: Based on insertion encoder reading (similar to open-loop)
 
 ---
 
 ## MRI Integration Team Responsibilities
 
-### Overview for MRI Team
+### Overview for MRI/Slicer Team
 
-**Your Role**: Implement MRI-side communication and imaging control via OpenIGTLink
+**Communication Architecture**: 3D Slicer acts as the central communication hub
 
-**Our Role** (MATLAB Team): Robot control, trajectory planning, position processing
+```
+MATLAB Control ←→ 3D Slicer (Hub) ←→ MRI Scanner
+   (Robot)      OpenIGTLink    (Imaging/Segmentation)
+```
 
-**Interface**: OpenIGTLink protocol for bidirectional communication
+**Your Role** (MRI/Slicer Team): 
+- Implement Slicer-side OpenIGTLink communication with MATLAB
+- Trigger MRI scans based on MATLAB commands
+- Segment needle tip from MRI images
+- Send needle position back to MATLAB
+
+**Our Role** (MATLAB Team): 
+- Robot control and trajectory planning
+- Send scan triggers and imaging parameters to Slicer
+- Process received needle positions for control
+
+**Interface**: OpenIGTLink protocol between MATLAB and 3D Slicer
 
 ### Phase 1 Requirements (Minimum Viable Product)
 
-#### 1.1 Receive Scan Trigger from MATLAB
+#### 1.1 Receive Scan Trigger from MATLAB (via Slicer OpenIGTLink)
 
 **What to Implement**:
-- OpenIGTLink server/client to receive STRING messages from MATLAB
-- Listen for `"TRIGGER_SCAN"` command
+- OpenIGTLink server/client in Slicer to receive STRING messages from MATLAB
+- Listen for `"TRIGGER_SCAN"` command from MATLAB
 - Trigger MRI image acquisition upon receiving command
+- Forward scan completion status back to MATLAB
 
-**Message Format**:
+**Message Format (MATLAB → Slicer)**:
 ```
 Type: STRING
 Device Name: "SCAN_TRIGGER"
@@ -136,10 +202,11 @@ Content: "TRIGGER_SCAN"
 ```
 
 **Expected Behavior**:
-1. MATLAB sends `TRIGGER_SCAN` when robot stops
-2. Your system initiates MRI scan
-3. Scan completes and image is processed
-4. Needle position is sent back to MATLAB (see 1.2)
+1. MATLAB sends `TRIGGER_SCAN` to Slicer when robot stops
+2. Slicer receives command and initiates MRI scan
+3. MRI acquires image and sends data to Slicer
+4. Slicer segments needle tip from image
+5. Slicer sends needle position back to MATLAB (see 1.2)
 
 **Timing Requirements**:
 - Acknowledge receipt within 1 second
@@ -147,23 +214,26 @@ Content: "TRIGGER_SCAN"
 
 ---
 
-#### 1.2 Send Needle Position to MATLAB
+#### 1.2 Send Needle Position to MATLAB (from Slicer via OpenIGTLink)
 
 **What to Implement**:
-- Segment needle tip from acquired MRI image
-- Send needle tip position via OpenIGTLink to MATLAB
+- Segment needle tip from acquired MRI image (in Slicer)
+- Send needle tip position via OpenIGTLink from Slicer to MATLAB
 
 **Message Format Options** (Choose ONE that works for your system):
 
-**Option A: TRANSFORM Message** (Preferred if you have full 6-DOF pose)
+**Option A: TRANSFORM Message** (Preferred - position information only will be used)
 ```
 Type: TRANSFORM
 Device Name: "NEEDLE_TIP"
-Content: 4x4 transformation matrix
-  [R11 R12 R13 Tx]   // Tx, Ty, Tz in mm (RAS coordinates)
-  [R21 R22 R23 Ty]
-  [R31 R32 R33 Tz]
+Content: 4x4 transformation matrix (Slicer → MATLAB)
+  [R11 R12 R13 Tx]   // Only Tx, Ty, Tz will be used (in mm, RAS coordinates)
+  [R21 R22 R23 Ty]   // Rotation part (R) can be identity or any value
+  [R31 R32 R33 Tz]   // MATLAB will extract position only
   [  0   0   0  1]
+  
+Note: Rotation matrix (R) will be ignored. Only translation (Tx, Ty, Tz) is used.
+      If needle orientation is not measurable, set R to identity matrix.
 ```
 
 **Option B: POINT Message** (Simpler, position only)
@@ -184,6 +254,7 @@ Content: Point list with [x, y, z] in mm (RAS coordinates)
   - Z: Patient's superior (+) / inferior (-)
 - **Units**: Millimeters (mm)
 - **Origin**: Same as image volume origin used in 3D Slicer
+- **Reference Frame**: All coordinates in Slicer's RAS coordinate system
 
 **Quality/Confidence Metrics** (Optional but helpful):
 - If your segmentation provides confidence/quality score, include it
@@ -194,25 +265,25 @@ Content: Point list with [x, y, z] in mm (RAS coordinates)
 
 ---
 
-#### 1.3 Error Handling Requirements
+#### 1.3 Error Handling Requirements (Slicer ↔ MATLAB Communication)
 
 **What to Implement**:
 
-1. **Acknowledge Trigger**:
+1. **Acknowledge Trigger (Slicer → MATLAB)**:
    ```
    Type: STRING
    Device Name: "SCAN_STATUS"
    Content: "ACK_TRIGGER" or "SCAN_STARTED"
    ```
 
-2. **Report Scan Completion**:
+2. **Report Scan Completion (Slicer → MATLAB)**:
    ```
    Type: STRING
    Device Name: "SCAN_STATUS"
    Content: "SCAN_COMPLETE"
    ```
 
-3. **Report Errors**:
+3. **Report Errors (Slicer → MATLAB)**:
    ```
    Type: STRING
    Device Name: "SCAN_STATUS"
@@ -222,23 +293,26 @@ Content: Point list with [x, y, z] in mm (RAS coordinates)
    - "ERROR: Segmentation failed"
    - "ERROR: No needle visible"
    - "ERROR: MRI scanner not ready"
+   - "ERROR: OpenIGTLink connection lost"
    ```
 
 4. **Timeout Handling**:
-   - If scan cannot complete within timeout, send error message
+   - If scan cannot complete within timeout, send error message to MATLAB
    - MATLAB will wait maximum 60 seconds before declaring timeout
+   - MATLAB will offer retry option to user
+   - If user declines retry, MATLAB will continue with previous step's control parameters
 
 ---
 
 ### Phase 2 Requirements (Enhanced - Future)
 
-#### 2.1 Receive Imaging Location from MATLAB
+#### 2.1 Receive Imaging Location from MATLAB (via Slicer OpenIGTLink)
 
 **What to Implement**:
-- Receive imaging plane/volume location from MATLAB
+- Receive imaging plane/volume location from MATLAB via Slicer
 - Adjust MRI scan parameters to image specified region
 
-**Message Format**:
+**Message Format (MATLAB → Slicer → MRI)**:
 ```
 Type: TRANSFORM
 Device Name: "SCAN_LOCATION"
@@ -253,9 +327,10 @@ Content: Center point [x, y, z] of region to scan
 
 **Expected Behavior**:
 1. MATLAB computes optimal imaging location (near needle tip)
-2. MATLAB sends SCAN_LOCATION before TRIGGER_SCAN
-3. Your system adjusts scan parameters (slice position, orientation)
-4. Scan proceeds at specified location
+2. MATLAB sends SCAN_LOCATION to Slicer before TRIGGER_SCAN
+3. Slicer forwards location information to MRI system
+4. MRI system adjusts scan parameters (slice position, orientation)
+5. Scan proceeds at specified location
 
 **Benefits**:
 - Reduced scan time (smaller region of interest)
@@ -279,24 +354,25 @@ Content: Center point [x, y, z] of region to scan
 
 ---
 
-### Decisions Required from MRI Team
+### Decisions Required from MRI/Slicer Team
 
 Please provide the following information to proceed:
 
 #### Critical Decisions (Phase 1 - Needed Immediately):
 
-1. **OpenIGTLink Configuration**:
-   - [ ] Will your system act as OpenIGTLink **Server** or **Client**?
-     - Server: MRI system listens for connections (needs IP:Port)
-     - Client: MRI system connects to MATLAB (MATLAB provides IP:Port)
-   - [ ] Preferred IP address: `__________`
-   - [ ] Preferred port: `________` (default: 18944, different from Slicer's 18936)
+1. **OpenIGTLink Configuration (Slicer ↔ MATLAB)**:
+   - [ ] Will Slicer act as OpenIGTLink **Server** or **Client** when connecting to MATLAB?
+     - Server: Slicer listens for MATLAB connections (needs IP:Port)
+     - Client: Slicer connects to MATLAB (MATLAB provides IP:Port)
+   - [ ] Slicer machine IP address: `__________`
+   - [ ] Preferred port for MATLAB ↔ Slicer: `________` (default: 18944, different from standard 18936)
+   - [ ] Note: This is separate from any Slicer ↔ MRI Scanner communication
 
-2. **Message Format Selection**:
-   - [ ] TRANSFORM (full 4x4 matrix)
+2. **Message Format Selection (Slicer → MATLAB)**:
+   - [ ] TRANSFORM (full 4x4 matrix) - Position extracted by MATLAB
    - [ ] POINT (position only)
    - [ ] CUSTOM (please specify format)
-   - [ ] **Device Name** you will use for needle position: `__________`
+   - [ ] **Device Name** you will use for needle position in Slicer: `__________`
 
 3. **Timing Specifications**:
    - [ ] Typical MRI scan duration: `______` seconds
@@ -304,10 +380,11 @@ Please provide the following information to proceed:
    - [ ] Total time from trigger to position available: `______` seconds
    - [ ] Can you provide scan progress updates? Yes / No
 
-4. **Segmentation Method**:
+4. **Segmentation Method (in Slicer)**:
    - [ ] Manual segmentation in Slicer
-   - [ ] Semi-automatic in Slicer (which module?)
+   - [ ] Semi-automatic in Slicer (which module/extension?)
    - [ ] Automatic algorithm (describe briefly)
+   - [ ] External tool → Slicer (specify tool)
    - [ ] Other: `__________`
 
 5. **Coordinate System Confirmation**:
@@ -316,18 +393,20 @@ Please provide the following information to proceed:
    - [ ] Confirm origin matches 3D Slicer image origin
    - [ ] If different, please specify: `__________`
 
-6. **Error Conditions**:
+6. **Error Conditions (Slicer ↔ MATLAB Communication)**:
    What error conditions should we expect?
-   - [ ] Needle not visible in image
+   - [ ] Needle not visible in MRI image
    - [ ] Segmentation confidence too low
    - [ ] MRI scanner busy/not ready
+   - [ ] OpenIGTLink connection issues
+   - [ ] Slicer processing error
    - [ ] Other: `__________`
 
 #### Optional Decisions (Phase 2 - Can Decide Later):
 
-7. **Imaging Location Control**:
-   - [ ] Interested in receiving scan location from MATLAB? Yes / No / Maybe
-   - [ ] Can your system adjust imaging plane based on coordinates? Yes / No
+7. **Imaging Location Control (MATLAB → Slicer → MRI)**:
+   - [ ] Interested in receiving scan location from MATLAB via Slicer? Yes / No / Maybe
+   - [ ] Can your MRI system adjust imaging plane based on Slicer coordinates? Yes / No
    - [ ] Preferred format for location specification: TRANSFORM / POINT / Other
 
 8. **Quality Metrics**:
@@ -346,10 +425,10 @@ Please provide the following information to proceed:
 
 **We Will Provide**:
 
-1. **OpenIGTLink Test Client/Server**:
-   - Simple MATLAB script to send TRIGGER_SCAN commands
-   - Script to receive and display position data
-   - Message format validators
+1. **OpenIGTLink Test Client/Server (MATLAB ↔ Slicer)**:
+   - Simple MATLAB script to send TRIGGER_SCAN commands to Slicer
+   - Script to receive and display position data from Slicer
+   - Message format validators for OpenIGTLink communication
 
 2. **Message Examples**:
    - Sample TRIGGER_SCAN messages
@@ -358,19 +437,20 @@ Please provide the following information to proceed:
 
 3. **Documentation**:
    - OpenIGTLink protocol reference
-   - Coordinate system transformation guides
+   - Coordinate system transformation guides (MATLAB ↔ Slicer RAS)
+   - Slicer OpenIGTLink module setup guide
    - Troubleshooting guide
 
 4. **Testing Protocol**:
-   - Step-by-step testing procedure
+   - Step-by-step testing procedure for MATLAB ↔ Slicer communication
    - Expected behavior documentation
    - Communication verification checklist
 
 **You Should Provide**:
 
-1. **Test Endpoint**:
-   - IP address and port for testing
-   - Schedule/availability for joint testing
+1. **Test Endpoint (Slicer Machine)**:
+   - IP address and port for Slicer OpenIGTLink testing
+   - Schedule/availability for joint testing sessions
 
 2. **Test Data**:
    - Sample MRI images with visible needle
@@ -383,17 +463,17 @@ Please provide the following information to proceed:
 
 ### Communication Protocol Summary
 
-**MATLAB → MRI (Commands)**:
+**MATLAB → Slicer (Commands via OpenIGTLink)**:
 
 | Phase | Message Type | Device Name | Content | Purpose |
 |-------|-------------|-------------|---------|---------|
-| 1 | STRING | SCAN_TRIGGER | "TRIGGER_SCAN" | Request MRI scan |
+| 1 | STRING | SCAN_TRIGGER | "TRIGGER_SCAN" | Request MRI scan via Slicer |
 | 1 | STRING | SCAN_CONTROL | "STOP_SCAN" | Abort scanning |
-| 1 | STRING | SCAN_CONTROL | "RESET" | Reset MRI state |
+| 1 | STRING | SCAN_CONTROL | "RESET" | Reset system state |
 | 2 | TRANSFORM | SCAN_LOCATION | 4x4 matrix | Specify imaging region |
 | 2 | POINT | SCAN_LOCATION | [x,y,z] | Specify imaging center |
 
-**MRI → MATLAB (Data & Status)**:
+**Slicer → MATLAB (Data & Status via OpenIGTLink)**:
 
 | Phase | Message Type | Device Name | Content | Purpose |
 |-------|-------------|-------------|---------|---------|
@@ -452,9 +532,9 @@ obj.Needle_pose_act [used for control]
 
 **Closed-Loop Control** (`open_loop = false`):
 - Currently **partially implemented**
-- Designed for continuous MRI feedback
+- Expects needle pose from MRI via `move_A_step(needle_pos_image)`
 - Called iteratively from `Server.onMove()`
-- **Will be adapted for step-and-scan workflow**
+- **Will be adapted for step-and-scan workflow with B-CURV control**
 
 ### Current Sensor Data Flow
 
@@ -481,16 +561,18 @@ obj.Needle_pose_act [used for control]
 **Current Gaps**:
 1. **No MRI Trigger Mechanism**: Cannot signal MRI to start scanning
 2. **No Scan Synchronization**: No handshaking protocol with MRI
-3. **No Step-based Movement**: Current code moves continuously
-4. **No Position Reception**: No mechanism to receive needle position from MRI
+3. **No Step-based Movement with B-CURV**: Current code moves continuously in open-loop or expects continuous feedback
+4. **No Position Reception**: No mechanism to receive needle tip position from MRI
 5. **No Timeout Handling**: No timeout for waiting for MRI response
+6. **No MRI-based Alpha/Theta_d Calculation**: Need to compute B-CURV parameters from MRI position at each step
 
 **Required Changes**:
-1. Implement step-based movement control
+1. Implement step-based movement control with B-CURV (Alpha and Theta_d computation per step)
 2. Add MRI trigger signal transmission
-3. Add MRI position reception and parsing
+3. Add MRI position reception and parsing (position only from TRANSFORM)
 4. Implement synchronization state machine
-5. Add timeout and error handling
+5. Add timeout, retry, and error handling
+6. Reuse open-loop's Alpha/Theta_d calculation logic with MRI-provided needle tip position
 
 ---
 
@@ -542,30 +624,33 @@ obj.Needle_pose_act [used for control]
 stateDiagram-v2
     [*] --> Initialized
     Initialized --> Planning: Receive Target
-    Planning --> ReadyToMove: Compute Trajectory
+    Planning --> ReadyToCompute: Initialize (home pos as needle tip)
     
-    ReadyToMove --> Moving: Start Step
-    Moving --> WaitingForStop: Motor Moving
+    ReadyToCompute --> ComputingControl: Compute Alpha & Theta_d
+    ComputingControl --> Moving: Start Insertion + Rotation
+    Moving --> WaitingForStop: Motor Moving (B-CURV)
     WaitingForStop --> Stopped: Motion Complete
     
     Stopped --> TriggeringMRI: Send TRIGGER_SCAN
     TriggeringMRI --> WaitingForAck: Waiting...
     WaitingForAck --> WaitingForPosition: Received ACK
-    WaitingForAck --> Error: Timeout (No ACK)
+    WaitingForAck --> ErrorHandling: Timeout (No ACK)
     
     WaitingForPosition --> ProcessingPosition: Received Position
-    WaitingForPosition --> Error: Timeout (No Position)
+    WaitingForPosition --> ErrorHandling: Timeout (No Position)
     
-    ProcessingPosition --> UpdatingTrajectory: Transform Coordinates
-    UpdatingTrajectory --> CheckingTarget: Recompute Path
+    ProcessingPosition --> TransformCoordinates: Extract Tx,Ty,Tz
+    TransformCoordinates --> CheckingTermination: RAS to Robot Frame
     
-    CheckingTarget --> TargetReached: Within Tolerance
-    CheckingTarget --> ReadyToMove: Continue Insertion
+    CheckingTermination --> TerminationReached: Insertion Encoder Check Met
+    CheckingTermination --> ReadyToCompute: Continue (use new position)
     
-    TargetReached --> [*]
-    Error --> ErrorHandling
-    ErrorHandling --> ReadyToMove: Retry
-    ErrorHandling --> [*]: Abort
+    TerminationReached --> [*]
+    ErrorHandling --> OfferRetry: Display Error
+    OfferRetry --> TriggeringMRI: User Retries
+    OfferRetry --> UsePreviousControl: User Declines
+    UsePreviousControl --> Moving: Reuse previous Alpha/Theta_d
+    OfferRetry --> [*]: Abort
 ```
 
 ### Data Flow for One Step-and-Scan Cycle
@@ -575,41 +660,55 @@ stateDiagram-v2
 │  Step N Cycle (typical duration: 10-60 seconds)                │
 └─────────────────────────────────────────────────────────────────┘
 
-1. MATLAB: Compute next step distance (5-10 mm)
+0. MATLAB: Use needle tip position from previous step (or home position for step 1)
+   ↓ [0.1 sec]
+
+1. MATLAB: Compute error vector to target
    ↓ [0.1 sec]
    
-2. MATLAB → Robot: Move forward command
+2. MATLAB: Compute Alpha & Theta_d (using open-loop calculation logic)
+   ↓ [0.1 sec]
+   
+3. MATLAB → Robot: Insertion + Rotation command (B-CURV, 10mm)
    ↓ [1-3 sec]
    
-3. Robot: Execute motion, report complete
+4. Robot: Execute simultaneous insertion (10mm) + rotation (to Theta_d)
    ↓ [0.5 sec]
    
-4. MATLAB: Wait for stabilization
+5. Robot → MATLAB: Motion complete (encoder feedback)
+   ↓ [0.5 sec]
+   
+6. MATLAB: Wait for stabilization
    ↓ [0.1 sec]
    
-5. MATLAB → MRI: Send "TRIGGER_SCAN" (STRING)
+7. MATLAB → MRI: Send "TRIGGER_SCAN" (STRING)
    ↓ [0.1 sec]
    
-6. MRI → MATLAB: Send "ACK_TRIGGER" (STRING)
+8. MRI → MATLAB: Send "ACK_TRIGGER" (STRING)
    ↓ [10-30 sec]
    
-7. MRI: Acquire image and segment needle
+9. MRI: Acquire image and segment needle tip
    ↓ [0.1 sec]
    
-8. MRI → MATLAB: Send "SCAN_COMPLETE" (STRING)
-   ↓ [0.1 sec]
-   
-9. MRI → MATLAB: Send needle position (TRANSFORM/POINT)
-   ↓ [0.5 sec]
-   
-10. MATLAB: Process position, update trajectory
+10. MRI → MATLAB: Send "SCAN_COMPLETE" (STRING)
     ↓ [0.1 sec]
     
-11. MATLAB: Check if target reached
+11. MRI → MATLAB: Send needle tip position (TRANSFORM - position only)
+    ↓ [0.5 sec]
+    
+12. MATLAB: Extract position (Tx, Ty, Tz), ignore rotation
+    ↓ [0.1 sec]
+    
+13. MATLAB: Transform position from RAS to robot frame
+    ↓ [0.1 sec]
+    
+14. MATLAB: Check termination condition (insertion encoder)
     ↓
     
-12. If NOT reached: Go to step 1 (next cycle)
-    If reached: Stop and complete
+15. If termination NOT met: Go to step 0 (next cycle with new position)
+    If termination met: Stop and complete
+    
+    If MRI fails: Retry option → If declined, use previous Alpha/Theta_d for one more step
 ```
 
 ---
@@ -618,28 +717,33 @@ stateDiagram-v2
 
 ### Phase 1: Timing Signals Only (Weeks 1-3)
 
-**Goal**: Establish basic step-and-scan workflow with timing coordination
+**Goal**: Establish basic step-and-scan workflow with B-CURV control using MRI feedback
 
 **MATLAB Implementation**:
-- Step-based movement control
+- Step-based movement control with B-CURV (Alpha and Theta_d computation)
+- Reuse open-loop's control parameter calculation logic
 - Send TRIGGER_SCAN to MRI
-- Wait for position response
-- Basic timeout handling
+- Wait for position response (extract position only from TRANSFORM)
+- Compute control parameters for next step based on MRI position
+- Timeout handling with retry mechanism
+- Fallback to previous control parameters if MRI fails
 
 **MRI Team Implementation**:
 - Receive TRIGGER_SCAN
 - Return ACK
 - Perform scan
-- Return position (TRANSFORM or POINT)
+- Return position (TRANSFORM with position only, or POINT)
 
 **Imaging Region**: MRI team decides scan location (e.g., fixed slice, whole volume)
 
 **Success Criteria**:
-- ✓ Robot steps forward 5-10 mm
+- ✓ Robot steps forward 10 mm with B-CURV rotation
 - ✓ MATLAB triggers MRI scan
-- ✓ MRI returns needle position
-- ✓ MATLAB receives and logs position
-- ✓ Process repeats until target
+- ✓ MRI returns needle tip position
+- ✓ MATLAB computes Alpha/Theta_d from position
+- ✓ Next step uses updated control parameters
+- ✓ Process repeats until insertion encoder termination
+- ✓ Retry mechanism works on MRI failure
 
 ---
 
@@ -697,10 +801,7 @@ classdef StepAndScanController < handle
     
     properties (Access = public)
         % Configuration
-        step_distance = 5                 % Step distance [mm]
-        min_step_distance = 2             % Minimum step [mm]
-        max_step_distance = 15            % Maximum step [mm]
-        adaptive_stepping = false         % Adjust step based on error
+        step_distance = 10                % Fixed step distance [mm]
         
         % Timing parameters
         scan_wait_time = 2.0              % Wait before triggering scan [sec]
@@ -713,10 +814,13 @@ classdef StepAndScanController < handle
         step_number = 0                   % Current step count
         total_insertion_distance = 0      % Total inserted distance [mm]
         
-        % Position data
-        needle_positions_history          % History of MRI positions
+        % Position and control data
+        needle_positions_history          % History of MRI positions (robot frame)
         step_distances_history            % History of step distances
         step_times_history                % Timing data for each step
+        current_needle_position           % Current needle tip (robot frame)
+        previous_alpha                    % Previous Alpha value
+        previous_theta_d                  % Previous Theta_d value
         
         % MRI communication
         mri_comm_manager                  % MRI communication manager
@@ -725,7 +829,7 @@ classdef StepAndScanController < handle
         
         % Error tracking
         mri_timeout_count = 0             % Number of MRI timeouts
-        max_timeout_retries = 3           % Max retries before abort
+        max_timeout_retries = 3           % Max retries before asking user
         
         % Phase 2 properties (imaging location)
         enable_location_specification = false  % Phase 2 feature flag
@@ -739,22 +843,35 @@ classdef StepAndScanController < handle
         
         function executeStepAndScan(obj, robot, target_position)
             %EXECUTESTEPANDSCAN Main step-and-scan loop
+            %   Orchestrates B-CURV control with MRI feedback
+            %   Similar structure to open-loop but with MRI position updates
         end
         
-        function success = executeOneStep(obj, robot, current_position, target_position)
+        function success = executeOneStep(obj, robot, target_position)
             %EXECUTEONESTEP Execute one step-scan-feedback cycle
+            %   1. Compute Alpha/Theta_d from current needle position
+            %   2. Execute insertion + rotation (B-CURV)
+            %   3. Trigger MRI and wait for position
+            %   4. Update current needle position for next step
+        end
+        
+        function [alpha, theta_d] = computeControlParameters(obj, robot, current_tip_pos, target_pos)
+            %COMPUTECONTROLPARAMETERS Compute Alpha and Theta_d
+            %   Uses same logic as open-loop (reuse existing functions)
         end
         
         function triggerMRIScan(obj)
             %TRIGGERMRISCAN Send trigger signal to MRI
         end
         
-        function [position, quality] = waitForMRIPosition(obj)
-            %WAITFORMRIPOSITION Wait for MRI position with timeout
+        function [position, success] = waitForMRIPosition(obj)
+            %WAITFORMRIPOSITION Wait for MRI position with timeout and retry
+            %   Returns success flag. If failed after retry, offers user option.
         end
         
-        function distance = computeNextStep(obj, current_pos, target_pos, error_magnitude)
-            %COMPUTENEXTSTEP Compute optimal step distance
+        function handleMRIFailure(obj, robot, target_position)
+            %HANDLEMRIFAILURE Handle MRI data acquisition failure
+            %   Offers retry or use previous control parameters
         end
         
         % Phase 2 methods
@@ -1159,30 +1276,29 @@ MRI Scanner → Image Volume (RAS) → Registration Matrix → Robot Base → Ne
 classdef MRIPositionManager < handle
     %MRIPOSITIONMANAGER Flexible receiver for MRI needle tip position
     %   Supports multiple message types and formats with plugin architecture
+    %   NOTE: For step-and-scan, only position (Tx, Ty, Tz) is used from TRANSFORM
     
     properties (Access = public)
         % Configuration
-        expected_message_type = 'AUTO'    % 'AUTO', 'TRANSFORM', 'POINT', 'IMAGE', 'CUSTOM'
+        expected_message_type = 'AUTO'    % 'AUTO', 'TRANSFORM', 'POINT', 'CUSTOM'
         device_name_filter = 'NEEDLE'     % Filter by device name (e.g., 'NEEDLE_TIP')
-        coordinate_system = 'RAS'         % 'RAS' (Slicer) or 'LPS'
+        coordinate_system = 'RAS'         % 'RAS' (Slicer) - MRI coordinate system
         
         % Reception state
-        last_position = []                % [x, y, z] in mm (image frame)
-        last_orientation = []             % [3x3] rotation matrix or quaternion
-        last_full_transform = eye(4)      % [4x4] homogeneous transform
+        last_position = []                % [x, y, z] in mm (RAS frame)
         last_timestamp                    % Reception time
         last_message_type                 % Actual message type received
         
         % Quality metrics
         is_valid = false                  % Data validity flag
-        confidence = 0.0                  % Confidence score [0-1]
+        confidence = 0.0                  % Confidence score [0-1] if provided
         time_since_update = inf           % Time since last valid update
         update_count = 0                  % Total updates received
         dropout_count = 0                 % Number of dropouts detected
         
         % Statistics
         update_rate_hz = 0                % Estimated update frequency
-        position_history                  % Recent position history (for filtering)
+        position_history                  % Recent position history (for analysis)
         max_history_length = 10           % History buffer size
         
         % Parsers (plugin architecture)
@@ -1206,9 +1322,10 @@ classdef MRIPositionManager < handle
             %Constructor with flexible options
         end
         
-        function [position, orientation, quality] = receivePosition(obj, message_type, message_data, device_name)
+        function [position, quality] = receivePosition(obj, message_type, message_data, device_name)
             %RECEIVEPOSITION Main reception function (called from IGT callbacks)
             %   Flexible parsing based on message type
+            %   Extracts position only (orientation ignored)
         end
         
         function registerParser(obj, message_type, parser_func)
@@ -1217,10 +1334,6 @@ classdef MRIPositionManager < handle
         
         function [pos, confidence] = getLatestPosition(obj)
             %GETLATESTPOSITION Get most recent position with confidence
-        end
-        
-        function transform = getLatestTransform(obj)
-            %GETLATESTTRANSFORM Get full 4x4 transformation matrix
         end
         
         function obj = updateQualityMetrics(obj)
@@ -1236,36 +1349,31 @@ end
 
 ### Plugin Parser Functions
 
-**TRANSFORM Parser** (4x4 matrix → position):
+**TRANSFORM Parser (Position Only)** - Extract only translation from 4x4 matrix:
 ```matlab
-function [pos, orient, quality] = parse_TRANSFORM_message(transform_matrix)
-    %PARSE_TRANSFORM_MESSAGE Extract position from TRANSFORM message
+function [pos, quality] = parse_TRANSFORM_position_only(transform_matrix)
+    %PARSE_TRANSFORM_POSITION_ONLY Extract position only from TRANSFORM message
     %   Input: 4x4 homogeneous transformation matrix
-    %   Output: position [x,y,z], orientation [3x3], quality score
+    %   Output: position [x,y,z] in mm, quality score
+    %   NOTE: Rotation part is ignored as MRI cannot reliably measure needle orientation
     
-    pos = transform_matrix(1:3, 4);           % Extract translation
-    orient = transform_matrix(1:3, 1:3);      % Extract rotation
+    pos = transform_matrix(1:3, 4);           % Extract translation only
     
-    % Quality check: verify orthonormality of rotation matrix
-    det_R = det(orient);
-    orthogonality_error = norm(orient' * orient - eye(3), 'fro');
-    
-    if abs(det_R - 1) < 0.01 && orthogonality_error < 0.1
-        quality = 1.0;  % High quality
-    elseif abs(det_R - 1) < 0.1 && orthogonality_error < 0.3
-        quality = 0.5;  % Medium quality
+    % Quality check: verify translation is reasonable (non-zero, finite)
+    if all(isfinite(pos)) && norm(pos) > 0.1  % At least 0.1mm from origin
+        quality = 1.0;  % Valid position
     else
-        quality = 0.0;  % Low quality - invalid transform
+        quality = 0.0;  % Invalid position
     end
 end
 ```
 
 **POINT Parser** (point list → position):
 ```matlab
-function [pos, orient, quality] = parse_POINT_message(point_list, point_index)
+function [pos, quality] = parse_POINT_message(point_list, point_index)
     %PARSE_POINT_MESSAGE Extract needle tip from POINT message
     %   Input: Nx3 array of points, optional index
-    %   Output: position [x,y,z], orientation [], quality score
+    %   Output: position [x,y,z] in mm, quality score
     
     if nargin < 2
         point_index = 1;  % Default to first point
@@ -1273,40 +1381,13 @@ function [pos, orient, quality] = parse_POINT_message(point_list, point_index)
     
     if size(point_list, 1) >= point_index
         pos = point_list(point_index, :);
-        orient = [];  % POINT messages don't include orientation
         quality = 1.0;
     else
         pos = [];
-        orient = [];
         quality = 0.0;
     end
 end
 ```
-
-**IMAGE Parser** (image metadata → position):
-```matlab
-function [pos, orient, quality] = parse_IMAGE_message(image_struct)
-    %PARSE_IMAGE_MESSAGE Extract position from IMAGE message metadata
-    %   Input: Image structure with origin and orientation
-    %   Output: position [x,y,z], orientation [3x3], quality score
-    
-    % Some MRI tracking may encode needle tip in image metadata
-    if isfield(image_struct, 'needleTipPosition')
-        pos = image_struct.needleTipPosition;
-        quality = 1.0;
-    elseif isfield(image_struct, 'origin')
-        % Fallback: use image origin (less common)
-        pos = image_struct.origin;
-        quality = 0.5;
-    else
-        pos = [];
-        quality = 0.0;
-    end
-    
-    if isfield(image_struct, 'orientation')
-        orient = image_struct.orientation;
-    else
-        orient = [];
     end
 end
 ```
@@ -1551,13 +1632,13 @@ function obj = startup(obj)
         'coordinate_system', 'RAS', ...
         'expected_message_type', 'AUTO');
     
-    % Register parsers
-    obj.mri_position_manager.registerParser('TRANSFORM', @parse_TRANSFORM_message);
+    % Register parsers for position-only extraction
+    obj.mri_position_manager.registerParser('TRANSFORM', @parse_TRANSFORM_position_only);
     obj.mri_position_manager.registerParser('POINT', @parse_POINT_message);
     
     % Initialize step-and-scan controller (NEW)
     obj.step_and_scan_controller = StepAndScanController( ...
-        'step_distance', 5, ...
+        'step_distance', 10, ...
         'mri_ack_timeout', 5, ...
         'mri_position_timeout', 60);
     
@@ -1565,46 +1646,158 @@ function obj = startup(obj)
 end
 ```
 
-**New Method: `updateTrajectoryFromMRI()`** - Adjust path based on MRI feedback
+**New Method: `computeControlFromMRI()`** - Compute Alpha and Theta_d from MRI position
 
 ```matlab
-function obj = updateTrajectoryFromMRI(obj, mri_position, target_position)
-    %UPDATETRAJECTORYFROMRI Update control based on MRI position feedback
+function [alpha, theta_d] = computeControlFromMRI(obj, mri_position_ras, target_position)
+    %COMPUTECONTROLFROMMRI Compute B-CURV control parameters from MRI position
+    %   Reuses open-loop calculation logic with MRI-provided needle tip position
     %   Inputs:
-    %       mri_position - Current needle tip from MRI [x,y,z]
-    %       target_position - Desired target [x,y,z]
+    %       mri_position_ras - Current needle tip from MRI in RAS [x,y,z]
+    %       target_position - Desired target in robot frame [x,y,z]
+    %   Outputs:
+    %       alpha - Bevel angle for B-CURV control
+    %       theta_d - Desired rotation angle [rad]
     
-    % Transform MRI position to robot frame
-    obj.needle_tip_mri_robot = obj.transformMRIToRobot(mri_position);
+    % Transform MRI position from RAS to robot frame
+    needle_tip_robot = obj.transformMRIToRobot(mri_position_ras);
     
-    % Compute error vector
-    error_vector = target_position(1:3) - obj.needle_tip_mri_robot;
+    % Compute error vector (same as open-loop)
+    error_vector = target_position(1:3) - needle_tip_robot;
     error_magnitude = norm(error_vector);
     
-    fprintf('Position Error: %.2f mm\n', error_magnitude);
-    fprintf('  Target:  [%.2f, %.2f, %.2f]\n', target_position(1:3));
-    fprintf('  Current: [%.2f, %.2f, %.2f]\n', obj.needle_tip_mri_robot);
-    fprintf('  Error:   [%.2f, %.2f, %.2f]\n', error_vector);
+    fprintf('MRI Position Control Computation:\n');
+    fprintf('  Target:  [%.2f, %.2f, %.2f] mm\n', target_position(1:3));
+    fprintf('  Current: [%.2f, %.2f, %.2f] mm\n', needle_tip_robot);
+    fprintf('  Error:   [%.2f, %.2f, %.2f] mm (magnitude: %.2f mm)\n', ...
+        error_vector, error_magnitude);
     
-    % Check if target reached
-    if error_magnitude < obj.Epsilon
-        obj.is_target_reached = true;
-        disp('Target reached!');
-        return;
-    end
-    
-    % Update target position in local frame for control algorithm
+    % Reuse open-loop calculation logic
+    % Call existing function Cal_k_P_tt_theta_d or similar
     obj.Target_Pos_local = error_vector';
     
-    % Compute required rotation angle
-    if norm(error_vector(1:2)) > 0.1  % Only if lateral error significant
-        obj.theta_d = atan2(error_vector(2), error_vector(1));
+    % Compute Alpha and Theta_d using existing open-loop logic
+    [k, P_tt, theta_d, ~] = Cal_k_P_tt_theta_d(...
+        obj.zInsertion, ...
+        obj.Target_Pos_local, ...
+        obj.zRotation);  % Current rotation from encoder
+    
+    % Extract alpha from computation (method depends on existing implementation)
+    alpha = obj.computeAlphaFromError(error_vector);
+    
+    fprintf('  Computed Alpha: %.2f deg, Theta_d: %.2f deg\n', ...
+        alpha * 180/pi, theta_d * 180/pi);
+    
+    % Update rotation direction
+    obj.rot_dir = sign(theta_d - obj.zRotation);
+end
+```
+
+**New Method: `executeStepWithMRIFeedback()`** - One step of insertion + rotation
+
+```matlab
+function success = executeStepWithMRIFeedback(obj, alpha, theta_d, step_distance)
+    %EXECUTESTEPWITHMRIFEEDBACK Execute one step of B-CURV insertion + rotation
+    %   Similar to open-loop's move_A_step but with explicit parameters
+    %   Inputs:
+    %       alpha - Bevel angle
+    %       theta_d - Desired rotation angle [rad]
+    %       step_distance - Distance to insert [mm]
+    
+    fprintf('\n=== Executing Step %d ===\n', obj.current_insertion_step + 1);
+    fprintf('Alpha: %.2f deg, Theta_d: %.2f deg, Distance: %.2f mm\n', ...
+        alpha * 180/pi, theta_d * 180/pi, step_distance);
+    
+    % Store control parameters
+    obj.alpha_current = alpha;
+    obj.theta_d = theta_d;
+    
+    % Update rotation direction
+    obj.rot_dir = sign(theta_d - obj.zRotation);
+    
+    % Execute insertion + rotation simultaneously (B-CURV)
+    % This reuses the existing move_A_step logic structure
+    target_z = obj.zInsertion + step_distance;
+    
+    if ~obj.simulation_mode
+        % Real hardware - simultaneous insertion and rotation
+        % Start rotation motor
+        set_rpm_pid(obj.g, obj.rot_dir * obj.rpm_rotation);
         
-        % Update rotation immediately for next step
-        obj.rot_dir = sign(obj.theta_d - obj.zRotation);
+        % Start insertion motor
+        direction = 1;  % Forward
+        voltage = obj.default_insertion_voltage;
+        move_insertion(obj.g, direction, voltage);
         
-        fprintf('Trajectory Update: theta_d = %.2f deg, rot_dir = %d\n', ...
-            obj.theta_d * 180/pi, obj.rot_dir);
+        % Monitor until target insertion reached
+        while true
+            pause(0.1);
+            
+            % Update encoder readings
+            current_insertion = get_encoder_insertion(obj.g);
+            obj.zInsertion = abs(current_insertion) / 5000 * 3;
+            
+            current_rotation = get_encoder_tick(obj.g);
+            obj.zRotation = encoder2theta(current_rotation);
+            
+            % Check if insertion target reached
+            if obj.zInsertion >= target_z
+                break;
+            end
+            
+            % Safety check
+            if obj.ESTOP
+                stop_insertion(obj.g, direction);
+                set_rpm_pid(obj.g, 0);  % Stop rotation
+                success = false;
+                return;
+            end
+        end
+        
+        % Stop both motors
+        stop_insertion(obj.g, direction);
+        set_rpm_pid(obj.g, 0);
+        
+    else
+        % Simulation mode
+        obj.zInsertion = target_z;
+        obj.zRotation = theta_d;
+        disp(['SIMULATION: Inserted ', num2str(step_distance), ...
+              ' mm, rotated to ', num2str(theta_d * 180/pi), ' deg']);
+    end
+    
+    % Wait for stabilization
+    pause(0.5);
+    
+    % Update step counter
+    obj.current_insertion_step = obj.current_insertion_step + 1;
+    
+    success = true;
+    fprintf('Step complete. Position: %.2f mm, Rotation: %.2f deg\n', ...
+        obj.zInsertion, obj.zRotation * 180/pi);
+end
+```
+
+**New Method: `checkTerminationCondition()`** - Check if insertion should stop
+
+```matlab
+function terminate = checkTerminationCondition(obj, target_position)
+    %CHECKTERMINATIONCONDITION Check if insertion should terminate
+    %   Uses insertion encoder reading (similar to open-loop)
+    %   Inputs:
+    %       target_position - Target position in robot frame [x,y,z]
+    %   Outputs:
+    %       terminate - True if should stop
+    
+    % Check based on insertion depth
+    % This uses the same termination logic as open-loop
+    terminate = check_termination_condition_with_plane(...
+        obj.zInsertion, ...
+        target_position, ...
+        obj.insertion_plane_tolerance);
+    
+    if terminate
+        fprintf('Termination condition met at insertion depth: %.2f mm\n', obj.zInsertion);
     end
 end
 ```
@@ -1713,20 +1906,21 @@ end
 
 ```matlab
 function executeStepAndScan(obj, robot, target_position)
-    %EXECUTESTEPANDSCAN Main step-and-scan insertion loop
+    %EXECUTESTEPANDSCAN Main step-and-scan insertion loop with B-CURV control
     %   Inputs:
     %       robot - Robot object
-    %       target_position - Target pose (4x4 transform or [x,y,z])
+    %       target_position - Target position in robot frame [x,y,z] or 4x4 transform
     %
     %   Workflow:
-    %       1. Move robot one step
-    %       2. Trigger MRI scan
-    %       3. Wait for needle position
-    %       4. Update trajectory
-    %       5. Check if target reached
-    %       6. Repeat
+    %       1. Compute Alpha/Theta_d from current needle position
+    %       2. Execute insertion + rotation (B-CURV, simultaneous)
+    %       3. Trigger MRI scan
+    %       4. Wait for needle position
+    %       5. Store position for next step
+    %       6. Check termination condition (insertion encoder)
+    %       7. Repeat
     
-    disp('=== Starting Step-and-Scan Insertion ===');
+    disp('=== Starting Step-and-Scan Insertion with B-CURV ===');
     
     % Extract target position
     if size(target_position, 1) == 4
@@ -1735,22 +1929,27 @@ function executeStepAndScan(obj, robot, target_position)
         target_pos = target_position(1:3);
     end
     
-    % Initialize
+    % Initialize - use home position as initial needle tip
     obj.step_number = 0;
     obj.total_insertion_distance = 0;
+    obj.current_needle_position = robot.getHomePosition();  % Initial position
     obj.needle_positions_history = [];
     obj.step_distances_history = [];
     obj.step_times_history = [];
     
-    % Main loop
-    while ~robot.is_target_reached && ~robot.ESTOP
+    fprintf('Initial needle position (home): [%.2f, %.2f, %.2f]\n', ...
+        obj.current_needle_position);
+    fprintf('Target position: [%.2f, %.2f, %.2f]\n', target_pos);
+    
+    % Main loop - terminate based on insertion encoder
+    while ~robot.ESTOP
         obj.step_number = obj.step_number + 1;
         step_start_time = tic;
         
-        fprintf('\n--- Step %d ---\n', obj.step_number);
+        fprintf('\n========== Step %d ==========\n', obj.step_number);
         
         % Execute one step-scan-feedback cycle
-        success = obj.executeOneStep(robot, robot.get_robot_current_pose(), target_pos);
+        success = obj.executeOneStep(robot, target_pos);
         
         if ~success
             disp('Step failed - checking retry condition');
@@ -1775,6 +1974,12 @@ function executeStepAndScan(obj, robot, target_position)
         obj.step_times_history(obj.step_number) = step_duration;
         fprintf('Step %d completed in %.2f seconds\n', obj.step_number, step_duration);
         
+        % Check termination condition based on insertion encoder
+        if robot.checkTerminationCondition(target_pos)
+            disp('=== Termination condition met (insertion encoder) ===');
+            break;
+        end
+        
         % Safety check: maximum insertion depth
         if robot.zInsertion > robot.max_insertion_distance
             disp('Maximum insertion distance reached');
@@ -1792,8 +1997,8 @@ function executeStepAndScan(obj, robot, target_position)
     disp('=== Step-and-Scan Complete ===');
     fprintf('Total steps: %d\n', obj.step_number);
     fprintf('Total distance: %.2f mm\n', obj.total_insertion_distance);
+    fprintf('Final insertion depth: %.2f mm\n', robot.zInsertion);
     fprintf('Average step time: %.2f seconds\n', mean(obj.step_times_history));
-    fprintf('Target reached: %s\n', string(robot.is_target_reached));
     
     % Save data
     obj.saveStepAndScanData();
@@ -1803,48 +2008,63 @@ end
 ---
 
 #### 2. `executeOneStep()` - Single Step Cycle
-**Purpose**: Execute one complete step-scan-feedback cycle
+**Purpose**: Execute one complete step-scan-feedback cycle with B-CURV control
 
 **Location**: `StepAndScanController.m` (new class method)
 
 ```matlab
-function success = executeOneStep(obj, robot, current_position, target_position)
+function success = executeOneStep(obj, robot, target_position)
     %EXECUTEONESTEP Execute one step-scan-feedback cycle
+    %   Flow: Compute Alpha/Theta_d → Insert+Rotate → MRI Scan → Store Position
     %   Returns: success - true if cycle completed successfully
     
     success = false;
     
     try
-        % --- PHASE 1: MOTION ---
-        disp('Phase 1: Moving robot...');
+        % --- PHASE 1: COMPUTE CONTROL PARAMETERS ---
+        disp('Phase 1: Computing B-CURV control parameters...');
         
-        % Compute step distance (adaptive or fixed)
-        if obj.adaptive_stepping
-            error_magnitude = norm(target_position - current_position(1:3,4));
-            step_dist = obj.computeNextStep(current_position, target_position, error_magnitude);
+        % Use current needle position (from previous step or home position)
+        if obj.step_number == 0
+            % First step: use home position as initial needle tip
+            current_needle_pos = robot.getHomePosition();  % Robot frame
+            fprintf('Using home position as initial needle tip: [%.2f, %.2f, %.2f]\n', ...
+                current_needle_pos);
         else
-            step_dist = obj.step_distance;
+            % Use position from previous step
+            current_needle_pos = obj.current_needle_position;
+            fprintf('Using previous step position: [%.2f, %.2f, %.2f]\n', ...
+                current_needle_pos);
         end
         
-        % Execute motion
-        if ~robot.moveStep(step_dist)
+        % Compute Alpha and Theta_d (reusing open-loop logic)
+        [alpha, theta_d] = robot.computeControlFromMRI(...
+            current_needle_pos, target_position);
+        
+        % Store for potential retry
+        obj.previous_alpha = alpha;
+        obj.previous_theta_d = theta_d;
+        
+        % --- PHASE 2: EXECUTE INSERTION + ROTATION (B-CURV) ---
+        disp('Phase 2: Executing insertion + rotation...');
+        
+        if ~robot.executeStepWithMRIFeedback(alpha, theta_d, obj.step_distance)
             disp('ERROR: Motion failed');
             return;
         end
         
-        obj.total_insertion_distance = obj.total_insertion_distance + step_dist;
-        obj.step_distances_history(obj.step_number) = step_dist;
+        obj.total_insertion_distance = obj.total_insertion_distance + obj.step_distance;
+        obj.step_distances_history(obj.step_number + 1) = obj.step_distance;
         
         % Wait for stabilization
         pause(obj.stabilization_time);
         
-        % --- PHASE 2: MRI TRIGGERING (Phase 1 Implementation) ---
-        disp('Phase 2: Triggering MRI scan...');
+        % --- PHASE 3: MRI TRIGGERING ---
+        disp('Phase 3: Triggering MRI scan...');
         
         % Optional: Send scan location (Phase 2 feature)
         if obj.enable_location_specification
-            scan_location = robot.get_robot_current_pose();
-            scan_location(1:3, 4) = scan_location(1:3, 4) + [0; 0; obj.scan_location_buffer];
+            scan_location = robot.Needle_pose_act;  % Current needle pose
             robot.mri_comm_manager.sendScanLocation(scan_location);
             pause(0.1);
         end
@@ -1852,44 +2072,40 @@ function success = executeOneStep(obj, robot, current_position, target_position)
         % Send trigger
         obj.triggerMRIScan(robot.mri_comm_manager);
         
-        % --- PHASE 3: WAIT FOR ACKNOWLEDGMENT ---
-        disp('Phase 3: Waiting for MRI acknowledgment...');
+        % --- PHASE 4: WAIT FOR ACKNOWLEDGMENT ---
+        disp('Phase 4: Waiting for MRI acknowledgment...');
         
         [ack_status, ack_message] = robot.mri_comm_manager.waitForAcknowledgment(obj.mri_ack_timeout);
         
         if ~strcmp(ack_status, 'ACK_TRIGGER') && ~strcmp(ack_status, 'SCAN_STARTED')
-            disp(['ERROR: No acknowledgment from MRI (received: ', ack_message, ')']);
+            disp(['WARNING: No acknowledgment from MRI (received: ', ack_message, ')']);
+            % Continue anyway - ACK is optional
+        else
+            disp(['MRI acknowledged: ', ack_message]);
+        end
+        
+        % --- PHASE 5: WAIT FOR POSITION ---
+        disp('Phase 5: Waiting for needle position...');
+        
+        [mri_position_ras, success_flag] = obj.waitForMRIPosition(...
+            robot.mri_comm_manager, obj.mri_position_timeout);
+        
+        if ~success_flag
+            % Handle MRI failure with retry option
+            obj.handleMRIFailure(robot, target_position);
             return;
         end
         
-        disp(['MRI acknowledged: ', ack_message]);
+        fprintf('Received position (RAS): [%.2f, %.2f, %.2f]\n', ...
+                mri_position_ras(1), mri_position_ras(2), mri_position_ras(3));
         
-        % --- PHASE 4: WAIT FOR POSITION ---
-        disp('Phase 4: Waiting for needle position...');
+        % Transform to robot frame and store for next step
+        obj.current_needle_position = robot.transformMRIToRobot(mri_position_ras);
+        obj.needle_positions_history(obj.step_number + 1, :) = obj.current_needle_position;
         
-        [mri_position, quality] = obj.waitForMRIPosition(robot.mri_comm_manager, ...
-                                                         obj.mri_position_timeout);
-        
-        if isempty(mri_position)
-            disp('ERROR: No position data received from MRI');
-            return;
-        end
-        
-        fprintf('Received position: [%.2f, %.2f, %.2f] with quality %.2f\n', ...
-                mri_position(1), mri_position(2), mri_position(3), quality);
-        
-        % Store position
-        obj.needle_positions_history(obj.step_number, :) = mri_position;
-        
-        % --- PHASE 5: UPDATE TRAJECTORY ---
-        disp('Phase 5: Updating trajectory...');
-        
-        robot.updateTrajectoryFromMRI(mri_position, target_position);
-        
-        % Check if target reached
-        if robot.is_target_reached
-            disp('*** TARGET REACHED ***');
-        end
+        fprintf('Transformed position (Robot): [%.2f, %.2f, %.2f]\n', ...
+                obj.current_needle_position(1), obj.current_needle_position(2), ...
+                obj.current_needle_position(3));
         
         success = true;
         
@@ -1980,7 +2196,84 @@ end
 
 ---
 
-#### 5. `computeNextStep()` - Adaptive Step Sizing
+#### 5. `handleMRIFailure()` - Handle MRI Data Failure
+**Purpose**: Handle MRI position acquisition failure with user retry option
+
+**Location**: `StepAndScanController.m` (new class method)
+
+```matlab
+function handleMRIFailure(obj, robot, target_position)
+    %HANDLEMRIFAILURE Handle MRI data acquisition failure
+    %   Offers user option to retry or continue with previous control parameters
+    
+    disp('=== MRI Data Acquisition Failed ===');
+    disp('Options:');
+    disp('  1. Retry MRI scan');
+    disp('  2. Continue with previous step control parameters (Alpha, Theta_d)');
+    disp('  3. Abort insertion');
+    
+    % Get user choice (in real system, use GUI or input)
+    choice = input('Enter choice (1/2/3): ', 's');
+    
+    switch choice
+        case '1'
+            % Retry
+            disp('Retrying MRI scan...');
+            [mri_position_ras, success_flag] = obj.waitForMRIPosition(...
+                robot.mri_comm_manager, obj.mri_position_timeout);
+            
+            if success_flag
+                % Transform and store for next step
+                obj.current_needle_position = robot.transformMRIToRobot(mri_position_ras);
+                obj.needle_positions_history(obj.step_number + 1, :) = obj.current_needle_position;
+                disp('Retry successful!');
+            else
+                disp('Retry also failed. Aborting step.');
+            end
+            
+        case '2'
+            % Use previous control parameters for one more step
+            disp('Continuing with previous control parameters...');
+            disp(['Using Alpha = ', num2str(obj.previous_alpha * 180/pi), ' deg']);
+            disp(['Using Theta_d = ', num2str(obj.previous_theta_d * 180/pi), ' deg']);
+            
+            % Execute one more step with same parameters
+            if robot.executeStepWithMRIFeedback(...
+                    obj.previous_alpha, obj.previous_theta_d, obj.step_distance)
+                
+                disp('Extended step completed.');
+                obj.total_insertion_distance = obj.total_insertion_distance + obj.step_distance;
+                
+                % Try MRI again
+                obj.triggerMRIScan(robot.mri_comm_manager);
+                [mri_position_ras, success_flag] = obj.waitForMRIPosition(...
+                    robot.mri_comm_manager, obj.mri_position_timeout);
+                
+                if success_flag
+                    obj.current_needle_position = robot.transformMRIToRobot(mri_position_ras);
+                    obj.needle_positions_history(obj.step_number + 1, :) = obj.current_needle_position;
+                else
+                    disp('MRI still unavailable after extended step.');
+                end
+            else
+                disp('Extended step motion failed.');
+            end
+            
+        case '3'
+            % Abort
+            disp('Insertion aborted by user.');
+            robot.ESTOP = true;
+            
+        otherwise
+            disp('Invalid choice. Aborting.');
+            robot.ESTOP = true;
+    end
+end
+```
+
+---
+
+#### 6. `computeNextStep()` - Adaptive Step Sizing (Optional - Future)
 **Purpose**: Compute optimal step distance based on error and constraints
 
 **Location**: `StepAndScanController.m` (new class method)
