@@ -45,7 +45,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         registration_matrix = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1]
         validModes = ['startup', 'calibration', 'planning', 'targeting', 'idle', 'move_to_goal', 'stop'];
-        robot_base_to_zframe = [1., 0., 0., -0.5; 0., 1., 0., 166.4; 0., 0., 1., 239.71; 0., 0., 0., 1]; %x = 0, y = 167.4, z=239.71
+        robot_base_to_zframe = [1., 0., 0., 0.; 0., 1., 0., 167.7; 0., 0., 1., 238.11; 0., 0., 0., 1]; %x = 0, y = 167.4, z=239.71
         baseToNeedleTipAtHome = [0, 140.426185, 259.075000];
         zFrameToKinematicTip = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
         reachable_target_pose_imager_coord = eye(4);
@@ -88,7 +88,7 @@ classdef Robot < Kinematics
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
         stop_count_insertion = -391841  %-191841                 % Insertion stop count threshold
-        voltage_insertion = 2.16                     % Insertion voltage
+        voltage_insertion = 2.18                     % Insertion voltage
         PPR = fix(5000/3)                             % Pulse per revolution
         motor_num_rot = 1                             % Motor number for rotation
         max_error_rot = 0.1                           % Motor control error tolerance (rpm)
@@ -105,7 +105,7 @@ classdef Robot < Kinematics
         flag_motor = 1                                % Motor control flag (1=Enable, 0=Disable)
         flag_terminate_z = 0                          % Z-direction termination flag
         flag_terminated = false                       % General termination flag
-        
+        flag_timerFcn = false
         %% ===================================================================
         %  SIMULATION PARAMETERS
         %% ===================================================================
@@ -217,7 +217,16 @@ classdef Robot < Kinematics
             % Release Estop to continue working
             obj.ESTOP = false;
         end
-        
+
+        function obj = BuildTimer(obj)
+            % Structure the timer function
+            if ~obj.flag_timerFcn
+                obj.t_control = timer('StartDelay', obj.control_Start, 'Period', obj.Freq_ctrl_sec, 'ExecutionMode', 'fixedRate');
+                obj.t_control.TimerFcn = @(~, ~) obj.Control_CB;
+                obj.flag_timerFcn = True;
+            end
+        end
+
         function obj = Send_Current_Position(obj)
             % Update current position to 3D Slicer server
             obj.robot_pose = obj.get_robot_current_pose();
@@ -285,8 +294,9 @@ classdef Robot < Kinematics
                 obj.Needle_pose_ini);
 
             %% Timer initialization
-            obj.t_control = timer('StartDelay', obj.control_Start, 'Period', obj.Freq_ctrl_sec, 'ExecutionMode', 'fixedRate');
-            obj.t_control.TimerFcn = @(~, ~) obj.Control_CB;
+            obj.BuildTimer();
+            % obj.t_control = timer('StartDelay', obj.control_Start, 'Period', obj.Freq_ctrl_sec, 'ExecutionMode', 'fixedRate');
+            % obj.t_control.TimerFcn = @(~, ~) obj.Control_CB;
 
             %% Hardware initialization
             if ~obj.simulation_mode
@@ -597,6 +607,7 @@ classdef Robot < Kinematics
             %MOVE_TO_END Main insertion function for open loop control
             sim_time = tic;
             obj.simulation_start_time = sim_time; % Store for timing calculations
+            obj.BuildTimer();
             start(obj.t_control);
 
             % Start insertion
@@ -637,7 +648,7 @@ classdef Robot < Kinematics
             disp('Endpoint satisfied')
             stop(obj.t_control);
             delete(obj.t_control);
-
+            obj.flag_timerFcn = false;
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             % Motor control execution
             omega_rpm = radsec2rpm(0);
@@ -670,9 +681,6 @@ classdef Robot < Kinematics
         end
 
         function obj = home_insertion(obj, home_pos, threshold)
-            
-            current_rot = obj.zRotation;
-            initialPulse = 0;
             current_pos = get_encoder_insertion(obj.g);
             obj.zInsertion = abs(current_pos)/5000*3;
             voltage = 2;
@@ -692,10 +700,19 @@ classdef Robot < Kinematics
             end
 
             obj.Send_Current_Position();
+        end
 
-
-%{
-             while  f_pos || f_rot
+        function home_both(obj,home_pos, threshold)
+            current_rot = obj.zRotation;
+            initialPulse = 0;
+            current_pos = get_encoder_insertion(obj.g);
+            obj.zInsertion = abs(current_pos)/5000*3;
+            voltage = 2;
+            direction = 0; % Pull-out
+            f_pos = True;
+            f_rot = True;
+            
+            while  f_pos || f_rot
                 if f_pos
                     move_insertion(obj.g, direction, voltage);
                 end
@@ -722,8 +739,24 @@ classdef Robot < Kinematics
                     f_rot = false;
                 end
             end 
-%}
-
+        end
+        
+        function home_rotation(obj)
+            current_rot = obj.zRotation;
+            initialPulse = 0;
+             while abs(current_rot - (2*pi)) <= deg2rad(1)
+                set_rpm_ino(obj.arduino, 2);
+                pause(0.1);
+                set_rpm_ino(obj.arduino, 0);
+                encoder_read = get_encoder_tick(obj.arduino);
+                current_rot = encoder2theta(encoder_read, obj.PPR, initialPulse);
+                disp("current");
+                disp(current_rot);
+                obj.zRotation = current_rot;
+                obj.Send_Current_Position();
+                disp("relative")
+                disp(abs(2*pi - current_rot))
+            end 
         end
 
         function RetractNeedle(obj)
@@ -733,6 +766,7 @@ classdef Robot < Kinematics
             home_pos = 0;
             if ~obj.simulation_mode
                 obj.home_insertion(home_pos, threshold);
+                obj.home_rotation()
             else
                 disp("SIMULATION MODE: Would home insertion with home_pos " + num2str(home_pos) + " and threshold " + num2str(threshold));
             end
@@ -913,228 +947,203 @@ classdef Robot < Kinematics
         %% ===================================================================
         %  REAL-TIME CONTROL CALLBACK
         %% ===================================================================
-        function Control_CB(obj)
+        function Control_CB(obj, src, ~)
             %CONTROL_CB Main control callback function executed by timer
-            
-            % Initialize control variables
-            omega_temp = obj.omega;
-            omega = omega_temp;
-            
-            obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
-
-            % if obj.Ctrl_Step_num == 1
-            %     A = obj.get_robot_current_pose();
-            %     target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
-            %     obj.target_relative_global = target_relative;
-            % 
-            % end
-
-            % Obtain target position in robot frame
-            % target_position_image_temp = obj.target_position_image(1:3,4);
-            target_position_image_temp = obj.target_relative_global;
-            if isempty(target_position_image_temp)
-                disp('target_position_image_temp is empty');
-            else
-                try
-                    fprintf('target_position_image_temp: [%.3f, %.3f, %.3f]\n', ...
-                        target_position_image_temp(1), target_position_image_temp(2), target_position_image_temp(3));
-                catch
-                    disp('target_position_image_temp:');
-                    disp(target_position_image_temp);
-                end
-            end
-            
-
-            %% State estimation using Kalman filter
-            if obj.flag_ekf == 1 && obj.Ctrl_Step_num > 1
-                [obj.ekf, Needle_pose_ekf] = Update_EKF(obj.ekf, obj.Needle_pose_sensor, obj.sensor_flag, obj.omega_All, obj.Stabbing_Vel, obj.Freq_ctrl_sec, obj.Ctrl_Step_num, obj.delay_step_CtrlFreq);
-                Needle_pose_act = Needle_pose_ekf;
-            else
-                Needle_pose_act = obj.Needle_pose_sensor;
-            end
-
-            obj.sensor_flag = false;
-
-            %% Encoder reading for theta angle
-            if ~obj.simulation_mode
-                encoder_read = get_encoder_tick(obj.arduino);
-                initialPulse = 0;
-                theta_encoder = encoder2theta(encoder_read, obj.PPR, initialPulse);
-                obj.zRotation = theta_encoder;
-                tick_insertion = get_encoder_insertion(obj.g);
-                obj.zInsertion = abs(tick_insertion)/5000*3;
-            else
-                obj.zRotation = 0;
-                obj.zInsertion = 5*obj.Ctrl_Step_num;
-                tick_insertion = -1; % define for simulation to avoid undefined usage in logging
-                disp(['SIMULATION MODE: Using simulated theta = ', num2str(obj.zRotation)]);
-            end
-
-            % Update needle pose with encoder data
-            if ~isprop(obj, 'Needle_pose_sensor_realtime') || isempty(obj.Needle_pose_sensor_realtime)
-                obj.Needle_pose_sensor_realtime = obj.Needle_pose_sensor;
-            end
-
-            obj.Needle_pose_sensor_realtime(6) = obj.zRotation;
-            Needle_pose_act(6) = obj.zRotation;
-            obj.Needle_pose_sensor_realtime(3) = obj.zInsertion;
-            Needle_pose_act(3) = obj.zInsertion;
-
-            % Only for open-loop
-            if obj.CM ==0
-                Needle_pose_act(1) = 0;
-                Needle_pose_act(2) = 0;
-                Needle_pose_act(3) = 0;
-                obj.Target_Pos_local = transpose(target_position_image_temp); % Ryo: added 20250806 for FF control
-            end
-
-            obj.Needle_pose_act = Needle_pose_act; 
-            
-            
-
-            %% Control algorithm execution
-            % Generate needle tip position and transformation matrix
-            [P_tb1, T_tb] = Cal_Ptb1_Ttb(Needle_pose_act);
-
-            % Control output calculation
-            if (obj.CM == 0 && obj.Ctrl_Step_num == 1) || (obj.CM == 1)
-                % Parameter calculation
-                [obj.k, P_tt, obj.theta_d] = Cal_k_P_tt_theta_d(obj.Target_Pos_local, T_tb, obj.zRotation);
-                obj.k = abs(obj.k);
-
-                if obj.k > obj.k_max
-                    obj.k = obj.k_max;
-                end
-
-                % Profile imitation
-                [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
-
-                % Open-loop B-CURV settings
-                flag_test_group = false;
+            if ~obj.ESTOP
+                % Initialize control variables
+                omega_temp = obj.omega;
+                omega = omega_temp;
                 
-                if flag_test_group
-                    flag_noRotation = false;
-                    flag_random = false;
+                obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
+    
+                % if obj.Ctrl_Step_num == 1
+                %     A = obj.get_robot_current_pose();
+                %     target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
+                %     obj.target_relative_global = target_relative;
+                % 
+                % end
+    
+                % Obtain target position in robot frame
+                % target_position_image_temp = obj.target_position_image(1:3,4);
+                target_position_image_temp = obj.target_relative_global;
+                if isempty(target_position_image_temp)
+                    disp('target_position_image_temp is empty');
                 else
-                    flag_noRotation = true;
-                    flag_random = true;
-                end
-
-                if flag_noRotation
-                    obj.alpha = 1.0;
-                    if flag_random
-
-                        obj.theta_d = 2 * pi * rand();
-                    else
-                        % obj.theta_d = 0; % use if fixed value
+                    try
+                        fprintf('target_position_image_temp: [%.3f, %.3f, %.3f]\n', ...
+                            target_position_image_temp(1), target_position_image_temp(2), target_position_image_temp(3));
+                    catch
+                        disp('target_position_image_temp:');
+                        disp(target_position_image_temp);
                     end
                 end
-
                 
-
-            elseif obj.CM == 2
-                % New feedback control implementation area
-            end
-
-            % Display current alpha and desired theta (in degrees)
-            try
-                fprintf('alpha: %.6f, theta_d: %.6f deg\n', obj.alpha, obj.theta_d * 180 / pi);
-            catch
-                disp('alpha:'); disp(obj.alpha);
-                disp('theta_d (deg):'); disp(obj.theta_d * 180 / pi);
-            end
-
-            % Update rotation direction
-            [obj.rot_dir, obj.theta0] = Update_rot_dir(obj.zRotation, obj.theta0, obj.rot_dir);
-
-            % Control output calculation
-            omega = Cal_Omega(obj.alpha, obj.zRotation, obj.theta_d, obj.omega_max, obj.rot_dir);
-
-            % Store omega value
-            obj.omega = omega;
-
-            %% Motor control execution
-            omega_rpm = radsec2rpm(omega);
-            % omega_rpm = 60;
-            if abs(omega_rpm) < 0.01
-                omega_rpm = 0;
-            elseif abs(omega_rpm) < 1
-                omega_rpm = sign(omega_rpm) * 1;
+    
+                %% State estimation using Kalman filter
+                if obj.flag_ekf == 1 && obj.Ctrl_Step_num > 1
+                    [obj.ekf, Needle_pose_ekf] = Update_EKF(obj.ekf, obj.Needle_pose_sensor, obj.sensor_flag, obj.omega_All, obj.Stabbing_Vel, obj.Freq_ctrl_sec, obj.Ctrl_Step_num, obj.delay_step_CtrlFreq);
+                    Needle_pose_act = Needle_pose_ekf;
+                else
+                    Needle_pose_act = obj.Needle_pose_sensor;
+                end
+    
+                obj.sensor_flag = false;
+    
+                %% Encoder reading for theta angle
+                if ~obj.simulation_mode
+                    encoder_read = get_encoder_tick(obj.arduino);
+                    initialPulse = 0;
+                    theta_encoder = encoder2theta(encoder_read, obj.PPR, initialPulse);
+                    obj.zRotation = theta_encoder;
+                    tick_insertion = get_encoder_insertion(obj.g);
+                    obj.zInsertion = abs(tick_insertion)/5000*3;
+                else
+                    obj.zRotation = 0;
+                    obj.zInsertion = 5*obj.Ctrl_Step_num;
+                    tick_insertion = -1; % define for simulation to avoid undefined usage in logging
+                    disp(['SIMULATION MODE: Using simulated theta = ', num2str(obj.zRotation)]);
+                end
+    
+                % Update needle pose with encoder data
+                if ~isprop(obj, 'Needle_pose_sensor_realtime') || isempty(obj.Needle_pose_sensor_realtime)
+                    obj.Needle_pose_sensor_realtime = obj.Needle_pose_sensor;
+                end
+    
+                obj.Needle_pose_sensor_realtime(6) = obj.zRotation;
+                Needle_pose_act(6) = obj.zRotation;
+                obj.Needle_pose_sensor_realtime(3) = obj.zInsertion;
+                Needle_pose_act(3) = obj.zInsertion;
+    
+                % Only for open-loop
+                if obj.CM ==0
+                    Needle_pose_act(1) = 0;
+                    Needle_pose_act(2) = 0;
+                    Needle_pose_act(3) = 0;
+                    obj.Target_Pos_local = transpose(target_position_image_temp); % Ryo: added 20250806 for FF control
+                end
+    
+                obj.Needle_pose_act = Needle_pose_act; 
+                
+                
+    
+                %% Control algorithm execution
+                % Generate needle tip position and transformation matrix
+                [P_tb1, T_tb] = Cal_Ptb1_Ttb(Needle_pose_act);
+    
+                % Control output calculation
+                if (obj.CM == 0 && obj.Ctrl_Step_num == 1) || (obj.CM == 1)
+                    % Parameter calculation
+                    [obj.k, P_tt, obj.theta_d] = Cal_k_P_tt_theta_d(obj.Target_Pos_local, T_tb, obj.zRotation);
+                    obj.k = abs(obj.k);
+    
+                    if obj.k > obj.k_max
+                        obj.k = obj.k_max;
+                    end
+    
+                    % Profile imitation
+                    [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
+    
+                    % Open-loop B-CURV settings
+                    flag_test_group = true;
+                    
+                    if flag_test_group
+                        flag_noRotation = false;
+                        flag_random = false;
+                    else
+                        flag_noRotation = true;
+                        flag_random = true;
+                    end
+    
+                    if flag_noRotation
+                        obj.alpha = 1.0;
+                        if flag_random
+    
+                            obj.theta_d = 2 * pi * rand();
+                        else
+                            % obj.theta_d = 0; % use if fixed value
+                        end
+                    end
+    
+                    
+    
+                elseif obj.CM == 2
+                    % New feedback control implementation area
+                end
+    
+                % Display current alpha and desired theta (in degrees)
+                try
+                    fprintf('alpha: %.6f, theta_d: %.6f deg\n', obj.alpha, obj.theta_d * 180 / pi);
+                catch
+                    disp('alpha:'); disp(obj.alpha);
+                    disp('theta_d (deg):'); disp(obj.theta_d * 180 / pi);
+                end
+    
+                % Update rotation direction
+                [obj.rot_dir, obj.theta0] = Update_rot_dir(obj.zRotation, obj.theta0, obj.rot_dir);
+    
+                % Control output calculation
+                omega = Cal_Omega(obj.alpha, obj.zRotation, obj.theta_d, obj.omega_max, obj.rot_dir);
+    
+                % Store omega value
+                obj.omega = omega;
+    
+                %% Motor control execution
+                omega_rpm = radsec2rpm(omega);
+                % omega_rpm = 60;
+                if abs(omega_rpm) < 0.01
+                    omega_rpm = 0;
+                elseif abs(omega_rpm) < 1
+                    omega_rpm = sign(omega_rpm) * 1;
+                else
+                    omega_rpm = fix(omega_rpm);
+                end
+                % omega_rpm = fix(omega_rpm);
+    
+                disp("Current theta: " + num2str(rad2deg(obj.zRotation)))
+    
+                if obj.flag_motor == 1 && ~obj.simulation_mode
+                    set_rpm_ino(obj.arduino, omega_rpm);
+                elseif obj.simulation_mode
+                    disp(['SIMULATION MODE: Would set motor RPM to ', num2str(omega_rpm), ' [rpm]']);
+                end
+    
+                % Control_CB 内の表示部分に追加
+                fprintf('Goal: %.2f, Curr: %.2f, Diff: %.2f, CmdRPM: %.5f\n', ...
+                    rad2deg(obj.theta_d), ...
+                    rad2deg(obj.zRotation), ...
+                    rad2deg(angdiff(obj.zRotation, obj.theta_d)), ... % 角度差（要Mapping Toolbox、なければ自作）
+                    radsec2rpm(omega));
+    
+                % Terminate move if reach target along z-axis
+                % target_position_image_temp(3)
+                disp("Target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
+                obj.zInsertion
+                if obj.zInsertion > target_position_image_temp(3)
+                    obj.flag_terminate_z = 1;
+                    disp("--------------------------------")
+                    disp("Reached target along z-axis")
+                    disp("--------------------------------")
+                end
+    
+                %% Data logging
+                obj.omega_All(obj.Ctrl_Step_num) = omega;
+                obj.Needle_pose_act_All(obj.Ctrl_Step_num, :) = Needle_pose_act;
+                obj.Needle_pose_sensor_realtime_All(obj.Ctrl_Step_num, :) = obj.Needle_pose_sensor_realtime;
+                obj.Target_Pos_local_All(obj.Ctrl_Step_num, :) = obj.Target_Pos_local;
+                obj.Etc_All(obj.Ctrl_Step_num, :) = [obj.zRotation * 180 / pi, obj.theta_d, omega * 180 / pi, obj.omega_hat_pro * obj.omega_max * 180 / pi, obj.k, obj.alpha];
+                obj.theta_encoder_All(obj.Ctrl_Step_num) = obj.zRotation;
+                obj.tick_insertion_All(obj.Ctrl_Step_num) = tick_insertion;
+                if ~isempty(obj.simulation_start_time)
+                    obj.Ctrl_Time(obj.Ctrl_Step_num) = toc(obj.simulation_start_time);
+                else
+                    obj.Ctrl_Time(obj.Ctrl_Step_num) = obj.Ctrl_Step_num * obj.Freq_ctrl_sec;
+                end
+                obj.Send_Current_Position();
             else
-                omega_rpm = fix(omega_rpm);
-            end
-            % omega_rpm = fix(omega_rpm);
-
-            disp("Current theta: " + num2str(rad2deg(obj.zRotation)))
-
-            if obj.flag_motor == 1 && ~obj.simulation_mode
-                set_rpm_ino(obj.arduino, omega_rpm);
-            elseif obj.simulation_mode
-                disp(['SIMULATION MODE: Would set motor RPM to ', num2str(omega_rpm), ' [rpm]']);
-            end
-
-            % Control_CB 内の表示部分に追加
-            fprintf('Goal: %.2f, Curr: %.2f, Diff: %.2f, CmdRPM: %.5f\n', ...
-                rad2deg(obj.theta_d), ...
-                rad2deg(obj.zRotation), ...
-                rad2deg(angdiff(obj.zRotation, obj.theta_d)), ... % 角度差（要Mapping Toolbox、なければ自作）
-                radsec2rpm(omega));
-
-            % Terminate move if reach target along z-axis
-            % target_position_image_temp(3)
-            disp("Target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
-            obj.zInsertion
-            if obj.zInsertion > target_position_image_temp(3)
-                obj.flag_terminate_z = 1;
-                disp("--------------------------------")
-                disp("Reached target along z-axis")
-                disp("--------------------------------")
-            end
-
-            %% Data logging
-            obj.omega_All(obj.Ctrl_Step_num) = omega;
-            obj.Needle_pose_act_All(obj.Ctrl_Step_num, :) = Needle_pose_act;
-            obj.Needle_pose_sensor_realtime_All(obj.Ctrl_Step_num, :) = obj.Needle_pose_sensor_realtime;
-            obj.Target_Pos_local_All(obj.Ctrl_Step_num, :) = obj.Target_Pos_local;
-            obj.Etc_All(obj.Ctrl_Step_num, :) = [obj.zRotation * 180 / pi, obj.theta_d, omega * 180 / pi, obj.omega_hat_pro * obj.omega_max * 180 / pi, obj.k, obj.alpha];
-            obj.theta_encoder_All(obj.Ctrl_Step_num) = obj.zRotation;
-            obj.tick_insertion_All(obj.Ctrl_Step_num) = tick_insertion;
-            if ~isempty(obj.simulation_start_time)
-                obj.Ctrl_Time(obj.Ctrl_Step_num) = toc(obj.simulation_start_time);
-            else
-                obj.Ctrl_Time(obj.Ctrl_Step_num) = obj.Ctrl_Step_num * obj.Freq_ctrl_sec;
-            end
-            obj.Send_Current_Position();
-            
-        end
-
-        function update_shared_file(obj)
-            file = 'shared_data.mat';          % Shared data file path
-            lockfile = 'shared_data.lock';     % Lock file path
-            acquireLock(lockfile);    % lock file
-            robot_pose = obj.Needle_pose;
-            save(file, 'robot_pose'); % overwrite file with only robot_pose
-            releaseLock(lockfile);    % release lock
-        end
-    end
-end
-
-function acquireLock(lockfile)
-    while true
-        if ~isfile(lockfile)
-            fid = fopen(lockfile, 'w');
-            if fid ~= -1
-                fprintf(fid, 'lock');
-                fclose(fid);
+                stop(src)
+                delete(src)
+                obj.t_control = [];% optional: clear your stored handle
+                obj.flag_timerFcn = false;
                 return
             end
         end
-        pause(0.01);
-    end
-end
-
-function releaseLock(lockfile)
-    if isfile(lockfile)
-        delete(lockfile);
-    end
-end
