@@ -31,6 +31,35 @@ class SimpleNeedleTracking(ScriptedLoadableModule):
     # slicer.app.connect("startupCompleted()", registerSampleData)
 
 ################################################################################################################################################
+# Custom Widget  - Separator
+################################################################################################################################################
+class SeparatorWidget(qt.QWidget):
+    def __init__(self, label_text='Separator Widget Label', parent=None):
+        super().__init__(parent)
+
+        spacer = qt.QWidget()
+        spacer.setFixedHeight(10)
+        
+        self.label = qt.QLabel(label_text)
+        font = qt.QFont()
+        font.setItalic(True)
+        self.label.setFont(font)
+        
+        line = qt.QFrame()
+        line.setFrameShape(qt.QFrame.HLine)
+        line.setFrameShadow(qt.QFrame.Sunken)
+        
+        layout = qt.QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(qt.Qt.AlignVCenter)
+        layout.addWidget(spacer)
+        layout.addWidget(self.label)
+        layout.addWidget(line)
+        
+        self.setLayout(layout)
+
+
+################################################################################################################################################
 # Widget Class
 ################################################################################################################################################
 
@@ -59,7 +88,7 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     ####################################
     
     imagesCollapsibleButton = ctk.ctkCollapsibleButton()
-    imagesCollapsibleButton.text = 'Image selection'
+    imagesCollapsibleButton.text = 'Setup and initialization'
     self.layout.addWidget(imagesCollapsibleButton)
     imagesFormLayout = qt.QFormLayout(imagesCollapsibleButton)
     
@@ -74,6 +103,56 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     inputModeHBoxLayout.addWidget(self.inputModeMagPhase)
     inputModeHBoxLayout.addWidget(self.inputModeRealImag)
     imagesFormLayout.addRow('Input Mode:',inputModeHBoxLayout)
+    
+    ### Baseline images
+    imagesFormLayout.addRow(SeparatorWidget('Baseline images'))
+    
+    # Input magnitude/real volume (first volume)
+    self.firstBaselineVolumeSelector = slicer.qMRMLNodeComboBox()
+    self.firstBaselineVolumeSelector.nodeTypes = ['vtkMRMLScalarVolumeNode']
+    self.firstBaselineVolumeSelector.selectNodeUponCreation = True
+    self.firstBaselineVolumeSelector.addEnabled = True
+    self.firstBaselineVolumeSelector.removeEnabled = True
+    self.firstBaselineVolumeSelector.noneEnabled = True
+    self.firstBaselineVolumeSelector.showHidden = False
+    self.firstBaselineVolumeSelector.showChildNodeTypes = False
+    self.firstBaselineVolumeSelector.setMRMLScene(slicer.mrmlScene)
+    self.firstBaselineVolumeSelector.setToolTip('Select the magnitude/real image')
+    imagesFormLayout.addRow('Magnitude/Real: ', self.firstBaselineVolumeSelector)
+
+    # Input phase/imaginary volume (second volume)
+    self.secondBaselineVolumeSelector = slicer.qMRMLNodeComboBox()
+    self.secondBaselineVolumeSelector.nodeTypes = ['vtkMRMLScalarVolumeNode']
+    self.secondBaselineVolumeSelector.selectNodeUponCreation = True
+    self.secondBaselineVolumeSelector.addEnabled = True
+    self.secondBaselineVolumeSelector.removeEnabled = True
+    self.secondBaselineVolumeSelector.noneEnabled = True
+    self.secondBaselineVolumeSelector.showHidden = False
+    self.secondBaselineVolumeSelector.showChildNodeTypes = False
+    self.secondBaselineVolumeSelector.setMRMLScene(slicer.mrmlScene)
+    self.secondBaselineVolumeSelector.setToolTip('Select the phase/imaginary image')
+    imagesFormLayout.addRow('Phase/Imaginary: ', self.secondBaselineVolumeSelector)
+    
+    # Create a segmentation node selector widget
+    self.manualMaskSelector = slicer.qMRMLNodeComboBox()
+    self.manualMaskSelector.nodeTypes = ['vtkMRMLSegmentationNode']
+    self.manualMaskSelector.selectNodeUponCreation = True
+    self.manualMaskSelector.noneEnabled = True
+    self.manualMaskSelector.showChildNodeTypes = False
+    self.manualMaskSelector.showHidden = False
+    self.manualMaskSelector.setMRMLScene(slicer.mrmlScene)
+    self.manualMaskSelector.setToolTip('Select segmentation with manual mask')
+    imagesFormLayout.addRow('Mask (optional): ', self.manualMaskSelector)
+
+    # Save baseline 
+    trackingHBoxLayout = qt.QHBoxLayout()    
+    self.saveBaselineButton = qt.QPushButton('Save Baseline')
+    self.saveBaselineButton.toolTip = 'Save or update baseline images'
+    self.saveBaselineButton.enabled = False
+    imagesFormLayout.addRow('',self.saveBaselineButton)
+    
+    ### Real-time images
+    imagesFormLayout.addRow(SeparatorWidget('Real-time images'))
 
     # Input magnitude/real volume (first volume)
     self.firstVolumeSelector = slicer.qMRMLNodeComboBox()
@@ -86,7 +165,7 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     self.firstVolumeSelector.showChildNodeTypes = False
     self.firstVolumeSelector.setMRMLScene(slicer.mrmlScene)
     self.firstVolumeSelector.setToolTip('Select the magnitude/real image')
-    imagesFormLayout.addRow('Magnitude/Real Image: ', self.firstVolumeSelector)
+    imagesFormLayout.addRow('Magnitude/Real: ', self.firstVolumeSelector)
 
     # Input phase/imaginary volume (second volume)
     self.secondVolumeSelector = slicer.qMRMLNodeComboBox()
@@ -99,23 +178,7 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     self.secondVolumeSelector.showChildNodeTypes = False
     self.secondVolumeSelector.setMRMLScene(slicer.mrmlScene)
     self.secondVolumeSelector.setToolTip('Select the phase/imaginary image')
-    imagesFormLayout.addRow('Phase/Imaginary Image: ', self.secondVolumeSelector)
-   
-    # Select which scene view to track
-    self.sceneViewButton_red = qt.QRadioButton('Red')
-    self.sceneViewButton_yellow = qt.QRadioButton('Yellow')
-    self.sceneViewButton_green = qt.QRadioButton('Green')
-    self.sceneViewButton_green.checked = 1
-    self.sceneViewButtonGroup = qt.QButtonGroup()
-    self.sceneViewButtonGroup.addButton(self.sceneViewButton_red)
-    self.sceneViewButtonGroup.addButton(self.sceneViewButton_yellow)
-    self.sceneViewButtonGroup.addButton(self.sceneViewButton_green)
-    layout = qt.QHBoxLayout()
-    layout.addWidget(self.sceneViewButton_red)
-    layout.addWidget(self.sceneViewButton_yellow)
-    layout.addWidget(self.sceneViewButton_green)
-    imagesFormLayout.addRow('Scene view:',layout)
-
+    imagesFormLayout.addRow('Phase/Imaginary: ', self.secondVolumeSelector)
 
     ## Needle Tracking                
     ####################################
@@ -124,6 +187,21 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     trackingCollapsibleButton.text = 'Needle tracking'
     self.layout.addWidget(trackingCollapsibleButton)
     trackingFormLayout = qt.QFormLayout(trackingCollapsibleButton)
+    
+    # Select which scene view to track
+    self.sceneViewButton_red = qt.QRadioButton('Red')
+    self.sceneViewButton_yellow = qt.QRadioButton('Yellow')
+    self.sceneViewButton_green = qt.QRadioButton('Green')
+    self.sceneViewButton_red.checked = 1
+    self.sceneViewButtonGroup = qt.QButtonGroup()
+    self.sceneViewButtonGroup.addButton(self.sceneViewButton_red)
+    self.sceneViewButtonGroup.addButton(self.sceneViewButton_yellow)
+    self.sceneViewButtonGroup.addButton(self.sceneViewButton_green)
+    layout = qt.QHBoxLayout()
+    layout.addWidget(self.sceneViewButton_red)
+    layout.addWidget(self.sceneViewButton_yellow)
+    layout.addWidget(self.sceneViewButton_green)
+    trackingFormLayout.addRow('Scene view:',layout)    
     
     # Tip prediction 
     self.tipPredictionSelector = slicer.qMRMLNodeComboBox()
@@ -165,33 +243,13 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     self.debugFlagCheckBox.setToolTip('If checked, output images at intermediate steps')
     advancedFormLayout.addRow('Debug', self.debugFlagCheckBox)
     
-    # Mask threshold
-    self.maskThresholdWidget = ctk.ctkSliderWidget()
-    self.maskThresholdWidget.singleStep = 1
-    self.maskThresholdWidget.setDecimals(0)
-    self.maskThresholdWidget.minimum = 0
-    self.maskThresholdWidget.maximum = 255
-    self.maskThresholdWidget.value = 60
-    self.maskThresholdWidget.setToolTip('Set intensity threshold value (0-255) for creating tissue mask. Voxels that have intensities lower than this value will be masked out.')
-    advancedFormLayout.addRow('Mask Threshold:', self.maskThresholdWidget)
-    
-    # Mask closing
-    self.maskClosingWidget = ctk.ctkSliderWidget()
-    self.maskClosingWidget.singleStep = 1
-    self.maskClosingWidget.setDecimals(0)
-    self.maskClosingWidget.minimum = 0
-    self.maskClosingWidget.maximum = 30
-    self.maskClosingWidget.value = 15
-    self.maskClosingWidget.setToolTip('Set kernel size (px) for closing operation on mask.')
-    advancedFormLayout.addRow('Mask Closing:', self.maskClosingWidget)
-    
     # ROI size
     self.roiSizeWidget = ctk.ctkSliderWidget()
     self.roiSizeWidget.singleStep = 1
     self.roiSizeWidget.setDecimals(0)
-    self.roiSizeWidget.minimum = 30
+    self.roiSizeWidget.minimum = 15
     self.roiSizeWidget.maximum = 100
-    self.roiSizeWidget.value = 15
+    self.roiSizeWidget.value = 30
     self.roiSizeWidget.setToolTip('Set ROI window size (px).')
     advancedFormLayout.addRow('ROI Size:', self.roiSizeWidget)
     
@@ -200,7 +258,7 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     self.blobThresholdWidget.singleStep = 0.1
     self.blobThresholdWidget.minimum = 0
     self.blobThresholdWidget.maximum = 2*np.pi
-    self.blobThresholdWidget.value = np.pi
+    self.blobThresholdWidget.value = 2
     self.blobThresholdWidget.setToolTip('Set phase threshold value (0-2pi rad) for blob detection.')
     advancedFormLayout.addRow('Blob Threshold:', self.blobThresholdWidget)
     
@@ -224,39 +282,45 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     # These connections ensure that we update parameter node when scene is closed
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.StartCloseEvent, self.onSceneStartClose)
     self.addObserver(slicer.mrmlScene, slicer.mrmlScene.EndCloseEvent, self.onSceneEndClose)
-    
+    # TODO: Create observer for phase image sequence and link to the self.receivedImage callback function
+
     # These connections ensure that whenever user changes some settings on the GUI, that is saved in the MRML scene
     # (in the selected parameter node).
     self.inputModeMagPhase.connect("toggled(bool)", self.updateParameterNodeFromGUI)
     self.inputModeRealImag.connect("toggled(bool)", self.updateParameterNodeFromGUI)
+    self.firstBaselineVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateParameterNodeFromGUI)
+    self.secondBaselineVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateParameterNodeFromGUI)
     self.firstVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateParameterNodeFromGUI)
     self.secondVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateParameterNodeFromGUI)
     self.sceneViewButton_red.connect("toggled(bool)", self.updateParameterNodeFromGUI)
     self.sceneViewButton_yellow.connect("toggled(bool)", self.updateParameterNodeFromGUI)
     self.sceneViewButton_green.connect("toggled(bool)", self.updateParameterNodeFromGUI)
     self.tipPredictionSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateParameterNodeFromGUI)
-    self.maskThresholdWidget.connect("valueChanged(double)", self.updateParameterNodeFromGUI)
-    self.maskClosingWidget.connect("valueChanged(double)", self.updateParameterNodeFromGUI)
     self.roiSizeWidget.connect("valueChanged(double)", self.updateParameterNodeFromGUI)
     self.blobThresholdWidget.connect("valueChanged(double)", self.updateParameterNodeFromGUI)
     self.errorThresholdWidget.connect("valueChanged(double)", self.updateParameterNodeFromGUI)
     self.debugFlagCheckBox.connect("toggled(bool)", self.updateParameterNodeFromGUI)
     
     # Connect UI buttons to event calls
+    self.saveBaselineButton.connect('clicked(bool)', self.saveBaseline)
     self.startTrackingButton.connect('clicked(bool)', self.startTracking)
     self.stopTrackingButton.connect('clicked(bool)', self.stopTracking)
+    self.firstBaselineVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateButtons)
+    self.secondBaselineVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateButtons)
     self.firstVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateButtons)
     self.secondVolumeSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateButtons)
     self.tipPredictionSelector.connect('currentNodeChanged(vtkMRMLNode*)', self.updateButtons)
 
     # Internal variables
+    self.isBaselineSaved = False
+    self.firstBaselineVolume = None
+    self.secondBaselineVolume = None
+    self.segmentationNode = None
     self.isTrackingOn = False
     self.firstVolume = None
     self.secondVolume = None
     self.sliceIndex = None
     self.inputMode = None
-    self.maskThreshold = None
-    self.maskClosing = None
     self.roiSize = None
     self.sliceIndex = None
     self.blobThreshold = None
@@ -327,6 +391,9 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     # Make sure GUI changes do not call updateParameterNodeFromGUI (it could cause infinite loop)
     self._updatingGUIFromParameterNode = True
     # Update node selectors and sliders
+    self.firstBaselineVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference('FirstBaselineVolume'))
+    self.secondBaselineVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference('SecondBaselineVolume'))
+    self.manualMaskSelector.setCurrentNode(self._parameterNode.GetNodeReference('ManualMaskSegmentation'))
     self.firstVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference('FirstVolume'))
     self.secondVolumeSelector.setCurrentNode(self._parameterNode.GetNodeReference('SecondVolume'))
     self.inputModeMagPhase.checked = (self._parameterNode.GetParameter('InputMode') == 'MagPhase')
@@ -335,8 +402,6 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     self.sceneViewButton_yellow.checked = (self._parameterNode.GetParameter('SceneView') == 'Yellow')
     self.sceneViewButton_green.checked = (self._parameterNode.GetParameter('SceneView') == 'Green')
     self.tipPredictionSelector.setCurrentNode(self._parameterNode.GetNodeReference('TipPrediction'))
-    self.maskThresholdWidget.value = float(self._parameterNode.GetParameter('MaskThreshold'))
-    self.maskClosingWidget.value = float(self._parameterNode.GetParameter('MaskClosing'))
     self.roiSizeWidget.value = float(self._parameterNode.GetParameter('ROISize'))
     self.blobThresholdWidget.value = float(self._parameterNode.GetParameter('BlobThreshold'))
     self.errorThresholdWidget.value = float(self._parameterNode.GetParameter('ErrorThreshold'))
@@ -354,13 +419,14 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
       return
     # Modify all properties in a single batch
     wasModified = self._parameterNode.StartModify()  
+    self._parameterNode.SetNodeReferenceID('FirstBaselineVolume', self.firstBaselineVolumeSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID('SecondBaselineVolume', self.secondBaselineVolumeSelector.currentNodeID)
+    self._parameterNode.SetNodeReferenceID('ManualMaskSegmentation', self.manualMaskSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID('FirstVolume', self.firstVolumeSelector.currentNodeID)
     self._parameterNode.SetNodeReferenceID('SecondVolume', self.secondVolumeSelector.currentNodeID)
     self._parameterNode.SetParameter('InputMode', 'MagPhase' if self.inputModeMagPhase.checked else 'RealImag')
     self._parameterNode.SetParameter('SceneView', self.getSelectedView())
     self._parameterNode.SetNodeReferenceID('TipPrediction', self.tipPredictionSelector.currentNodeID)
-    self._parameterNode.SetParameter('MaskThreshold', str(self.maskThresholdWidget.value))
-    self._parameterNode.SetParameter('MaskClosing', str(self.maskClosingWidget.value))
     self._parameterNode.SetParameter('ROISize', str(self.roiSizeWidget.value))
     self._parameterNode.SetParameter('BlobThreshold', str(self.blobThresholdWidget.value))
     self._parameterNode.SetParameter('ErrorThreshold', str(self.errorThresholdWidget.value))
@@ -369,9 +435,11 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
                         
   # Update button states
   def updateButtons(self):
-    volumeNodesDefined = self.firstVolumeSelector.currentNode() and self.secondVolumeSelector.currentNode()
+    baselineNodesDefined = self.firstBaselineVolumeSelector.currentNode() and self.secondBaselineVolumeSelector.currentNode()
+    rtNodesDefined = self.firstVolumeSelector.currentNode() and self.secondVolumeSelector.currentNode()
     positionNodeDefined = self.tipPredictionSelector.currentNode()
-    self.startTrackingButton.enabled = volumeNodesDefined and positionNodeDefined and not self.isTrackingOn
+    self.saveBaselineButton.enabled = baselineNodesDefined and not self.isTrackingOn
+    self.startTrackingButton.enabled = rtNodesDefined and positionNodeDefined and self.isBaselineSaved and not self.isTrackingOn
     self.stopTrackingButton.enabled = self.isTrackingOn
     
   # Get selected scene view for tracking
@@ -391,39 +459,52 @@ class SimpleNeedleTrackingWidget(ScriptedLoadableModuleWidget, VTKObservationMix
     sliceWidgetLogic = layoutManager.sliceWidget(str(selectedView)).sliceLogic()
     return sliceWidgetLogic.GetSliceIndexFromOffset(sliceWidgetLogic.GetSliceOffset()) - 1
   
+  def saveBaseline(self):
+    self.isBaselineSaved = True
+    self.updateButtons()    
+    # Get selected nodes
+    self.firstBaselineVolume = self.firstBaselineVolumeSelector.currentNode()
+    self.secondBaselineVolume = self.secondBaselineVolumeSelector.currentNode()    
+    self.segmentationNode = self.manualMaskSelector.currentNode()
+    # Get parameters
+    self.inputMode = 'MagPhase' if self.inputModeMagPhase.checked else 'RealImag'
+    self.debugFlag = self.debugFlagCheckBox.checked
+    # Set base images
+    self.logic.updateBaseImages(self.firstBaselineVolume, self.secondBaselineVolume, self.segmentationNode, self.inputMode, self.debugFlag)
+
+    
   def startTracking(self):
-    print('UI: startTracking()')
+    print('Start Tracking')
     self.isTrackingOn = True
     self.updateButtons()
     # Get parameters
-    self.inputMode = 'MagPhase' if self.inputModeMagPhase.checked else 'RealImag'
-    self.maskThreshold = int(self.maskThresholdWidget.value)
-    self.maskClosing = int(self.maskClosingWidget.value)
-    self.roiSize = int(self.roiSizeWidget.value)
-    self.sliceIndex = self.getSliceIndex(self.getSelectedView())
-    self.blobThreshold = float(self.blobThresholdWidget.value)
-    self.errorThreshold = float(self.errorThresholdWidget.value)
-    self.debugFlag = self.debugFlagCheckBox.checked
     # Get selected nodes
     self.firstVolume = self.firstVolumeSelector.currentNode()
     self.secondVolume = self.secondVolumeSelector.currentNode()    
     self.tipPrediction = self.tipPredictionSelector.currentNode()
-    # Set base images
-    self.logic.updateBaseImages(self.firstVolume, self.secondVolume, self.inputMode, self.maskThreshold, self.maskClosing, self.debugFlag)
     # Create listener to sequence node
     self.addObserver(self.secondVolume, self.secondVolume.ImageDataModifiedEvent, self.receivedImage)
+    # Initialize CurrentTrackedTipNode with current prediction value
+    self.logic.initializeTipPrediction(self.tipPrediction)
   
   def stopTracking(self):
     self.isTrackingOn = False
     self.updateButtons()
-    #TODO: Should something else be refreshed/updated?
-    print('UI: stopTracking()')
+    #TODO: Define what should to be refreshed
+    print('Stop Tracking')
     self.removeObserver(self.secondVolume, self.secondVolume.ImageDataModifiedEvent, self.receivedImage)
   
   def receivedImage(self, caller=None, event=None):
+    # Execute one tracking cycle
     if self.isTrackingOn:
-      print('UI: receivedImage()')
-      # Execute one tracking cycle
+      # Get parameters
+      self.inputMode = 'MagPhase' if self.inputModeMagPhase.checked else 'RealImag'
+      self.roiSize = int(self.roiSizeWidget.value)
+      self.sliceIndex = self.getSliceIndex(self.getSelectedView())
+      self.blobThreshold = float(self.blobThresholdWidget.value)
+      self.errorThreshold = float(self.errorThresholdWidget.value)
+      self.debugFlag = self.debugFlagCheckBox.checked
+      # Get needle tip
       if self.logic.getNeedle(self.firstVolume, self.secondVolume, self.sliceIndex, self.tipPrediction, self.inputMode, self.roiSize, self.blobThreshold, self.errorThreshold, self.debugFlag):
         print('Tracking successful')
       else:
@@ -439,7 +520,6 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
   def __init__(self):
     ScriptedLoadableModuleLogic.__init__(self)
     self.cliParamNode = None
-    print('Logic: __init__')
     
     # Phase rescaling filter
     self.phaseRescaleFilter = sitk.RescaleIntensityImageFilter()
@@ -470,14 +550,10 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     
   # Initialize parameter node with default settings
   def setDefaultParameters(self, parameterNode):
-    if not parameterNode.GetParameter('MaskThreshold'):
-        parameterNode.SetParameter('MaskThreshold', '60')
-    if not parameterNode.GetParameter('MaskClosing'):
-        parameterNode.SetParameter('MaskClosing', '15')
     if not parameterNode.GetParameter('ROISize'):
         parameterNode.SetParameter('ROISize', '15')   
     if not parameterNode.GetParameter('BlobThreshold'):
-        parameterNode.SetParameter('BlobThreshold', '3.14')   
+        parameterNode.SetParameter('BlobThreshold', '2')   
     if not parameterNode.GetParameter('ErrorThreshold'):
         parameterNode.SetParameter('ErrorThreshold', '15.0')   
     if not parameterNode.GetParameter('Debug'):
@@ -506,12 +582,17 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     return image
   
   # Return blank itk Image with same information from reference volume
-  def createBlankItk(self, sitkReference, type=None):
-    if (type is None):
-      image = sitk.Image(sitkReference.GetSize(), sitkReference.GetPixelID())
-    else:
-      image = sitk.Image(sitkReference.GetSize(), type)  
+  def createBlankItk(self, sitkReference, type=None, pixelValue=0):
+    image = sitk.Image(sitkReference.GetSize(), sitk.sitkUInt8)
     image.CopyInformation(sitkReference)
+    if pixelValue != 0: 
+      image = sitk.Not(image)
+    if (type is None):
+      image = sitk.Cast(image, sitkReference.GetPixelID())
+    else:
+      image = sitk.Cast(image, type)  
+    if pixelValue != 0:
+      image = pixelValue*image 
     return image
 
   # Unwrap phase images with implementation from scikit-image (module: restoration)
@@ -537,31 +618,52 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     sitk_phase = self.numpyToitk(numpy_phase, sitk_real)
     return (sitk_magn, sitk_phase)
 
+  def getMaskFromSegmentation(self, segmentationNode, referenceVolumeNode):
+    if segmentationNode is None:
+      sitk_reference = sitkUtils.PullVolumeFromSlicer(referenceVolumeNode)
+      sitk_mask = self.createBlankItk(sitk_reference, pixelValue=1)
+    else:
+      labelmapVolumeNode = slicer.util.getFirstNodeByName('mask_labelmap')
+      if labelmapVolumeNode is None or labelmapVolumeNode.GetClassName() != 'vtkMRMLLabelMapVolumeNode':      
+        labelmapVolumeNode = slicer.vtkMRMLLabelMapVolumeNode()
+        slicer.mrmlScene.AddNode(labelmapVolumeNode)
+        labelmapVolumeNode.SetName('mask_labelmap')
+      slicer.modules.segmentations.logic().ExportVisibleSegmentsToLabelmapNode(segmentationNode, labelmapVolumeNode, referenceVolumeNode)
+      sitk_mask = sitkUtils.PullVolumeFromSlicer(labelmapVolumeNode)
+    return sitk.Cast(sitk_mask, sitk.sitkUInt8)
 
+  def initializeTipPrediction(self, tipPredictedNode):
+    try:
+      transformMatrix = vtk.vtkMatrix4x4()
+      tipPredictedNode.GetMatrixTransformToWorld(transformMatrix)
+      self.tipTrackedNode.SetMatrixTransformToParent(transformMatrix)
+      print('Initialized CurrentTrackedTipNode')
+      return True
+    except:
+      print('Could not initilize CurrentTrackedTipNode')
+      return False
+  
   # Update the stored base images
-  def updateBaseImages(self, firstVolume, secondVolume, inputMode, maskThreshold, maskClosing, debugFlag=False):
+  def updateBaseImages(self, firstBaselineVolume, secondBaselineVolume, segmentationNode, inputMode, debugFlag=False):
     # Initialize sequence counter
     self.count = 0
     # Get itk images from MRML volume nodes 
     if (inputMode == 'RealImag'): # Convert to magnitude/phase
-      (self.sitk_base_m, self.sitk_base_p) = self.realImagToMagPhase(firstVolume, secondVolume)
+      (self.sitk_base_m, self.sitk_base_p) = self.realImagToMagPhase(firstBaselineVolume, secondBaselineVolume)
     else:                         # Already as magnitude/phase
-      self.sitk_base_m = sitkUtils.PullVolumeFromSlicer(firstVolume)
-      self.sitk_base_p = sitkUtils.PullVolumeFromSlicer(secondVolume)
+      self.sitk_base_m = sitkUtils.PullVolumeFromSlicer(firstBaselineVolume)
+      self.sitk_base_p = sitkUtils.PullVolumeFromSlicer(secondBaselineVolume)
     # Force 32Float
     self.sitk_base_m = sitk.Cast(self.sitk_base_m, sitk.sitkFloat32)
     self.sitk_base_p = sitk.Cast(self.sitk_base_p, sitk.sitkFloat32)
     # Phase scaling to angle interval [0 to 2*pi]
     self.sitk_base_p = self.phaseRescaleFilter.Execute(self.sitk_base_p)
     # Get base mask: Generate bool mask from magnitude image to remove background
-    self.sitk_mask = (self.sitk_base_m > maskThreshold)
-    closingFilter = sitk.BinaryMorphologicalClosingImageFilter()    # Closing to fill bigger holes
-    closingFilter.SetKernelRadius(maskClosing)
-    self.sitk_mask = closingFilter.Execute(self.sitk_mask)  
+    self.sitk_mask = self.getMaskFromSegmentation(segmentationNode, firstBaselineVolume)
     # Unwrapped base phase
     numpy_base_p = sitk.GetArrayFromImage(self.sitk_base_p)
     numpy_mask = sitk.GetArrayFromImage(self.sitk_mask)
-    self.numpy_base_unwraped_p = self.unwrap_phase_array(numpy_base_p, numpy_mask)# REscale MARIANA
+    self.numpy_base_unwraped_p = self.unwrap_phase_array(numpy_base_p, numpy_mask)# Rescale MARIANA
     # Push debug images to Slicer
     if debugFlag:
       self.pushitkToSlicer(self.sitk_base_m, 'debug_base_m', debugFlag)
@@ -569,10 +671,10 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
       self.pushitkToSlicer(self.sitk_mask, 'debug_mask', debugFlag)
       sitk_base_unwraped_p = self.numpyToitk(self.numpy_base_unwraped_p, self.sitk_base_p)
       self.pushitkToSlicer(sitk_base_unwraped_p, 'debug_base_unwraped_p', debugFlag)
-  
+      print('Baseline saved')
+    
   
   def getNeedle(self, firstVolume, secondVolume, sliceIndex, tipPrediction, inputMode, roiSize, blobThreshold, errorThreshold, debugFlag=False):
-    print('Logic: getNeedle()')    
     if (self.sitk_base_m is None) or (self.sitk_base_p is None):
       print('ERROR: Mag/Phase base images were not initialized')    
       return False
@@ -587,6 +689,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     # Force 32Float
     sitk_img_m = sitk.Cast(sitk_img_m, sitk.sitkFloat32)
     sitk_img_p = sitk.Cast(sitk_img_p, sitk.sitkFloat32)
+    numpy_base_p = sitk.GetArrayFromImage(self.sitk_base_p)
     numpy_mask = sitk.GetArrayFromImage(self.sitk_mask)
     # Phase scaling to angle interval [0 to 2*pi]
     sitk_img_p = self.phaseRescaleFilter.Execute(sitk_img_p) # Rescale MARIANA
@@ -610,6 +713,7 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     if debugFlag:
       sitk_img_unwraped_p = self.numpyToitk(numpy_img_unwraped_p, self.sitk_base_p)
       self.pushitkToSlicer(sitk_img_unwraped_p, 'debug_img_unwraped_p', debugFlag)
+      
 
     ######################################
     ##                                  ##
@@ -669,28 +773,17 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     ####################################
     
     # 3D Gradient Filter only works with >=4 slices
-    # Perform 2D gradient in each slice instead
-    # TODO: Maybe there is another function for this?
-    sitk_phaseGradientVolume = self.createBlankItk(sitk_roi, type=sitk.sitkFloat32)
+    # Perform 2D gradient instead
     gradientFilter = sitk.GradientMagnitudeRecursiveGaussianImageFilter()
-    for slice in range(sliceDepth):
-      sitk_phaseGradient = gradientFilter.Execute(sitk_roi[:,:,slice])
-      sitk_phaseGradientVolume[:,:,slice] = sitk_phaseGradient # Put slice in the volume
-    sitk_phaseGradientVolume = self.phaseRescaleFilter.Execute(sitk_phaseGradientVolume)
+    sitk_phaseGradient = gradientFilter.Execute(sitk_roi[:,:,sliceIndex])
+    sitk_phaseGradient = self.phaseRescaleFilter.Execute(sitk_phaseGradient)
+    
     # Plot
     if debugFlag:
+      # Put slice in the volume
+      sitk_phaseGradientVolume = self.createBlankItk(sitk_roi, type=sitk.sitkFloat32)
+      sitk_phaseGradientVolume[:,:,sliceIndex] = sitk_phaseGradient
       self.pushitkToSlicer(sitk_phaseGradientVolume, 'debug_phase_gradient', debugFlag)    
-
-    # Get gradient mean intensity value
-    imgStats = sitk.StatisticsImageFilter()
-    imgStats.Execute(sitk_phaseGradientVolume)
-    meanValue = imgStats.GetMean()
-    if debugFlag:
-      print('Gradient mean intensity = %s' %(meanValue))
-    # If intensity is high, we probably have only noise
-    if meanValue >= 1.2:
-      print('Probably empty phase diff, gradient mostly noise')
-      return False      
 
     ####################################
     ##                                ##
@@ -699,68 +792,76 @@ class SimpleNeedleTrackingLogic(ScriptedLoadableModuleLogic):
     ####################################
 
     # Threshold roi to create blobs
-    sitk_blobs = (sitk_phaseGradientVolume > blobThreshold)
+    sitk_blobs = (sitk_phaseGradient > blobThreshold)
+    # Put slice in the volume
+    sitk_blobsVolume = self.createBlankItk(sitk_roi, sitk_blobs.GetPixelID())
+    sitk_blobsVolume[:,:,sliceIndex] = sitk_blobs
     # Plot
     if debugFlag:
-      self.pushitkToSlicer(sitk_blobs, 'debug_blobs', debugFlag)  
+      self.pushitkToSlicer(sitk_blobsVolume, 'debug_blobs', debugFlag)  
           
     # Label blobs
     stats = sitk.LabelShapeStatisticsImageFilter()
-    stats.Execute(sitk.ConnectedComponent(sitk_blobs))
-    num_blobs = stats.GetNumberOfLabels()
+    stats.Execute(sitk.ConnectedComponent(sitk_blobsVolume))
 
-    # Check number of blobs found      
-    if num_blobs == 0:
-      print('No centroids found')
-      return False
-    # Select center of tip blob
-    elif num_blobs == 1:
-      center = stats.GetCentroid(1)
-      if debugFlag:
-        print('Label %s: -> Size: %s, Center: %s, Flatness: %s, Elongation: %s' %(1, stats.GetNumberOfPixels(1), stats.GetCentroid(1), stats.GetFlatness(1), stats.GetElongation(1)))
-    else:               # More than one - find most likely tip
-      # Get blobs sizes, insertion depth and centroid physical coordinates
-      labels_size = []
-      labels_centroid = []
-      labels_depth = []
-      for l in stats.GetLabels():
-          if (stats.GetElongation(l) < 4): 
-              labels_size.append(stats.GetNumberOfPixels(l))
-              labels_centroid.append(stats.GetCentroid(l))    
-              labels_depth.append(stats.GetCentroid(l)[2])
-          if debugFlag:
-              print('Label %s: -> Size: %s, Center: %s, Flatness: %s, Elongation: %s' %(l, stats.GetNumberOfPixels(l), stats.GetCentroid(l), stats.GetFlatness(l), stats.GetElongation(l)))
-      # Find two largest blobs
-      sorted_by_size = np.argsort(labels_size) 
-      first_largest_index = sorted_by_size[-1]
-      second_largest_index = sorted_by_size[-2]
-      if(labels_size[second_largest_index]/labels_size[first_largest_index] >= 0.15): # Check if both blobs are comparable size
-        biggest_depth = max([labels_depth[first_largest_index], labels_depth[second_largest_index]])
-        label_index = labels_depth.index(biggest_depth)       # Get deepest inserted from the two
-      else:
-        label_index = first_largest_index                     # Get significantly largest
-      # Get selected centroid center
-      center = labels_centroid[label_index]
-      if debugFlag:
-        print('Chosen label: %i' %(label_index+1))
-
+    # Get blobs sizes and centroid physical coordinates
+    labels_size = []
+    labels_centroid = []
+    labels_depth = []
+    for l in stats.GetLabels():
+        if debugFlag:
+            print('Label %s: -> Size: %s, Center: %s, Flatness: %s, Elongation: %s' %(l, stats.GetNumberOfPixels(l), stats.GetCentroid(l), stats.GetFlatness(l), stats.GetElongation(l)))
+        if (stats.GetElongation(l) < 4): 
+            labels_size.append(stats.GetNumberOfPixels(l))
+            labels_centroid.append(stats.GetCentroid(l))    
+            labels_depth.append(stats.GetCentroid(l)[2])
 
     ####################################
     ##                                ##
     ## Step 6: Get tip physical point ##
     ##                                ##
     ####################################
+    # Check number of centroids found
+    if len(labels_size)>15:
+      print('Too many centroids, probably noise')
+      return False
+    # Reasonable number of centroids: get the largest one
+    try:
+      sorted_by_size = np.argsort(labels_size) 
+      first_largest = sorted_by_size[-1]
+      # second_largest = sorted_by_size[-2]
+    except:
+      print('No centroids found')
+      return False
     
+    # Check centroid size with respect to ROI size
+    if (labels_size[first_largest] > 0.5*roiSize*0.5*roiSize):
+      print('Centroid too big, probably noise')
+      return False
+    
+    # # Get significantly bigger centroid
+    # if (labels_size[first_largest] > 3.5*labels_size[second_largest]):
+    #   label_index = first_largest
+    # else: # Get centroid further inserted
+    #   label_index = labels_depth.index(max(labels_depth))
+
+    # Get selected centroid center
+    # center = labels_centroid[label_index]
+    center = labels_centroid[first_largest]
     # Convert to 3D Slicer coordinates (RAS)
     centerRAS = (-center[0], -center[1], center[2])
+
+    # Plot
     if debugFlag:
+      # print('Chosen label: %i' %(label_index+1))
+      print('Chosen label: %i' %(first_largest+1))
       print(centerRAS)
 
     # Calculate prediction error
     predError = sqrt(pow((tipRAS[0]-centerRAS[0]),2)+pow((tipRAS[1]-centerRAS[1]),2)+pow((tipRAS[2]-centerRAS[2]),2))
     # Check error threshold
     if(predError>errorThreshold):
-      print('Tip too far from prediction')
+      print('Tip too far from prediction: Err = %f' %predError)
       return False
     
     # Push coordinates to tip Node
