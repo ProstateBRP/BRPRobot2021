@@ -1,6 +1,6 @@
 classdef Robot < Kinematics
     %ROBOT - Advanced needle insertion robot controller
-    % 
+    %
     % This class provides comprehensive control for needle insertion robots
     % including registration, planning, targeting, movement control, and
     % real-time feedback processing.
@@ -25,7 +25,7 @@ classdef Robot < Kinematics
     %   - Skips actual motor control
     %   - Allows testing of control algorithms and flow
 
-    
+
 
     properties (Access = public)
         %% ===================================================================
@@ -61,16 +61,35 @@ classdef Robot < Kinematics
         Target_Pos_local                               % Target position in needle coordinate (mm)
         Stabbing_Vel = 5                               % Needle insertion speed (mm/sec)
         omega_max = pi                                 % Maximum rotational velocity (rad/sec)
+
+        %%%
+        %%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % !!!!! Double-Check !!!!!
+        % Update_Needle_pose_select.m should be updated if the max_curvature is changed
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
         % max_curvature = 0.0026                         % Maximum curvature for needle control
         max_curvature = 0.001054;                      % In-bore B-CURV with gelatine
         % max_curvature = 0.000545;                      % In-bore B-CURV with gelwax
+
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        %%%%%%%%%%%%%
+        %%%
+
         max_insertion_distance = 127;                  % Maximum insertion distance (mm) (absolute value)
         k_max                                          % Maximum curvature (computed)
         rot_dir = 1                                    % Rotation direction: CW(1), CCW(-1)
         theta0                                         % Initial theta0 angle
         CM = 0                                         % Control method (0=FF, 1=FB_old, 2=FB_new)
-        target_relative_global                               % Target position relative to needle tip
-        
+        target_relative_global                         % Target position relative to needle tip
+
         %% ===================================================================
         %  TIMING AND CONTROL PARAMETERS
         %% ===================================================================
@@ -83,7 +102,7 @@ classdef Robot < Kinematics
         delay_step_sec = 5                             % Sensor delay (sec)
         Freq_sens                                      % Sensing frequency in steps
         Freq_em_sec = 1/10                             % EM sensor frequency (sec)
-        
+
         %% ===================================================================
         %  MOTOR CONTROL PARAMETERS
         %% ===================================================================
@@ -96,7 +115,7 @@ classdef Robot < Kinematics
         theta_d
         omega_hat_pro
         k
-        
+
         %% ===================================================================
         %  SYSTEM FLAGS
         %% ===================================================================
@@ -111,7 +130,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         scale_model_sim = 1.0                         % Model scaling factor for simulation
         disturbance_sim = [0, 0, 0]                   % Simulated disturbances [x,y,z]
-        
+
         %% ===================================================================
         %  DATA STORAGE ARRAYS
         %% ===================================================================
@@ -133,13 +152,13 @@ classdef Robot < Kinematics
         data_sensor_ctrl_All                          % Control sensor data cell array
         Sensor_Diff_Time                              % Sensor time difference array
         Update_Time                                   % Update timing array
-        
+
         %% ===================================================================
         %  HARDWARE OBJECTS
         %% ===================================================================
         arduino                                       % Arduino communication object
         g                                            % Galil motor control object
-        
+
         %% ===================================================================
         %  TIMER OBJECTS AND CONTROL
         %% ===================================================================
@@ -162,7 +181,7 @@ classdef Robot < Kinematics
         ekf                                          % Extended Kalman filter object
         delay_step_CtrlFreq                          % Sensor delay considering control cycle
         delay_step                                   % Sensor delay step
-        
+
         %% ===================================================================
         %  REAL-TIME CONTROL VARIABLES
         %% ===================================================================
@@ -347,7 +366,7 @@ classdef Robot < Kinematics
         % Basic robot setup and update functions
         %% ==================================================================
         function obj = SetNeedleLength(obj, needle_length)
-        % Update the needle information
+            % Update the needle information
             obj.BiopsyNeedle.needleLength = needle_length;
             obj.UpdateNeedleLength();
             %obj.RunInverseKinematics();
@@ -356,7 +375,7 @@ classdef Robot < Kinematics
         function T = ConvertFromImagerToRobotBase(obj, matrix_img_coord)
             T = obj.robot_base_to_zframe * (obj.registration_matrix \ matrix_img_coord);
         end
-        
+
         function T = ConvertFromRobotBaseToImager(obj, matrix_rbt_coord)
             T =  obj.registration_matrix * (obj.robot_base_to_zframe \ matrix_rbt_coord);
         end
@@ -435,17 +454,17 @@ classdef Robot < Kinematics
             %
             %   Outputs:
             %     is_reachable - Boolean flag indicating reachability
-            
+
             %{
             % Get current needle pose [x, y, z, gamma, phi, theta]
             current_pose = obj.Needle_pose;
             current_pos = current_pose(1:3);  % [x, y, z] position
             current_theta = current_pose(6);  % Current rotation angle
-            
+
             % Calculate needle tip position and transformation matrix
             [P_tb1, T_tb] = Cal_Ptb1_Ttb(current_pose);
             needle_tip = P_tb1(1:3);  % Extract 3D position from homogeneous coordinates
-            
+
             % Calculate relative position from needle tip to target
             target_relative = target(1:3,4) - needle_tip;
             %}
@@ -456,19 +475,19 @@ classdef Robot < Kinematics
 
             A = obj.get_robot_current_pose();
             target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
-            
+
             % Calculate remaining insertion distance (z-direction)
             remaining_z_distance = target_relative(3);
-            
+
             % Check if target is behind current position (not reachable)
             if remaining_z_distance <= 0
                 obj.is_reachable = false;
                 return;
             end
-            
+
             % Calculate lateral distance (x-y plane) to target
             lateral_distance = sqrt(target_relative(1)^2 + target_relative(2)^2);
-            
+
             % Check if the required insertion distance exceeds maximum allowable distance
             if target(3) > obj.max_insertion_distance
                 obj.is_reachable = false;
@@ -482,9 +501,9 @@ classdef Robot < Kinematics
 
             % obj.is_reachable = true; % Only for testing
             %}
-            
+
             % Display reachability analysis for debugging
-            if obj.simulation_mode   
+            if obj.simulation_mode
                 fprintf('Reachability Analysis:\n');
                 fprintf('  Current needle tip: [%.2f, %.2f, %.2f] mm\n', needle_tip(1), needle_tip(2), needle_tip(3));
                 fprintf('  Target position: [%.2f, %.2f, %.2f] mm\n', target(1), target(2), target(3));
@@ -502,7 +521,7 @@ classdef Robot < Kinematics
             fprintf('  Is reachable: %s\n', char(string(obj.is_reachable)));
         end
 
-        
+
 
         function obj = update_target(obj, target)
             %UPDATE_TARGET Update robot target position
@@ -538,7 +557,7 @@ classdef Robot < Kinematics
                 % disp(obj.registration_matrix);
                 % disp(target);
                 % disp(target_robot);
-                
+
                 % if is_in_workspace % Ryo commented out this line and
                 % added the following line
                 if true % Ryo added this line to move reachable to after this
@@ -560,7 +579,7 @@ classdef Robot < Kinematics
             target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
             obj.target_relative_global = target_relative;
             fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
-            
+
         end
 
         %% ===================================================================
@@ -569,27 +588,27 @@ classdef Robot < Kinematics
         function robot_pose = get_robot_current_pose(obj)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
             % if obj.simulation_mode
-                robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
-                % disp("======")
-                % disp(robot_kinematics.BaseToTreatment);
-                % disp("======");
-                robot_pose = obj.ConvertFromRobotBaseToImager(robot_kinematics.BaseToTreatment);
-                disp("======")
-                disp(robot_pose);
-                disp("======");
-                % disp(obj.zFrameToKinematicTip)
-                % robot_pose = [1,0,0,0;0,1,0,-26.9738;0,0,1,-34.7100;0,0,0,1];
-                % robot_pose = obj.registration_matrix * robot_pose;
-                % disp(robot_pose)
-                % obj.counter = obj.counter + 1;
-                % if obj.counter == 100
-                %     obj.counter = 0;
-                % end
+            robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
+            % disp("======")
+            % disp(robot_kinematics.BaseToTreatment);
+            % disp("======");
+            robot_pose = obj.ConvertFromRobotBaseToImager(robot_kinematics.BaseToTreatment);
+            disp("======")
+            disp(robot_pose);
+            disp("======");
+            % disp(obj.zFrameToKinematicTip)
+            % robot_pose = [1,0,0,0;0,1,0,-26.9738;0,0,1,-34.7100;0,0,0,1];
+            % robot_pose = obj.registration_matrix * robot_pose;
+            % disp(robot_pose)
+            % obj.counter = obj.counter + 1;
+            % if obj.counter == 100
+            %     obj.counter = 0;
+            % end
             % else
-                % robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
-                % obj.zFrameToKinematicTip = obj.baseToZframe\robot_kinematics.BaseToTreatment;
-                % disp(obj.zFrameToKinematicTip)
-                % robot_pose = obj.registration_matrix *  obj.zFrameToKinematicTip;
+            % robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
+            % obj.zFrameToKinematicTip = obj.baseToZframe\robot_kinematics.BaseToTreatment;
+            % disp(obj.zFrameToKinematicTip)
+            % robot_pose = obj.registration_matrix *  obj.zFrameToKinematicTip;
             % end
         end
 
@@ -687,15 +706,15 @@ classdef Robot < Kinematics
             direction = 0; % Pull-out
 
             while abs(current_pos - home_pos) > threshold
-                
+
                 move_insertion(obj.g, direction, voltage);
-                
+
                 pause(0.1);
 
                 stop_insertion(obj.g, direction);
 
                 current_pos = get_encoder_insertion(obj.g)
-                obj.zInsertion = abs(current_pos)/5000*3;   
+                obj.zInsertion = abs(current_pos)/5000*3;
 
             end
 
@@ -711,7 +730,7 @@ classdef Robot < Kinematics
             direction = 0; % Pull-out
             f_pos = True;
             f_rot = True;
-            
+
             while  f_pos || f_rot
                 if f_pos
                     move_insertion(obj.g, direction, voltage);
@@ -738,13 +757,13 @@ classdef Robot < Kinematics
                 if abs(current_rot - (2*pi)) <= deg2rad(1)
                     f_rot = false;
                 end
-            end 
+            end
         end
-        
+
         function home_rotation(obj)
             current_rot = obj.zRotation;
             initialPulse = 0;
-             while abs(current_rot - (2*pi)) <= deg2rad(1)
+            while abs(current_rot - (2*pi)) <= deg2rad(1)
                 set_rpm_ino(obj.arduino, 2);
                 pause(0.1);
                 set_rpm_ino(obj.arduino, 0);
@@ -756,7 +775,7 @@ classdef Robot < Kinematics
                 obj.Send_Current_Position();
                 disp("relative")
                 disp(abs(2*pi - current_rot))
-            end 
+            end
         end
 
         function RetractNeedle(obj)
@@ -843,7 +862,7 @@ classdef Robot < Kinematics
             end
 
             disp(['SIMULATION: Needle at Z=', num2str(obj.Needle_pose(3)), ...
-                      ', Theta=', num2str(obj.Needle_pose(6) * 180 / pi), ' degrees']);
+                ', Theta=', num2str(obj.Needle_pose(6) * 180 / pi), ' degrees']);
         end
 
         %% ===================================================================
@@ -852,11 +871,11 @@ classdef Robot < Kinematics
         function save_experiment_data(obj, filename)
             %SAVE_EXPERIMENT_DATA Save all recorded experimental data to MAT file
             %   Saves all control variables recorded during the experiment
-            
+
             if nargin < 2
                 filename = "data_all.mat";
             end
-            
+
             % Extract control data from object properties
             omega_All = obj.omega_All;
             Needle_pose_act_All = obj.Needle_pose_act_All;
@@ -868,7 +887,7 @@ classdef Robot < Kinematics
             Mom_Vec_All = obj.Mom_Vec_All;
             theta_encoder_All = obj.theta_encoder_All;
             tick_insertion_All = obj.tick_insertion_All;
-            
+
             % Extract timing data
             Time_Step = obj.Time_Step;
             Time_num = obj.Time_num;
@@ -876,11 +895,11 @@ classdef Robot < Kinematics
             Sensor_Time = obj.Sensor_Time;
             Update_Time = obj.Update_Time;
             Sensor_Diff_Time = obj.Sensor_Diff_Time;
-            
+
             % Extract sensor data
             data_sensor_All = obj.data_sensor_All;
             data_sensor_ctrl_All = obj.data_sensor_ctrl_All;
-            
+
             % Extract control parameters
             Time_resolution = obj.Time_resolution;
             Freq_ctrl_sec = obj.Freq_ctrl_sec;
@@ -891,12 +910,12 @@ classdef Robot < Kinematics
             k_max = obj.k_max;
             CM = obj.CM;
             rot_dir = obj.rot_dir;
-            
+
             % Extract initial conditions
             Needle_pose_ini = obj.Needle_pose_ini;
             Target_Pos_local = obj.Target_Pos_local;
             theta0 = obj.theta0;
-            
+
             % Extract flags and configuration
             flag_ekf = obj.flag_ekf;
             flag_exp = obj.flag_exp;
@@ -904,7 +923,7 @@ classdef Robot < Kinematics
             flag_terminate_z = obj.flag_terminate_z;
             flag_terminated = obj.flag_terminated;
             simulation_mode = obj.simulation_mode;
-            
+
             % Save all variables to file
             save(filename, ...
                 'omega_All', 'Needle_pose_act_All', 'Needle_pose_sensor_All', ...
@@ -916,9 +935,9 @@ classdef Robot < Kinematics
                 'omega_max', 'max_curvature', 'k_max', 'CM', 'rot_dir', ...
                 'Needle_pose_ini', 'Target_Pos_local', 'theta0', ...
                 'flag_ekf', 'flag_exp', 'flag_motor', 'flag_terminate_z', 'flag_terminated', 'simulation_mode');
-            
+
             fprintf('Experimental data saved to: %s\n', filename);
-            
+
             % Display summary of saved data
             fprintf('Saved data summary:\n');
             fprintf('  - Control steps: %d\n', obj.Ctrl_Step_num);
@@ -953,16 +972,16 @@ classdef Robot < Kinematics
                 % Initialize control variables
                 omega_temp = obj.omega;
                 omega = omega_temp;
-                
+
                 obj.Ctrl_Step_num = obj.Ctrl_Step_num + 1;
-    
+
                 % if obj.Ctrl_Step_num == 1
                 %     A = obj.get_robot_current_pose();
                 %     target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
                 %     obj.target_relative_global = target_relative;
-                % 
+                %
                 % end
-    
+
                 % Obtain target position in robot frame
                 % target_position_image_temp = obj.target_position_image(1:3,4);
                 target_position_image_temp = obj.target_relative_global;
@@ -977,8 +996,8 @@ classdef Robot < Kinematics
                         disp(target_position_image_temp);
                     end
                 end
-                
-    
+
+
                 %% State estimation using Kalman filter
                 if obj.flag_ekf == 1 && obj.Ctrl_Step_num > 1
                     [obj.ekf, Needle_pose_ekf] = Update_EKF(obj.ekf, obj.Needle_pose_sensor, obj.sensor_flag, obj.omega_All, obj.Stabbing_Vel, obj.Freq_ctrl_sec, obj.Ctrl_Step_num, obj.delay_step_CtrlFreq);
@@ -986,9 +1005,9 @@ classdef Robot < Kinematics
                 else
                     Needle_pose_act = obj.Needle_pose_sensor;
                 end
-    
+
                 obj.sensor_flag = false;
-    
+
                 %% Encoder reading for theta angle
                 if ~obj.simulation_mode
                     encoder_read = get_encoder_tick(obj.arduino);
@@ -1003,17 +1022,17 @@ classdef Robot < Kinematics
                     tick_insertion = -1; % define for simulation to avoid undefined usage in logging
                     disp(['SIMULATION MODE: Using simulated theta = ', num2str(obj.zRotation)]);
                 end
-    
+
                 % Update needle pose with encoder data
                 if ~isprop(obj, 'Needle_pose_sensor_realtime') || isempty(obj.Needle_pose_sensor_realtime)
                     obj.Needle_pose_sensor_realtime = obj.Needle_pose_sensor;
                 end
-    
+
                 obj.Needle_pose_sensor_realtime(6) = obj.zRotation;
                 Needle_pose_act(6) = obj.zRotation;
                 obj.Needle_pose_sensor_realtime(3) = obj.zInsertion;
                 Needle_pose_act(3) = obj.zInsertion;
-    
+
                 % Only for open-loop
                 if obj.CM ==0
                     Needle_pose_act(1) = 0;
@@ -1021,31 +1040,31 @@ classdef Robot < Kinematics
                     Needle_pose_act(3) = 0;
                     obj.Target_Pos_local = transpose(target_position_image_temp); % Ryo: added 20250806 for FF control
                 end
-    
-                obj.Needle_pose_act = Needle_pose_act; 
-                
-                
-    
+
+                obj.Needle_pose_act = Needle_pose_act;
+
+
+
                 %% Control algorithm execution
                 % Generate needle tip position and transformation matrix
                 [P_tb1, T_tb] = Cal_Ptb1_Ttb(Needle_pose_act);
-    
+
                 % Control output calculation
                 if (obj.CM == 0 && obj.Ctrl_Step_num == 1) || (obj.CM == 1)
                     % Parameter calculation
                     [obj.k, P_tt, obj.theta_d] = Cal_k_P_tt_theta_d(obj.Target_Pos_local, T_tb, obj.zRotation);
                     obj.k = abs(obj.k);
-    
+
                     if obj.k > obj.k_max
                         obj.k = obj.k_max;
                     end
-    
+
                     % Profile imitation
                     [obj.alpha, obj.omega_hat_pro] = Imitation_Profile(obj.k, obj.k_max, obj.theta_d);
-    
+
                     % Open-loop B-CURV settings
                     flag_test_group = true;
-                    
+
                     if flag_test_group
                         flag_noRotation = false;
                         flag_random = false;
@@ -1053,23 +1072,23 @@ classdef Robot < Kinematics
                         flag_noRotation = true;
                         flag_random = true;
                     end
-    
+
                     if flag_noRotation
                         obj.alpha = 1.0;
                         if flag_random
-    
+
                             obj.theta_d = 2 * pi * rand();
                         else
                             % obj.theta_d = 0; % use if fixed value
                         end
                     end
-    
-                    
-    
+
+
+
                 elseif obj.CM == 2
                     % New feedback control implementation area
                 end
-    
+
                 % Display current alpha and desired theta (in degrees)
                 try
                     fprintf('alpha: %.6f, theta_d: %.6f deg\n', obj.alpha, obj.theta_d * 180 / pi);
@@ -1077,16 +1096,16 @@ classdef Robot < Kinematics
                     disp('alpha:'); disp(obj.alpha);
                     disp('theta_d (deg):'); disp(obj.theta_d * 180 / pi);
                 end
-    
+
                 % Update rotation direction
                 [obj.rot_dir, obj.theta0] = Update_rot_dir(obj.zRotation, obj.theta0, obj.rot_dir);
-    
+
                 % Control output calculation
                 omega = Cal_Omega(obj.alpha, obj.zRotation, obj.theta_d, obj.omega_max, obj.rot_dir);
-    
+
                 % Store omega value
                 obj.omega = omega;
-    
+
                 %% Motor control execution
                 omega_rpm = radsec2rpm(omega);
                 % omega_rpm = 60;
@@ -1098,22 +1117,22 @@ classdef Robot < Kinematics
                     omega_rpm = fix(omega_rpm);
                 end
                 % omega_rpm = fix(omega_rpm);
-    
+
                 disp("Current theta: " + num2str(rad2deg(obj.zRotation)))
-    
+
                 if obj.flag_motor == 1 && ~obj.simulation_mode
                     set_rpm_ino(obj.arduino, omega_rpm);
                 elseif obj.simulation_mode
                     disp(['SIMULATION MODE: Would set motor RPM to ', num2str(omega_rpm), ' [rpm]']);
                 end
-    
+
                 % Control_CB 内の表示部分に追加
                 fprintf('Goal: %.2f, Curr: %.2f, Diff: %.2f, CmdRPM: %.5f\n', ...
                     rad2deg(obj.theta_d), ...
                     rad2deg(obj.zRotation), ...
                     rad2deg(angdiff(obj.zRotation, obj.theta_d)), ... % 角度差（要Mapping Toolbox、なければ自作）
                     radsec2rpm(omega));
-    
+
                 % Terminate move if reach target along z-axis
                 % target_position_image_temp(3)
                 disp("Target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
@@ -1124,7 +1143,7 @@ classdef Robot < Kinematics
                     disp("Reached target along z-axis")
                     disp("--------------------------------")
                 end
-    
+
                 %% Data logging
                 obj.omega_All(obj.Ctrl_Step_num) = omega;
                 obj.Needle_pose_act_All(obj.Ctrl_Step_num, :) = Needle_pose_act;
