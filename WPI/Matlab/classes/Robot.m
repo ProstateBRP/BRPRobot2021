@@ -1166,3 +1166,9 @@ classdef Robot < Kinematics
                 return
             end
         end
+
+        % Re-added missing 'end' keywords that were likely removed in commit 7060ff2c336a555cdd1c394052ad4b9e8d9ebae2
+        % Author: kyang3@wpi.edu
+        % Date: Sun Jan 4 23:52:27 2026 -0500
+    end
+end
