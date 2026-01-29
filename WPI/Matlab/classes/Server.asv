@@ -368,7 +368,7 @@ classdef Server < Robot
                             %         end
                             %         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
                             %         obj.sender.WriteOpenIGTLinkStatusMessage(char(head), status);
-                            %         obj.needle_pos_MRI = data
+                            %         final_targeting_reached = obj.move_A_step(data);
                             %         obj.robot_pose = obj.get_robot_current_pose();
                             %         obj.sender.WriteOpenIGTLinkTransformMessage(char(head), obj.robot_pose);
                             %         final_targeting_reached = obj.is_target_reached;
@@ -377,10 +377,9 @@ classdef Server < Robot
                                 error_message = "Wrong type of message at this time.";
                                 obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
                             end
-                            
-                            obj.needle_pos_MRI = obj.get_robot_current_pose();
-                            obj.move_to_end();
-                            i = i+1;
+                            data = obj.get_robot_current_pose();
+                            final_targeting_reached = obj.move_A_step(data);
+                            i = i+1
                             disp('Press Enter to continue...');
                             input('', 's');
                         end

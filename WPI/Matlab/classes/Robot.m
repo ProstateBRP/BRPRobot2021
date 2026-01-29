@@ -34,12 +34,12 @@ classdef Robot < Kinematics
         current_mode = 'stop'                          % Current robot operation mode
         starting_position                              % Initial robot position
         target_position_image                          % Target position in robot frame
-        is_target_reached                              % Flag indicating if target is reached
         previou_needle_pose_MRI                        % Previous needle pose from MRI
         simulation_mode = false                        % Flag to enable simulation mode
         ESTOP = true                                   % Software E-stop
         is_reachable                                   % Reachability Checking result
         counter = 0                                    % Counter timer
+        open_loop = false                              % open/close loop identifier
         %% ===================================================================
         %  REGISTRATION AND COORDINATE TRANSFORMATION
         %% ===================================================================
@@ -54,6 +54,8 @@ classdef Robot < Kinematics
         base_to_treatment_robot_coord = eye(4);
         target_full_pose_image_coord = eye(4);
         robot_pose
+        trajectory = [];
+        needle_pos_MRI;
         %% ===================================================================
         %  NEEDLE CONTROL PARAMETERS
         %% ===================================================================
@@ -242,7 +244,7 @@ classdef Robot < Kinematics
             if ~obj.flag_timerFcn
                 obj.t_control = timer('StartDelay', obj.control_Start, 'Period', obj.Freq_ctrl_sec, 'ExecutionMode', 'fixedRate');
                 obj.t_control.TimerFcn = @(~, ~) obj.Control_CB;
-                obj.flag_timerFcn = True;
+                obj.flag_timerFcn = true;
             end
         end
 
@@ -534,6 +536,24 @@ classdef Robot < Kinematics
             planning_finsh_flag = obj.reachable(target_robot);
         end
 
+        function obj = generate_trajectory(obj, target, nSteps)
+            % Simple trajectory: linear steps from current position to xyz (exclude origin).
+            % Default nSteps = 4. Saves to obj.trajectory and calls obj.generate_trajectory(traj).
+            
+                if nargin < 3 || isempty(nSteps)
+                    nSteps = 4; 
+                end
+            
+                A = obj.get_robot_current_pose();
+                origin = A(1:3,4).';              % 1x3
+                xyz    = target(1:3,4).';                % 1x3
+            
+                t = (1:nSteps)' / nSteps;         % nStepsx1 : 1/n ... 1
+                traj = origin + (xyz - origin) .* t;  % nStepsx3
+            
+                obj.trajectory = traj;
+        end
+
         function is_in_workspace = check_target(obj, target)
             %CHECK_TARGET Check if target is in workspace and update if valid
             if obj.simulation_mode
@@ -541,23 +561,13 @@ classdef Robot < Kinematics
                 target_robot = obj.target_registration(target);
                 obj.update_target(target_robot);
             else
-                % target_robot = obj.target_registration(target);
-                % target_robot(1,4) = target_robot(1,4)-7; % offset only for testing (registration matrix needs to be fixed?)
-                % target_robot(2,4) = target_robot(2,4)+68; % offset only for testing (registration matrix needs to be fixed?)
-
+                
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % Ryo Moved to below
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                 % obj.reachable(target);
                 % is_in_workspace = obj.is_reachable;
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-                % disp(obj.is_reachable);
-                % disp(is_in_workspace);
-                % disp(obj.registration_matrix);
-                % disp(target);
-                % disp(target_robot);
-
                 % if is_in_workspace % Ryo commented out this line and
                 % added the following line
                 if true % Ryo added this line to move reachable to after this
@@ -574,11 +584,14 @@ classdef Robot < Kinematics
                 is_in_workspace = obj.is_reachable;
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             end
-
-            A = obj.get_robot_current_pose();
-            target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
-            obj.target_relative_global = target_relative;
-            fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
+            if obj.open_loop
+                A = obj.get_robot_current_pose();
+                target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
+                obj.target_relative_global = target_relative;
+                fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
+            else
+                obj.generate_trajectory(obj.target_position_image)
+            end    
 
         end
 
@@ -793,53 +806,22 @@ classdef Robot < Kinematics
             disp('homing done')
         end
 
-        function move_A_step(obj, needle_pos_image)
-            %MOVE_A_STEP Move robot one step towards target
-            needle_pos_robot = obj.target_registration(needle_pos_image);
-            slow_flag = obj.isApprox(needle_pos_robot);
-            hit_flag = isInTargetingPos(needle_pos_robot);
-
-            if hit_flag
-                obj.RetractNeedle();
-            else
-                next_step = calculate_next_step(needle_pos_robot, slow_flag);
-                move_step(next_step, needle_pos_robot);
-            end
-        end
-
-        %% ===================================================================
-        %  CONTROL CALCULATION FUNCTIONS
-        %% ===================================================================
-        function next_step = calculate_next_step(obj, needle_pos, slow_flag)
-            %CALCULATE_NEXT_STEP Calculate next movement step
-            if slow_flag
-                next_step = xxxx(needle_pos, obj.target_position_image, small_step_value);
-            else
-                next_step = xxxx(needle_pos, obj.target_position_image, large_step_value);
-            end
-        end
-
-        function slow_flag = isApprox(obj, needle_pos)
-            %ISAPPROX Check if robot is close to target for fine control
-            % Implementation pending
-            slow_flag = false;
-        end
-
-        function hit_flag = isInTargetingPos(obj, needle_pos)
-            %ISINTARGETINGPOS Check if robot has reached target position
-            current_pos = current_robot_position();
-            if obj.target_position_image - mean(current_pos, needle_pos) < max_error_allowed
-                hit_flag = true;
-            else
-                hit_flag = false;
-            end
-            obj.update_flag(hit_flag);
-        end
-
-        function obj = update_flag(obj, flag)
-            %UPDATE_FLAG Update target reached flag
-            obj.is_target_reached = flag;
-        end
+        % function slow_flag = isApprox(obj, needle_pos)
+        %     %ISAPPROX Check if robot is close to target for fine control
+        %     % Implementation pending
+        %     slow_flag = false;
+        % end
+        % 
+        % function hit_flag = isInTargetingPos(obj, needle_pos)
+        %     %ISINTARGETINGPOS Check if robot has reached target position
+        %     current_pos = current_robot_position();
+        %     if obj.target_position_image - mean(current_pos, needle_pos) < max_error_allowed
+        %         hit_flag = true;
+        %     else
+        %         hit_flag = false;
+        %     end
+        %     obj.update_flag(hit_flag);
+        % end
 
         %% ===================================================================
         %  SIMULATION FUNCTIONS
@@ -1024,6 +1006,8 @@ classdef Robot < Kinematics
                 end
 
                 % Update needle pose with encoder data
+                % TODO: Add a close loop calculation that includes MRI
+                % feedback
                 if ~isprop(obj, 'Needle_pose_sensor_realtime') || isempty(obj.Needle_pose_sensor_realtime)
                     obj.Needle_pose_sensor_realtime = obj.Needle_pose_sensor;
                 end
@@ -1043,7 +1027,7 @@ classdef Robot < Kinematics
 
                 obj.Needle_pose_act = Needle_pose_act;
 
-
+                  
 
                 %% Control algorithm execution
                 % Generate needle tip position and transformation matrix
