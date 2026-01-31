@@ -316,6 +316,8 @@ classdef Server < Robot
 
         function obj = onMove(obj)
             disp('Scan & Move');
+            pause(0.5)
+            final_targeting_reached = false;
             fail_flag = false;
             id = split(obj.name, '_');
             if ~obj.robot_not_ready && obj.targeting_finsh_flag
@@ -339,9 +341,10 @@ classdef Server < Robot
                 if ~fail_flag
                     first_step_flag = true;
                     if obj.open_loop
-                        obj.move_to_end();
+                        final_targeting_reached = obj.move_to_end();
                     else
                         while i <= numel(obj.trajectory)
+                            obj.old_zInsertion = obj.zInsertion;
                             % With MRI feedback would be look like below
                             obj.target_relative_global = obj.trajectory(i);
                             disp("Current Target:")
@@ -379,7 +382,7 @@ classdef Server < Robot
                             end
                             
                             obj.needle_pos_MRI = obj.get_robot_current_pose();
-                            obj.move_to_end();
+                            final_targeting_reached = obj.move_to_end();
                             i = i+1;
                             disp('Press Enter to continue...');
                             input('', 's');

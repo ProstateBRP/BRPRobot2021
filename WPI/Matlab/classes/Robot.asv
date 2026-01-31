@@ -176,7 +176,6 @@ classdef Robot < Kinematics
         xRearSlider2
         zInsertion
         zRotation
-        old_zInsertion
 
         %% ===================================================================
         %  KALMAN FILTER AND STATE ESTIMATION
@@ -590,11 +589,10 @@ classdef Robot < Kinematics
                 target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
                 obj.target_relative_global = target_relative;
                 fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
-                obj.old_zInsertion = obj.zInsertion;
             else
                 obj.generate_trajectory(obj.target_position_image)
             end    
-        
+
         end
 
         %% ===================================================================
@@ -639,8 +637,6 @@ classdef Robot < Kinematics
         %% ===================================================================
         function reach = move_to_end(obj)
             %MOVE_TO_END Main insertion function for open loop control
-            obj.flag_terminate_z = 0;
-            obj.flag_terminated = 0;
             sim_time = tic;
             obj.simulation_start_time = sim_time; % Store for timing calculations
             obj.BuildTimer();
@@ -655,12 +651,13 @@ classdef Robot < Kinematics
             else
                 disp("SIMULATION MODE: Would start insertion with voltage " + num2str(voltage));
             end
-            
+
             % Main control loop
             while ~obj.ESTOP
                 % obj.update_shared_file();
                 pause(obj.Time_resolution / 100);
                 run_time = toc(sim_time);
+
                 if ~obj.simulation_mode
                     count_current_insertion = record_home_pos(obj.g);
                 else
@@ -670,20 +667,19 @@ classdef Robot < Kinematics
                 if count_current_insertion < obj.stop_count_insertion
                     obj.flag_terminate_z = 1;
                 end
+
                 if (run_time > obj.Time_SimEnd) || obj.flag_terminate_z == 1
                     disp("----------------------------")
-                    disp('Reached Termination Condition');
-                    disp(obj.zInsertion - obj.old_zInsertion);
-                    disp(obj.target_relative_global(3));
-                    disp("----------------------------")
                     disp(count_current_insertion);
-                    disp(obj.stop_count_insertion);
+                    disp(obj.stop_count_insertion)
+                    disp('Reached Termination Condition');
+                    disp("----------------------------")                 
                     break;
                 end
             end
 
             disp('Endpoint satisfied')
-            % obj.flag_terminated = 0;
+            obj.flag_terminated = false;
             reach = true;
             stop(obj.t_control);
             delete(obj.t_control);
@@ -1132,7 +1128,7 @@ classdef Robot < Kinematics
                 % target_position_image_temp(3)
                 disp("Target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
                 fprintf('zInsertion: %02f, target: %.2f',obj.zInsertion,target_position_image_temp(3))
-                if (obj.zInsertion - obj.old_zInsertion) > target_position_image_temp(3)
+                if obj.zInsertion > target_position_image_temp(3)
                     obj.flag_terminate_z = 1;
                     disp("--------------------------------")
                     disp("Reached target along z-axis")

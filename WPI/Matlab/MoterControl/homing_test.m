@@ -2,7 +2,7 @@
 clear;
 close all;
 
-flag_only_homing = false;
+flag_only_homing = true;
 %% Create GalilTools COM server object
 g = init_galil();
 
