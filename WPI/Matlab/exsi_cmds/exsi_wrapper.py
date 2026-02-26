@@ -36,9 +36,17 @@ class ExSiWrapper:
         stdin, stdout, stderr = self.client.exec_command(command)
         print(stdout.read().decode())
 
-    def set_rx_geometry(self, plane, start_loc, end_loc, slices, spacing, thickness):
+    # Updated to allow old usage (adjust_scan_plane calls with only 3 args)
+    # slices/spacing/thickness default to None (do not append if None)
+    def set_rx_geometry(self, plane, start_loc, end_loc, slices=None, spacing=None, thickness=None):
         command = f"exsi -host {self.hostname} setRxGeometry plane={plane} startloc={start_loc} endloc={end_loc}"
-        command += f" slices={slices} spacing={spacing} thick={thickness}"
+
+        if slices is not None:
+            command += f" slices={slices}"
+        if spacing is not None:
+            command += f" spacing={spacing}"
+        if thickness is not None:
+            command += f" thick={thickness}"
 
         stdin, stdout, stderr = self.client.exec_command(command)
         print(stdout.read().decode())
@@ -119,7 +127,76 @@ class ExSiWrapper:
         print(command)
         stdin, stdout, stderr = self.client.exec_command(command)
         print(stdout.read().decode())
+    # ------------------------ New methods ------------------------
 
+    # 1) Select task by taskKey
+    # Spec: SelectTask params: taskKey=string :contentReference[oaicite:3]{index=3}
+    def select_task(self, task_key):
+        command = f"exsi -host {self.hostname} SelectTask taskKey={task_key}"
+        stdin, stdout, stderr = self.client.exec_command(command)
+        print(stdout.read().decode())
+
+    # 2) setRxGeometry3p
+    # Spec: setRxGeometry3p params include: [taskKey] [coil] [centerloc=r,a,s] [spacing=r,a,s] [thick] [fov] [freqdir] :contentReference[oaicite:4]{index=4}
+    # NOTE: We keep the same “append params if provided” pattern used elsewhere.
+    def set_rx_geometry3p(self, centerloc=None, spacing=None, thick=None, taskKey=None, coil=None, fov=None, freqdir=None):
+        command = f"exsi -host {self.hostname} setRxGeometry3p"
+
+        if taskKey is not None:
+            command += f" taskKey={taskKey}"
+        if coil is not None:
+            command += f" coil={coil}"
+        if centerloc is not None:
+            command += f" centerloc={centerloc}"
+        if spacing is not None:
+            command += f" spacing={spacing}"
+        if thick is not None:
+            command += f" thick={thick}"
+        if fov is not None:
+            command += f" fov={fov}"
+        if freqdir is not None:
+            command += f" freqdir={freqdir}"
+
+        stdin, stdout, stderr = self.client.exec_command(command)
+        print(stdout.read().decode())
+
+    # 3) Pause / Resume scan (realtime)
+    # Spec: PauseScan / ResumeScan :contentReference[oaicite:5]{index=5}
+    def pause_scan(self):
+        command = f"exsi -host {self.hostname} PauseScan"
+        stdin, stdout, stderr = self.client.exec_command(command)
+        print(stdout.read().decode())
+
+    def resume_scan(self):
+        command = f"exsi -host {self.hostname} ResumeScan"
+        stdin, stdout, stderr = self.client.exec_command(command)
+        print(stdout.read().decode())
+
+    # Helper: build image type args exactly like the EXSI command expects:
+    # - either "all"/"none" OR a combination of magnitude/phase/real/imaginary
+    def _img_types_args(self, *types):
+        if len(types) == 0:
+            return "all"
+        # allow caller to pass a single list/tuple
+        if len(types) == 1 and isinstance(types[0], (list, tuple)):
+            types = tuple(types[0])
+        return " ".join(str(t) for t in types)
+
+    # 4) GenerateImageTypes
+    # Spec: GenerateImageTypes all | [magnitude] [phase] [real] [imaginary] :contentReference[oaicite:6]{index=6}
+    def generate_image_types(self, *types):
+        args = self._img_types_args(*types)
+        command = f"exsi -host {self.hostname} GenerateImageTypes {args}"
+        stdin, stdout, stderr = self.client.exec_command(command)
+        print(stdout.read().decode())
+
+    # 5) installImageTypes
+    # Spec: installImageTypes all | none | [magnitude] [phase] [real] [imaginary] :contentReference[oaicite:7]{index=7}
+    def install_image_types(self, *types):
+        args = self._img_types_args(*types)
+        command = f"exsi -host {self.hostname} installImageTypes {args}"
+        stdin, stdout, stderr = self.client.exec_command(command)
+        print(stdout.read().decode())
 
 if __name__ == "__main__":
     host_name = "10.0.1.1"
