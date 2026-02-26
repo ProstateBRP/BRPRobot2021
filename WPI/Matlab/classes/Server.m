@@ -17,6 +17,11 @@ classdef Server < Robot
         target_not_reachable = false
         idle_flag = false
         command_recieved = false
+        PyReady = false
+        SrcDir
+        PyDir
+        VenvPython
+        Hostname = "10.0.1.1"
     end
 
     properties (Access = public)
@@ -43,6 +48,50 @@ classdef Server < Robot
             obj.socket = obj.connect(obj.host,obj.port);
             obj.open_loop = p.Results.open_loop;
             obj.robot_not_ready = obj.is_startup();
+            obj.connect_exsi();
+        end
+
+        function obj = connect_exsi(obj)
+            % Locate project folders (cross-platform safe)
+            thisFile = mfilename("fullpath");      % .../src/classes/server.m
+            classDir = fileparts(thisFile);        % .../src/classes
+            srcDir   = fileparts(classDir);        % .../src
+            exsiDir  = fullfile(srcDir, "exsi_cmds");
+            % Determine venv python path (Windows + Linux)
+            if ispc
+                venvPython = fullfile(exsiDir, "venv", "Scripts", "python.exe");
+            else
+                venvPython = fullfile(exsiDir, "venv", "bin", "python");
+            end
+        
+            if ~isfile(venvPython)
+                error("Python venv not found at: %s", venvPython);
+            end
+            % Reset Python interpreter (important)
+            try
+                terminate(pyenv);
+            catch
+                % ignore if not loaded yet
+            end
+            pyenv("Version", venvPython);
+            % Add ONLY src folder to Python path
+            insert(py.sys.path, int32(0), srcDir);
+            % Import the bridge module (as package)
+            py.importlib.import_module("exsi_cmds.matlab_bridge");
+            % Initialize persistent SSH client once
+            hostname = "10.0.1.1";  % change if needed
+            py.exsi_cmds.matlab_bridge.init(hostname);
+            obj.PyReady = true;
+            fprintf("Python + ExSi bridge initialized successfully.\n");
+        end
+        
+        function run_brp(obj, plane, startloc, endloc)
+            % One plane at a time:
+            % plane: "Axial" | "Coronal" | "Sagittal"
+            if ~obj.PyReady
+                error("Python bridge not initialized.");
+            end
+            py.matlab_bridge.run_brp(string(plane), string(startloc), string(endloc));
         end
 
         function obj = onStartUp(obj)
@@ -346,7 +395,7 @@ classdef Server < Robot
                         while i <= numel(obj.trajectory)
                             obj.old_zInsertion = obj.zInsertion;
                             % With MRI feedback would be look like below
-                            obj.target_relative_global = obj.trajectory(i);
+                            obj.current_Z_target = obj.trajectory(i);
                             disp("Current Target:")
                             disp(obj.target_relative_global)
                             [head, type, data] = obj.receiver.readMessage();
@@ -463,6 +512,7 @@ classdef Server < Robot
             obj.planning_finsh_flag = false;
             obj.targeting_finsh_flag = false;
             obj.target_not_reachable = false;
+            obj.stop_master();
             delete all
         end
 

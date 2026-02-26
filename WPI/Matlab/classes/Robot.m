@@ -55,6 +55,7 @@ classdef Robot < Kinematics
         target_full_pose_image_coord = eye(4);
         robot_pose
         trajectory = [];
+        current_Z_target;
         needle_pos_MRI;
         %% ===================================================================
         %  NEEDLE CONTROL PARAMETERS
@@ -117,6 +118,7 @@ classdef Robot < Kinematics
         theta_d
         omega_hat_pro
         k
+        initialPulse = 0
 
         %% ===================================================================
         %  SYSTEM FLAGS
@@ -213,7 +215,6 @@ classdef Robot < Kinematics
             p = inputParser;
             addParameter(p, 'simulation', false, @islogical);
             parse(p, varargin{:});
-
             % Set simulation mode
             obj.simulation_mode = p.Results.simulation;
 
@@ -546,13 +547,13 @@ classdef Robot < Kinematics
                 end
             
                 A = obj.get_robot_current_pose();
-                origin = A(1:3,4).';              % 1x3
-                xyz    = target(1:3,4).';                % 1x3
+                origin = A(3,4).';              % Z insertion only
+                xyz    = target(3,4).';                % Z insertion only
             
                 t = (1:nSteps)' / nSteps;         % nStepsx1 : 1/n ... 1
-                traj = origin + (xyz - origin) .* t;  % nStepsx3
+                traj_z = origin + (xyz - origin) .* t;  % nStepsx3
             
-                obj.trajectory = traj;
+                obj.trajectory = traj_z;
         end
 
         function is_in_workspace = check_target(obj, target)
@@ -589,6 +590,7 @@ classdef Robot < Kinematics
                 A = obj.get_robot_current_pose();
                 target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
                 obj.target_relative_global = target_relative;
+                obj.current_Z_target = target_relative(3);
                 fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
                 obj.old_zInsertion = obj.zInsertion;
             else
@@ -600,6 +602,17 @@ classdef Robot < Kinematics
         %% ===================================================================
         %  ROBOT POSE AND POSITION MANAGEMENT
         %% ===================================================================
+        function obj = update_rotation(obj)
+            encoder_read = get_encoder_tick(obj.arduino);
+            theta_encoder = encoder2theta(encoder_read, obj.PPR, obj.initialPulse);
+            obj.zRotation = theta_encoder;
+        end
+
+        function obj = update_insertion(obj)
+            tick_insertion = get_encoder_insertion(obj.g);
+            obj.zInsertion = abs(tick_insertion)/5000*3;
+        end
+
         function robot_pose = get_robot_current_pose(obj)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
             % if obj.simulation_mode
@@ -743,7 +756,6 @@ classdef Robot < Kinematics
 
         function home_both(obj,home_pos, threshold)
             current_rot = obj.zRotation;
-            initialPulse = 0;
             current_pos = get_encoder_insertion(obj.g);
             obj.zInsertion = abs(current_pos)/5000*3;
             voltage = 2;
@@ -762,7 +774,7 @@ classdef Robot < Kinematics
                 stop_insertion(obj.g, direction);
                 set_rpm_ino(obj.arduino, 0);
                 encoder_read = get_encoder_tick(obj.arduino);
-                current_rot = encoder2theta(encoder_read, obj.PPR, initialPulse);
+                current_rot = encoder2theta(encoder_read, obj.PPR, obj.initialPulse);
                 disp("current");
                 disp(current_rot);
                 current_pos = get_encoder_insertion(obj.g);
@@ -782,13 +794,12 @@ classdef Robot < Kinematics
 
         function home_rotation(obj)
             current_rot = obj.zRotation;
-            initialPulse = 0;
             while abs(current_rot - (2*pi)) <= deg2rad(1)
                 set_rpm_ino(obj.arduino, 2);
                 pause(0.1);
                 set_rpm_ino(obj.arduino, 0);
                 encoder_read = get_encoder_tick(obj.arduino);
-                current_rot = encoder2theta(encoder_read, obj.PPR, initialPulse);
+                current_rot = encoder2theta(encoder_read, obj.PPR, obj.initialPulse);
                 disp("current");
                 disp(current_rot);
                 obj.zRotation = current_rot;
@@ -1003,12 +1014,8 @@ classdef Robot < Kinematics
 
                 %% Encoder reading for theta angle
                 if ~obj.simulation_mode
-                    encoder_read = get_encoder_tick(obj.arduino);
-                    initialPulse = 0;
-                    theta_encoder = encoder2theta(encoder_read, obj.PPR, initialPulse);
-                    obj.zRotation = theta_encoder;
-                    tick_insertion = get_encoder_insertion(obj.g);
-                    obj.zInsertion = abs(tick_insertion)/5000*3;
+                    obj.update_rotation();
+                    obj.update_insertion();
                 else
                     obj.zRotation = 0;
                     obj.zInsertion = 5*obj.Ctrl_Step_num;
@@ -1132,7 +1139,7 @@ classdef Robot < Kinematics
                 % target_position_image_temp(3)
                 disp("Target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
                 fprintf('zInsertion: %02f, target: %.2f',obj.zInsertion,target_position_image_temp(3))
-                if (obj.zInsertion - obj.old_zInsertion) > target_position_image_temp(3)
+                if (obj.zInsertion - obj.old_zInsertion) > obj.current_Z_target
                     obj.flag_terminate_z = 1;
                     disp("--------------------------------")
                     disp("Reached target along z-axis")

@@ -14,5 +14,7 @@ function theta = encoder2theta(encoderReading, countsPerRevolution, initialCount
 
     % Calculate theta in radians considering the initial count
     theta = (encoderReading - initialCount) / (countsPerRevolution) * 2 * pi;
+    
+    %What does this mean???
     theta = theta; % Flip sign to align with coordinate
 end
