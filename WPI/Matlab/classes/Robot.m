@@ -56,7 +56,7 @@ classdef Robot < Kinematics
         robot_pose
         trajectory = [];
         current_Z_target;
-        needle_pos_MRI;
+        needle_pos_MRI = [1, 0., 0., 0.; 0., 1, 0., 0.; 0., 0., 1, 0.; 0., 0., 0., 1];
         %% ===================================================================
         %  NEEDLE CONTROL PARAMETERS
         %% ===================================================================
@@ -178,7 +178,6 @@ classdef Robot < Kinematics
         xRearSlider2
         zInsertion
         zRotation
-        old_zInsertion
 
         %% ===================================================================
         %  KALMAN FILTER AND STATE ESTIMATION
@@ -551,7 +550,7 @@ classdef Robot < Kinematics
                 xyz    = target(3,4).';                % Z insertion only
             
                 t = (1:nSteps)' / nSteps;         % nStepsx1 : 1/n ... 1
-                traj_z = origin + (xyz - origin) .* t;  % nStepsx3
+                traj_z = (xyz - origin) .* t;  % nStepsx3
             
                 obj.trajectory = traj_z;
         end
@@ -592,9 +591,9 @@ classdef Robot < Kinematics
                 obj.target_relative_global = target_relative;
                 obj.current_Z_target = target_relative(3);
                 fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
-                obj.old_zInsertion = obj.zInsertion;
             else
-                obj.generate_trajectory(obj.target_position_image)
+                obj.generate_trajectory(obj.target_position_image);
+                obj.current_Z_target = obj.trajectory(1);
             end    
         
         end
@@ -686,7 +685,7 @@ classdef Robot < Kinematics
                 if (run_time > obj.Time_SimEnd) || obj.flag_terminate_z == 1
                     disp("----------------------------")
                     disp('Reached Termination Condition');
-                    disp(obj.zInsertion - obj.old_zInsertion);
+                    disp(obj.zInsertion - obj.current_Z_target);
                     disp(obj.target_relative_global(3));
                     disp("----------------------------")
                     disp(count_current_insertion);
@@ -746,7 +745,7 @@ classdef Robot < Kinematics
 
                 stop_insertion(obj.g, direction);
 
-                current_pos = get_encoder_insertion(obj.g)
+                current_pos = get_encoder_insertion(obj.g);
                 obj.zInsertion = abs(current_pos)/5000*3;
 
             end
@@ -1015,7 +1014,8 @@ classdef Robot < Kinematics
                 %% Encoder reading for theta angle
                 if ~obj.simulation_mode
                     obj.update_rotation();
-                    obj.update_insertion();
+                    tick_insertion = get_encoder_insertion(obj.g);
+                    obj.zInsertion = abs(tick_insertion)/5000*3;
                 else
                     obj.zRotation = 0;
                     obj.zInsertion = 5*obj.Ctrl_Step_num;
@@ -1137,9 +1137,10 @@ classdef Robot < Kinematics
 
                 % Terminate move if reach target along z-axis
                 % target_position_image_temp(3)
-                disp("Target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
-                fprintf('zInsertion: %02f, target: %.2f',obj.zInsertion,target_position_image_temp(3))
-                if (obj.zInsertion - obj.old_zInsertion) > obj.current_Z_target
+                disp("Final target Insertion Distance (mm): " + num2str(target_position_image_temp(3)))
+                disp("Current target Insertion Distance (mm): " + num2str(obj.current_Z_target))
+                fprintf('zInsertion: %02f, target: %.2f',obj.zInsertion,obj.current_Z_target)
+                if obj.current_Z_target <= obj.zInsertion
                     obj.flag_terminate_z = 1;
                     disp("--------------------------------")
                     disp("Reached target along z-axis")

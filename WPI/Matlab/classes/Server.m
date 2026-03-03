@@ -20,6 +20,7 @@ classdef Server < Robot
         PyReady = false
         SrcDir
         PyDir
+        exsi = false
         VenvPython
         Hostname = "10.0.1.1"
     end
@@ -38,6 +39,7 @@ classdef Server < Robot
             addParameter(p, 'port', obj.port);
             addParameter(p, 'open_loop', obj.open_loop);
             addParameter(p, 'simulation', false, @islogical);
+            addParameter(p, 'exsi', obj.exsi);
             parse(p, varargin{:});
             % Connect to robot control part
             if p.Results.simulation
@@ -47,8 +49,11 @@ classdef Server < Robot
             obj.port = p.Results.port;
             obj.socket = obj.connect(obj.host,obj.port);
             obj.open_loop = p.Results.open_loop;
+            obj.exsi = p.Results.exsi;
             obj.robot_not_ready = obj.is_startup();
-            obj.connect_exsi();
+            if obj.exsi
+                obj.connect_exsi();
+            end
         end
 
         function obj = connect_exsi(obj)
@@ -392,20 +397,20 @@ classdef Server < Robot
                     if obj.open_loop
                         final_targeting_reached = obj.move_to_end();
                     else
+                        i = 1;
                         while i <= numel(obj.trajectory)
-                            obj.old_zInsertion = obj.zInsertion;
                             % With MRI feedback would be look like below
                             obj.current_Z_target = obj.trajectory(i);
                             disp("Current Target:")
                             disp(obj.target_relative_global)
-                            [head, type, data] = obj.receiver.readMessage();
-                            if strcmpi(type, 'STRING')
-                                if strcmpi(data, 'CURRENT_POSITION')
-                                    obj.Send_Current_Position();
-                                else
-                                    error_message = "Wrong command at this time.";
-                                    obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
-                                end
+                            % [head, type, data] = obj.receiver.readMessage();
+                            % if strcmpi(type, 'STRING')
+                            %     if strcmpi(data, 'CURRENT_POSITION')
+                            %         obj.Send_Current_Position();
+                            %     else
+                            %         error_message = "Wrong command at this time.";
+                            %         obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
+                            %     end
                             % elseif strcmpi(type, 'TRANSFORM')
                             %     obj.sender.WriteOpenIGTLinkStringMessage(char(head), char("ACK_NPSOE"));
                             %     pause(0.01);
@@ -425,18 +430,28 @@ classdef Server < Robot
                             %         obj.sender.WriteOpenIGTLinkTransformMessage(char(head), obj.robot_pose);
                             %         final_targeting_reached = obj.is_target_reached;
                             %     end
-                            else
-                                error_message = "Wrong type of message at this time.";
-                                obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
-                            end
+                            % else
+                            %     error_message = "Wrong type of message at this time.";
+                            %     obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
+                            % end
                             user_input = input('Enter a 1x3 matrix like [1,2,3]: ', 's');
-                            current = str2num(user_input);
+                            current = transpose(str2num(user_input))
+                            A = obj.get_robot_current_pose();
+                            A(1:3,4) = current;
+                            obj.target_relative_global = obj.target_position_image(1:3,4) - A(1:3,4);
                             % obj.needle_pos_MRI = obj.get_robot_current_pose();
-                            obj.needle_pose_MRI = current;
-                            final_targeting_reached = obj.move_to_end();
-                            i = i+1;
+                            disp('Relative target')
+                            disp(obj.target_relative_global)
+                            disp('Mid_steps')
+                            disp(obj.trajectory)
+                            disp("current target")
+                            disp(obj.current_Z_target)
                             disp('Press Enter to continue...');
                             input('', 's');
+                            final_targeting_reached = obj.move_to_end();
+                            i = i+1;
+                            % disp('Press Enter to continue...');
+                            % input('', 's');
                         end
                     end
                     obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
