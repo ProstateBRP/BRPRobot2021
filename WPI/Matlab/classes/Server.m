@@ -429,8 +429,10 @@ classdef Server < Robot
                                 error_message = "Wrong type of message at this time.";
                                 obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
                             end
-                            
-                            obj.needle_pos_MRI = obj.get_robot_current_pose();
+                            user_input = input('Enter a 1x3 matrix like [1,2,3]: ', 's');
+                            current = str2num(user_input);
+                            % obj.needle_pos_MRI = obj.get_robot_current_pose();
+                            obj.needle_pose_MRI = current;
                             final_targeting_reached = obj.move_to_end();
                             i = i+1;
                             disp('Press Enter to continue...');

@@ -328,7 +328,7 @@ classdef Robot < Kinematics
                 pause(1)
                 obj.g = init_galil();
                 obj.Release();
-
+                obj.initialPulse = get_encoder_tick(obj.arduino);
                 %% Set A, B Port as Servo
                 response = obj.g.command('MT 1,1,1');
                 response = obj.g.command('KP 0,0,0');
@@ -352,7 +352,7 @@ classdef Robot < Kinematics
                 response = obj.g.command('CB 3');
                 response = obj.g.command('CB 4');
                 response = obj.g.command('CB 5');
-
+                
                 % Access Relay
                 % obj.g.command('SB 3');
                 % pause(0.1);
