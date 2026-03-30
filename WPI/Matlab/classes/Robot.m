@@ -62,7 +62,7 @@ classdef Robot < Kinematics
         %% ===================================================================
         Needle_pose_ini = [0, 0, 0, 0, 0, 0]          % Initial needle pose [x,y,z,gamma,phi,theta] (mm,rad)
         Target_Pos_local                               % Target position in needle coordinate (mm)
-        Stabbing_Vel = 5                               % Needle insertion speed (mm/sec)
+        Stabbing_Vel = 2                               % Needle insertion speed (mm/sec)  %changed to 2
         omega_max = pi                                 % Maximum rotational velocity (rad/sec)
 
         %%%
@@ -620,9 +620,9 @@ classdef Robot < Kinematics
             % disp(robot_kinematics.BaseToTreatment);
             % disp("======");
             robot_pose = obj.ConvertFromRobotBaseToImager(robot_kinematics.BaseToTreatment);
-            disp("======")
-            disp(robot_pose);
-            disp("======");
+            % disp("======")
+            % disp(robot_pose);
+            % disp("======");
             % disp(obj.zFrameToKinematicTip)
             % robot_pose = [1,0,0,0;0,1,0,-26.9738;0,0,1,-34.7100;0,0,0,1];
             % robot_pose = obj.registration_matrix * robot_pose;
@@ -676,7 +676,7 @@ classdef Robot < Kinematics
                 if ~obj.simulation_mode
                     count_current_insertion = record_home_pos(obj.g);
                 else
-                    count_current_insertion = 1000;
+                    count_current_insertion = 10000;
                 end
 
                 if count_current_insertion < obj.stop_count_insertion
@@ -747,6 +747,7 @@ classdef Robot < Kinematics
 
                 current_pos = get_encoder_insertion(obj.g);
                 obj.zInsertion = abs(current_pos)/5000*3;
+                obj.Send_Current_Position();
 
             end
 
@@ -759,8 +760,8 @@ classdef Robot < Kinematics
             obj.zInsertion = abs(current_pos)/5000*3;
             voltage = 2;
             direction = 0; % Pull-out
-            f_pos = True;
-            f_rot = True;
+            f_pos = true;
+            f_rot = true;
 
             while  f_pos || f_rot
                 if f_pos
@@ -792,19 +793,23 @@ classdef Robot < Kinematics
         end
 
         function home_rotation(obj)
-            current_rot = obj.zRotation;
-            while abs(current_rot - (2*pi)) <= deg2rad(1)
-                set_rpm_ino(obj.arduino, 2);
+            if obj.zRotation < pi
+                sign = -1;
+            end
+            while obj.zRotation >= deg2rad(0.5)
+                set_rpm_ino(obj.arduino, sign*2);
                 pause(0.1);
                 set_rpm_ino(obj.arduino, 0);
                 encoder_read = get_encoder_tick(obj.arduino);
-                current_rot = encoder2theta(encoder_read, obj.PPR, obj.initialPulse);
-                disp("current");
-                disp(current_rot);
-                obj.zRotation = current_rot;
-                obj.Send_Current_Position();
-                disp("relative")
-                disp(abs(2*pi - current_rot))
+                obj.zRotation = encoder2theta(encoder_read, obj.PPR, obj.initialPulse);
+                if obj.zRotation >= 2*pi
+                    obj.zRotation = obj.zRotation - 2*pi;
+                end
+                if obj.zRotation < -2*pi
+                    obj.zRotation = obj.zRotation + 2*pi;
+                end
+                disp("Current Rotation");
+                disp(obj.zRotation);
             end
         end
 
@@ -815,11 +820,10 @@ classdef Robot < Kinematics
             home_pos = 0;
             if ~obj.simulation_mode
                 obj.home_insertion(home_pos, threshold);
-                % obj.home_both();
+                obj.home_rotation();
+                % obj.home_both(home_pos, threshold);
                 disp("Current Inserstion");
                 disp(obj.zInsertion);
-                disp("Current Rotation");                
-                disp(obj.zRotation)         ;
             else
                 disp("SIMULATION MODE: Would home insertion with home_pos " + num2str(home_pos) + " and threshold " + num2str(threshold));
             end
@@ -1084,6 +1088,8 @@ classdef Robot < Kinematics
                             % obj.theta_d = 0; % use if fixed value
                         end
                     end
+
+                    % obj.alpha = 0; % hard-coded to test rotation
 
 
 

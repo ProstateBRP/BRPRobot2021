@@ -58,47 +58,198 @@ classdef Server < Robot
 
         function obj = connect_exsi(obj)
             % Locate project folders (cross-platform safe)
-            thisFile = mfilename("fullpath");      % .../src/classes/server.m
+            thisFile = mfilename("fullpath");      % .../src/classes/Server.m
             classDir = fileparts(thisFile);        % .../src/classes
             srcDir   = fileparts(classDir);        % .../src
             exsiDir  = fullfile(srcDir, "exsi_cmds");
-            % Determine venv python path (Windows + Linux)
+
             if ispc
                 venvPython = fullfile(exsiDir, "venv", "Scripts", "python.exe");
             else
                 venvPython = fullfile(exsiDir, "venv", "bin", "python");
             end
-        
+
             if ~isfile(venvPython)
                 error("Python venv not found at: %s", venvPython);
             end
-            % Reset Python interpreter (important)
+
             try
                 terminate(pyenv);
             catch
-                % ignore if not loaded yet
             end
-            pyenv("Version", venvPython);
-            % Add ONLY src folder to Python path
-            insert(py.sys.path, int32(0), srcDir);
-            % Import the bridge module (as package)
+
+            pe = pyenv("Version", venvPython);
+            disp(pe);
+
+            if count(string(py.sys.path), string(srcDir)) == 0
+                insert(py.sys.path, int32(0), srcDir);
+            end
+
             py.importlib.import_module("exsi_cmds.matlab_bridge");
-            % Initialize persistent SSH client once
-            hostname = "10.0.1.1";  % change if needed
-            py.exsi_cmds.matlab_bridge.init(hostname);
+            py.exsi_cmds.matlab_bridge.init(obj.Hostname);
             obj.PyReady = true;
             fprintf("Python + ExSi bridge initialized successfully.\n");
         end
-        
-        function run_brp(obj, plane, startloc, endloc)
-            % One plane at a time:
-            % plane: "Axial" | "Coronal" | "Sagittal"
-            if ~obj.PyReady
-                error("Python bridge not initialized.");
+
+        function exsi_load_protocol(obj, protocolPath, activate)
+            if nargin < 3
+                activate = true;
             end
-            py.matlab_bridge.run_brp(string(plane), string(startloc), string(endloc));
+            obj.assert_exsi_ready();
+            py.exsi_cmds.matlab_bridge.load_protocol(string(protocolPath), logical(activate));
         end
 
+        function exsi_set_rx_focus_only(obj, centerloc, taskKey, activate)
+            if nargin < 3 || isempty(taskKey)
+                taskKey = py.None;
+            else
+                taskKey = string(taskKey);
+            end
+            if nargin < 4
+                activate = true;
+            end
+            obj.assert_exsi_ready();
+            py.exsi_cmds.matlab_bridge.set_rx_focus_only(string(centerloc), taskKey, logical(activate));
+        end
+
+        function exsi_set_image_output_mode(obj, mode, install)
+            if nargin < 3
+                install = true;
+            end
+            obj.assert_exsi_ready();
+            py.exsi_cmds.matlab_bridge.set_image_output_mode(string(mode), logical(install));
+        end
+
+        function state = exsi_get_state(obj)
+            obj.assert_exsi_ready();
+            state = int64(py.exsi_cmds.matlab_bridge.get_state());
+        end
+
+        function exsi_start_scan(obj)
+            obj.assert_exsi_ready();
+            py.exsi_cmds.matlab_bridge.start_scan();
+        end
+
+        function state = exsi_run_simple_scan(obj, protocolPath, centerloc, imageMode, taskKey)
+            if nargin < 5 || isempty(taskKey)
+                taskKey = py.None;
+            else
+                taskKey = string(taskKey);
+            end
+            obj.assert_exsi_ready();
+            state = int64(py.exsi_cmds.matlab_bridge.run_simple_scan( ...
+                string(protocolPath), string(centerloc), string(imageMode), taskKey));
+        end
+
+        function assert_exsi_ready(obj)
+            if ~obj.PyReady
+                error("Python bridge not initialized. Call connect_exsi first.");
+            end
+        end
+
+        function test_exsi(obj)
+            % Embedded interactive EXSI test menu inside Server class.
+            %
+            % Usage:
+            %   srv = Server(..., 'exsi', true);
+            %   srv.test_exsi();
+            
+            obj.assert_exsi_ready();
+            
+            protocolPath = "ExSiTest/2";
+            centerloc    = "0,0,0";
+            imageMode    = "19";
+            taskKey      = "";
+            
+            while true
+                fprintf("\nChoose a test:\n");
+                fprintf("  1 = load protocol\n");
+                fprintf("  2 = change RX focus only (centerloc)\n");
+                fprintf("  3 = set image output mode\n");
+                fprintf("  4 = get scanner state\n");
+                fprintf("  5 = start scan\n");
+                fprintf("  6 = run simple full flow\n");
+                fprintf("  q = quit\n");
+            
+                choice = strtrim(input('Input: ', 's'));
+            
+                switch lower(choice)
+                    case '1'
+                        tmp = string(input(sprintf('Protocol path [%s]: ', protocolPath), 's'));
+                        if strlength(tmp) > 0
+                            protocolPath = tmp;
+                        end
+                        obj.exsi_load_protocol(protocolPath, true);
+            
+                    case '2'
+                        tmp = string(input(sprintf('Center location r,a,s [%s]: ', centerloc), 's'));
+                        if strlength(tmp) > 0
+                            centerloc = tmp;
+                        end
+            
+                        tmpTask = string(input(sprintf('Task key (blank to skip) [%s]: ', taskKey), 's'));
+                        if strlength(tmpTask) > 0
+                            taskKey = tmpTask;
+                        end
+            
+                        if strlength(taskKey) == 0
+                            obj.exsi_set_rx_focus_only(centerloc);
+                        else
+                            obj.exsi_set_rx_focus_only(centerloc, taskKey, true);
+                        end
+            
+                    case '3'
+                        tmp = string(input(sprintf('Image output mode [%s]: ', imageMode), 's'));
+                        if strlength(tmp) > 0
+                            imageMode = tmp;
+                        end
+                        obj.exsi_set_image_output_mode(imageMode, true);
+            
+                    case '4'
+                        state = obj.exsi_get_state();
+                        fprintf('Scanner state code = %d\n', state);
+                        fprintf('  0 = idle, 1 = scanning, 2 = prepped\n');
+            
+                    case '5'
+                        obj.exsi_start_scan();
+            
+                    case '6'
+                        tmp = string(input(sprintf('Protocol path [%s]: ', protocolPath), 's'));
+                        if strlength(tmp) > 0
+                            protocolPath = tmp;
+                        end
+            
+                        tmp = string(input(sprintf('Center location r,a,s [%s]: ', centerloc), 's'));
+                        if strlength(tmp) > 0
+                            centerloc = tmp;
+                        end
+            
+                        tmp = string(input(sprintf('Image output mode [%s]: ', imageMode), 's'));
+                        if strlength(tmp) > 0
+                            imageMode = tmp;
+                        end
+            
+                        tmpTask = string(input(sprintf('Task key (blank to skip) [%s]: ', taskKey), 's'));
+                        if strlength(tmpTask) > 0
+                            taskKey = tmpTask;
+                        end
+            
+                        if strlength(taskKey) == 0
+                            state = obj.exsi_run_simple_scan(protocolPath, centerloc, imageMode);
+                        else
+                            state = obj.exsi_run_simple_scan(protocolPath, centerloc, imageMode, taskKey);
+                        end
+                        fprintf('run_simple_scan finished. Returned state = %d\n', state);
+            
+                    case 'q'
+                        fprintf("Exiting EXSI test menu.\n");
+                        break;
+            
+                    otherwise
+                        fprintf("Unknown input.\n");
+                end
+            end
+        end
         function obj = onStartUp(obj)
             disp('Start_up');
             id = split(obj.name, '_');
@@ -401,6 +552,7 @@ classdef Server < Robot
                         while i <= numel(obj.trajectory)
                             % With MRI feedback would be look like below
                             obj.current_Z_target = obj.trajectory(i);
+                            obj.theta0 = obj.zRotation;
                             disp("Current Target:")
                             disp(obj.target_relative_global)
                             % [head, type, data] = obj.receiver.readMessage();

@@ -2,7 +2,7 @@
 clear;
 close all;
 
-flag_only_homing = false;
+flag_only_homing = true;
 %% Create GalilTools COM server object
 g = init_galil();
 
@@ -46,7 +46,7 @@ if flag_only_homing
     disp("Only Homing Mode")
 else
     direction = 1;
-    voltage = 2;
+    voltage = 3.2;
     pause
     disp("Insertion ongoing")
     move_insertion(g, direction, voltage);

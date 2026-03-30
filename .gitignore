@@ -1,4 +1,6 @@
 CommunicationTest/
+/AINeedleTracking/
+/WPI/Matlab/exsi_cmds/venv
 ##### Windows
 # Windows thumbnail cache files
 .vscode/

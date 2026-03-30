@@ -81,13 +81,13 @@ class ExSiWrapper:
         stdin, stdout, stderr = self.client.exec_command(command)
         print(stdout.read().decode())
     
-    def load_protocal(self, protocal_name):
-        command = f'exsi -host {self.hostname} loadprotocol site path="{protocal_name}"'
+    def load_protocal(self, protocal_name, dir_name="Pelvis"):
+        command = f'exsi -host {self.hostname} loadprotocol site dir="PracticePoint" path="{protocal_name}"'
         stdin, stdout, stderr = self.client.exec_command(command)
         print(stdout.read().decode())
     
-    def activate_task(self):
-        command = f"exsi -host {self.hostname} activatetask"
+    def activate_task(self, task_key=None):
+        command = f"exsi -host {self.hostname} activatetask taskKey={task_key}"
         stdin, stdout, stderr = self.client.exec_command(command)
         print(stdout.read().decode())
 
