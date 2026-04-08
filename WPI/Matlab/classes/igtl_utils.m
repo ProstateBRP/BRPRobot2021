@@ -13,6 +13,7 @@ classdef igtl_utils < handle
         receiver
         name
         state
+        show_message = true
     end
 
     methods
@@ -38,23 +39,29 @@ classdef igtl_utils < handle
             % Callback when STATUS message is received and processed
             % Currently, only prints received value
             obj.status_buffer = text;
-            disp(['Received STATUS message ', deblank(deviceName),  text]);
+            if obj.show_message
+                disp(['Received STATUS message ', deblank(deviceName),  text]);
+            end
         end
         
         function obj = onRxStringMessage(obj, deviceName, text)
             % Callback when STRING message is received and processed
             % Currently, only prints received value
             obj.string_buffer = text;
-            disp(['Received STRING message: ', deblank(deviceName), ' = ', text]);
+            if obj.show_message
+                disp(['Received STRING message: ', deblank(deviceName), ' = ', text]);
+            end
         end
 
         function obj = onRxTransformMessage(obj, deviceName, transform)
             % Callback when TRANSFORM message is received and processed
             % Currently, only prints received value
-            disp('Received TRANSFORM message: ');
-            disp([deblank(deviceName),  ' = ']);
             obj.transformation_buffer = transform;
-            disp(transform);
+            if obj.show_message
+                disp('Received TRANSFORM message: ');
+                disp([deblank(deviceName),  ' = ']);
+                disp(transform);
+            end
         end
     end
 end

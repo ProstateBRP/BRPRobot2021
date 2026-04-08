@@ -221,10 +221,6 @@ classdef Robot < Kinematics
                 disp('Robot initialized in SIMULATION MODE - hardware dependencies will be bypassed');
             else
                 disp('Robot initialized in NORMAL MODE - hardware dependencies required');
-                % robot_init = obj.get_robot_current_pose();
-                % obj.Needle_pose_ini(0:3) = robot_init(1:3,4);
-                % obj.Needle_pose_ini(3) = obj.Needle_pose_ini(3) + 200;
-                % disp(obj.Needle_pose_ini)
             end
             robot_pose = obj.Needle_pose;
             save('shared_data.mat', 'robot_pose');
@@ -522,6 +518,9 @@ classdef Robot < Kinematics
                 fprintf('---\n');
             end
             fprintf('  Is reachable: %s\n', char(string(obj.is_reachable)));
+        
+         
+            % obj.is_reachable = true; % only for test on April 1, 2027
         end
 
 
@@ -585,17 +584,17 @@ classdef Robot < Kinematics
                 is_in_workspace = obj.is_reachable;
                 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             end
+            
+            A = obj.get_robot_current_pose(true);
+            target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
+            obj.target_relative_global = target_relative;
             if obj.open_loop
-                A = obj.get_robot_current_pose();
-                target_relative = obj.target_position_image(1:3,4) - A(1:3,4);
-                obj.target_relative_global = target_relative;
                 obj.current_Z_target = target_relative(3);
-                fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', obj.target_relative_global);
             else
                 obj.generate_trajectory(obj.target_position_image);
                 obj.current_Z_target = obj.trajectory(1);
             end    
-        
+            fprintf('target_relative_global: [%.3f, %.3f, %.3f]\n', target_relative);
         end
 
         %% ===================================================================
@@ -612,17 +611,22 @@ classdef Robot < Kinematics
             obj.zInsertion = abs(tick_insertion)/5000*3;
         end
 
-        function robot_pose = get_robot_current_pose(obj)
+        function robot_pose = get_robot_current_pose(obj,display)
             %GET_ROBOT_CURRENT_POSE Return current robot pose in robot coordinate
             % if obj.simulation_mode
+            if nargin < 2
+                display = false;
+            end
             robot_kinematics = obj.ForwardKinematics(obj.xFrontSlider1, obj.xFrontSlider2, obj.xRearSlider1, obj.xRearSlider2, obj.zInsertion,obj.zRotation);
             % disp("======")
             % disp(robot_kinematics.BaseToTreatment);
             % disp("======");
             robot_pose = obj.ConvertFromRobotBaseToImager(robot_kinematics.BaseToTreatment);
-            % disp("======")
-            % disp(robot_pose);
-            % disp("======");
+            if display
+                disp("======")
+                disp(robot_pose);
+                disp("======");
+            end
             % disp(obj.zFrameToKinematicTip)
             % robot_pose = [1,0,0,0;0,1,0,-26.9738;0,0,1,-34.7100;0,0,0,1];
             % robot_pose = obj.registration_matrix * robot_pose;
@@ -793,10 +797,12 @@ classdef Robot < Kinematics
         end
 
         function home_rotation(obj)
-            if obj.zRotation < pi
-                sign = -1;
-            end
             while obj.zRotation >= deg2rad(0.5)
+                if obj.zRotation < pi
+                    sign = -1;
+                else
+                    sign = 1;
+                end
                 set_rpm_ino(obj.arduino, sign*2);
                 pause(0.1);
                 set_rpm_ino(obj.arduino, 0);
@@ -805,7 +811,7 @@ classdef Robot < Kinematics
                 if obj.zRotation >= 2*pi
                     obj.zRotation = obj.zRotation - 2*pi;
                 end
-                if obj.zRotation < -2*pi
+                if obj.zRotation < 0
                     obj.zRotation = obj.zRotation + 2*pi;
                 end
                 disp("Current Rotation");

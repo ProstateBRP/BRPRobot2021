@@ -1,5 +1,5 @@
 import time
-
+import ast
 import paramiko
 from paramiko import SSHClient
 
@@ -79,7 +79,10 @@ class ExSiWrapper:
     def get_task_list(self):
         command = f"exsi -host {self.hostname} gettasklist"
         stdin, stdout, stderr = self.client.exec_command(command)
-        print(stdout.read().decode())
+        info = stdout.read().decode()
+        nums = [int(x.strip()) for x in info.strip("[]").split(",") if x.strip()]
+        print(info)
+        return nums
     
     def load_protocal(self, protocal_name, dir_name="Pelvis"):
         command = f'exsi -host {self.hostname} loadprotocol site dir="PracticePoint" path="{protocal_name}"'

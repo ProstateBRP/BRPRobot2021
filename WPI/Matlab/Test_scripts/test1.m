@@ -10,3 +10,6 @@ r = Robot('simulation',true);
 r.calibrate(Trans);
 a = r.check_target(tar);
 disp(a);
+%%
+clc;clear;
+test_exsi_simple()

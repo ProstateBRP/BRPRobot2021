@@ -51,6 +51,17 @@ function [name, data] = readCommandMessage()
     end
 end
 
+function [name, data] = readTransformationMessage()
+    global onRxTransformMessage;
+    msg = ReadOpenIGTLinkMessage();
+    messageType = char(msg.dataTypeName);
+    messageType = deblank(messageType);
+    if strcmpi(messageType, 'TRANSFORM')
+        [name, data] = handleTransformMessage(msg, onRxTransformMessage);
+    else
+        disp(['Unexpected message type:', messageType])
+    end
+end
 
 %% Message content decoding (type specific)
 

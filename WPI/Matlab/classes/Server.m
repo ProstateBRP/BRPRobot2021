@@ -21,6 +21,7 @@ classdef Server < Robot
         SrcDir
         PyDir
         exsi = false
+        autoNeedle = false
         VenvPython
         Hostname = "10.0.1.1"
     end
@@ -40,6 +41,8 @@ classdef Server < Robot
             addParameter(p, 'open_loop', obj.open_loop);
             addParameter(p, 'simulation', false, @islogical);
             addParameter(p, 'exsi', obj.exsi);
+            addParameter(p, 'auto', obj.autoNeedle);
+            addParameter(p, 'show_message', obj.show_message);
             parse(p, varargin{:});
             % Connect to robot control part
             if p.Results.simulation
@@ -50,6 +53,8 @@ classdef Server < Robot
             obj.socket = obj.connect(obj.host,obj.port);
             obj.open_loop = p.Results.open_loop;
             obj.exsi = p.Results.exsi;
+            obj.autoNeedle = p.Results.auto;
+            obj.show_message = p.Results.show_message;
             obj.robot_not_ready = obj.is_startup();
             if obj.exsi
                 obj.connect_exsi();
@@ -91,54 +96,56 @@ classdef Server < Robot
             fprintf("Python + ExSi bridge initialized successfully.\n");
         end
 
-        function exsi_load_protocol(obj, protocolPath, activate)
-            if nargin < 3
-                activate = true;
-            end
+        function scan_once(obj)
             obj.assert_exsi_ready();
-            py.exsi_cmds.matlab_bridge.load_protocol(string(protocolPath), logical(activate));
+            task_list = int64(cellfun(@double, cell(py.exsi_cmds.matlab_bridge.get_task_list())));
+            sag_id = string(task_list(end-1));
+            cor_id = string(task_list(end));
+            py.exsi_cmds.matlab_bridge.select_task(sag_id)
+            disp("Wait to active task")
+            pause(4);
+            while true
+                state = int64(py.exsi_cmds.matlab_bridge.get_state());
+                if state == 0
+                    py.exsi_cmds.matlab_bridge.start_scan();
+                    break
+                else
+                    pause(0.1);
+                end
+            end  
+            while true
+                state = int64(py.exsi_cmds.matlab_bridge.get_state());
+                if state == 0
+                    break
+                else
+                    pause(0.1);
+                end
+            end
+            py.exsi_cmds.matlab_bridge.select_task(cor_id)
+            disp("Wait to active task")
+            pause(4);
+            while true
+                state = int64(py.exsi_cmds.matlab_bridge.get_state());
+                if state == 0
+                    py.exsi_cmds.matlab_bridge.start_scan();
+                    break
+                else
+                    pause(0.1);
+                end
+            end 
         end
 
-        function exsi_set_rx_focus_only(obj, centerloc, taskKey, activate)
-            if nargin < 3 || isempty(taskKey)
-                taskKey = py.None;
-            else
-                taskKey = string(taskKey);
-            end
-            if nargin < 4
-                activate = true;
-            end
+        function adjust_scan_plane(obj, current)
             obj.assert_exsi_ready();
-            py.exsi_cmds.matlab_bridge.set_rx_focus_only(string(centerloc), taskKey, logical(activate));
-        end
-
-        function exsi_set_image_output_mode(obj, mode, install)
-            if nargin < 3
-                install = true;
-            end
-            obj.assert_exsi_ready();
-            py.exsi_cmds.matlab_bridge.set_image_output_mode(string(mode), logical(install));
-        end
-
-        function state = exsi_get_state(obj)
-            obj.assert_exsi_ready();
-            state = int64(py.exsi_cmds.matlab_bridge.get_state());
-        end
-
-        function exsi_start_scan(obj)
-            obj.assert_exsi_ready();
-            py.exsi_cmds.matlab_bridge.start_scan();
-        end
-
-        function state = exsi_run_simple_scan(obj, protocolPath, centerloc, imageMode, taskKey)
-            if nargin < 5 || isempty(taskKey)
-                taskKey = py.None;
-            else
-                taskKey = string(taskKey);
-            end
-            obj.assert_exsi_ready();
-            state = int64(py.exsi_cmds.matlab_bridge.run_simple_scan( ...
-                string(protocolPath), string(centerloc), string(imageMode), taskKey));
+            task_list = int64(cellfun(@double, cell(py.exsi_cmds.matlab_bridge.get_task_list())));
+            sag_id = string(task_list(end-1));
+            cor_id = string(task_list(end));
+            py.exsi_cmds.matlab_bridge.select_task(sag_id, pyargs('activate', logical(false)));
+            pause(1);
+            py.exsi_cmds.matlab_bridge.set_rx_geometry('sagittal',string(current(1)-0.5),string(current(1)+0.5))
+            py.exsi_cmds.matlab_bridge.select_task(cor_id, pyargs('activate', logical(false)));
+            pause(1);
+            py.exsi_cmds.matlab_bridge.set_rx_geometry('sagittal',string(current(2)-0.5),string(current(2)+0.5))
         end
 
         function assert_exsi_ready(obj)
@@ -147,109 +154,6 @@ classdef Server < Robot
             end
         end
 
-        function test_exsi(obj)
-            % Embedded interactive EXSI test menu inside Server class.
-            %
-            % Usage:
-            %   srv = Server(..., 'exsi', true);
-            %   srv.test_exsi();
-            
-            obj.assert_exsi_ready();
-            
-            protocolPath = "ExSiTest/2";
-            centerloc    = "0,0,0";
-            imageMode    = "19";
-            taskKey      = "";
-            
-            while true
-                fprintf("\nChoose a test:\n");
-                fprintf("  1 = load protocol\n");
-                fprintf("  2 = change RX focus only (centerloc)\n");
-                fprintf("  3 = set image output mode\n");
-                fprintf("  4 = get scanner state\n");
-                fprintf("  5 = start scan\n");
-                fprintf("  6 = run simple full flow\n");
-                fprintf("  q = quit\n");
-            
-                choice = strtrim(input('Input: ', 's'));
-            
-                switch lower(choice)
-                    case '1'
-                        tmp = string(input(sprintf('Protocol path [%s]: ', protocolPath), 's'));
-                        if strlength(tmp) > 0
-                            protocolPath = tmp;
-                        end
-                        obj.exsi_load_protocol(protocolPath, true);
-            
-                    case '2'
-                        tmp = string(input(sprintf('Center location r,a,s [%s]: ', centerloc), 's'));
-                        if strlength(tmp) > 0
-                            centerloc = tmp;
-                        end
-            
-                        tmpTask = string(input(sprintf('Task key (blank to skip) [%s]: ', taskKey), 's'));
-                        if strlength(tmpTask) > 0
-                            taskKey = tmpTask;
-                        end
-            
-                        if strlength(taskKey) == 0
-                            obj.exsi_set_rx_focus_only(centerloc);
-                        else
-                            obj.exsi_set_rx_focus_only(centerloc, taskKey, true);
-                        end
-            
-                    case '3'
-                        tmp = string(input(sprintf('Image output mode [%s]: ', imageMode), 's'));
-                        if strlength(tmp) > 0
-                            imageMode = tmp;
-                        end
-                        obj.exsi_set_image_output_mode(imageMode, true);
-            
-                    case '4'
-                        state = obj.exsi_get_state();
-                        fprintf('Scanner state code = %d\n', state);
-                        fprintf('  0 = idle, 1 = scanning, 2 = prepped\n');
-            
-                    case '5'
-                        obj.exsi_start_scan();
-            
-                    case '6'
-                        tmp = string(input(sprintf('Protocol path [%s]: ', protocolPath), 's'));
-                        if strlength(tmp) > 0
-                            protocolPath = tmp;
-                        end
-            
-                        tmp = string(input(sprintf('Center location r,a,s [%s]: ', centerloc), 's'));
-                        if strlength(tmp) > 0
-                            centerloc = tmp;
-                        end
-            
-                        tmp = string(input(sprintf('Image output mode [%s]: ', imageMode), 's'));
-                        if strlength(tmp) > 0
-                            imageMode = tmp;
-                        end
-            
-                        tmpTask = string(input(sprintf('Task key (blank to skip) [%s]: ', taskKey), 's'));
-                        if strlength(tmpTask) > 0
-                            taskKey = tmpTask;
-                        end
-            
-                        if strlength(taskKey) == 0
-                            state = obj.exsi_run_simple_scan(protocolPath, centerloc, imageMode);
-                        else
-                            state = obj.exsi_run_simple_scan(protocolPath, centerloc, imageMode, taskKey);
-                        end
-                        fprintf('run_simple_scan finished. Returned state = %d\n', state);
-            
-                    case 'q'
-                        fprintf("Exiting EXSI test menu.\n");
-                        break;
-            
-                    otherwise
-                        fprintf("Unknown input.\n");
-                end
-            end
-        end
         function obj = onStartUp(obj)
             disp('Start_up');
             id = split(obj.name, '_');
@@ -490,7 +394,7 @@ classdef Server < Robot
                 while obj.idle_flag
                     [obj.name, type, data] = obj.receiver.readMessage();
                     if strcmpi(type, 'STRING')
-                        disp(data);
+                        %disp(data);
                         if strcmpi(data, 'CURRENT_POSITION')
                             obj.Send_Current_Position();
                         elseif ismember(data, obj.validCommands)
@@ -544,9 +448,20 @@ classdef Server < Robot
                     
                 end
                 if ~fail_flag
-                    first_step_flag = true;
                     if obj.open_loop
                         final_targeting_reached = obj.move_to_end();
+                        while obj.flag_terminate_z ~= 1
+                            [~, ~, data] = obj.receiver.readCommandMessage();
+                            if data == "STOP" 
+                                obj.onStop()
+                                obj.flag_terminate_z = 1;
+                                delete_all
+                            elseif data == "EMERGENCY"
+                                obj.onEmergency()
+                                obj.flag_terminate_z = 1;
+                                delete_all
+                            end
+                        end
                     else
                         i = 1;
                         while i <= numel(obj.trajectory)
@@ -555,43 +470,27 @@ classdef Server < Robot
                             obj.theta0 = obj.zRotation;
                             disp("Current Target:")
                             disp(obj.target_relative_global)
-                            % [head, type, data] = obj.receiver.readMessage();
-                            % if strcmpi(type, 'STRING')
-                            %     if strcmpi(data, 'CURRENT_POSITION')
-                            %         obj.Send_Current_Position();
-                            %     else
-                            %         error_message = "Wrong command at this time.";
-                            %         obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
-                            %     end
-                            % elseif strcmpi(type, 'TRANSFORM')
-                            %     obj.sender.WriteOpenIGTLinkStringMessage(char(head), char("ACK_NPSOE"));
-                            %     pause(0.01);
-                            %     if ~is_in_workspace
-                            %         status = struct('code', 10, 'subCode', 0, 'errorName', 'Configuration error', 'message', 'STATUS_CONFIG_ERROR');
-                            %         obj.sender.WriteOpenIGTLinkStatusMessage(char(head), status);
-                            %         break
-                            %     else
-                            %         if first_step_flag
-                            %             obj.set_entry_point(data);
-                            %             first_step_flag = false;
-                            %         end
-                            %         status = struct('code', 1, 'subCode', 0, 'errorName', 'none', 'message', 'STATUS_OK');
-                            %         obj.sender.WriteOpenIGTLinkStatusMessage(char(head), status);
-                            %         obj.needle_pos_MRI = data
-                            %         obj.robot_pose = obj.get_robot_current_pose();
-                            %         obj.sender.WriteOpenIGTLinkTransformMessage(char(head), obj.robot_pose);
-                            %         final_targeting_reached = obj.is_target_reached;
-                            %     end
-                            % else
-                            %     error_message = "Wrong type of message at this time.";
-                            %     obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
-                            % end
-                            user_input = input('Enter a 1x3 matrix like [1,2,3]: ', 's');
-                            current = transpose(str2num(user_input))
-                            A = obj.get_robot_current_pose();
-                            A(1:3,4) = current;
-                            obj.target_relative_global = obj.target_position_image(1:3,4) - A(1:3,4);
-                            % obj.needle_pos_MRI = obj.get_robot_current_pose();
+                            if obj.exsi
+                                obj.scan_once();
+                            end
+                            if obj.autoNeedle
+                                [head, ~, data] = obj.receiver.readTransformationMessage();
+                                if strcmpi(head, 'CurrentTrackedTip')
+                                    obj.sender.WriteOpenIGTLinkStringMessage(char(head), char("ACK_NPSOE"));
+                                    pause(0.01);
+                                    current = data(1:3,4);
+                                else
+                                    error_message = "Wrong message header.";
+                                    obj.sender.WriteOpenIGTLinkStringMessage(char(head), char(error_message));
+                                end
+                            else
+                                user_input = input('Enter a 1x3 matrix like [1,2,3]: ', 's');
+                                current = transpose(str2num(user_input));      
+                            end
+                            obj.target_relative_global = obj.target_position_image(1:3,4) - current;
+                            if obj.exsi
+                                obj.adjust_scan_plane(current);
+                            end
                             disp('Relative target')
                             disp(obj.target_relative_global)
                             disp('Mid_steps')
@@ -601,9 +500,19 @@ classdef Server < Robot
                             disp('Press Enter to continue...');
                             input('', 's');
                             final_targeting_reached = obj.move_to_end();
+                            while obj.flag_terminate_z ~= 1
+                                [~, ~, data] = obj.receiver.readCommandMessage();
+                                if data == "STOP" 
+                                    obj.onStop()
+                                    obj.flag_terminate_z = 1;
+                                    delete_all
+                                elseif data == "EMERGENCY"
+                                    obj.onEmergency()
+                                    obj.flag_terminate_z = 1;
+                                    delete_all
+                                end
+                            end
                             i = i+1;
-                            % disp('Press Enter to continue...');
-                            % input('', 's');
                         end
                     end
                     obj.sender.WriteOpenIGTLinkStatusMessage(char(obj.state), status);
@@ -681,7 +590,9 @@ classdef Server < Robot
             obj.planning_finsh_flag = false;
             obj.targeting_finsh_flag = false;
             obj.target_not_reachable = false;
-            obj.stop_master();
+            if obj.exsi
+                obj.stop_master();
+            end
             delete all
         end
 
